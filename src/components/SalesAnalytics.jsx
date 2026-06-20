@@ -185,7 +185,7 @@ function ChartCard({ title, icon, children }) {
 /* ═══════════════════════════════════════════════════════════
    MAIN COMPONENT
 ═══════════════════════════════════════════════════════════ */
-export default function SalesAnalytics({ setActiveSubTab }) {
+export default function SalesAnalytics({ setActiveSubTab, setOrderDispatchFilter, setOrderCurrentPage, onNavigate }) {
   const [rangeDays, setRangeDays] = useState(30);
 
   const [cloudOrders, setCloudOrders] = useState([]);
@@ -340,13 +340,15 @@ export default function SalesAnalytics({ setActiveSubTab }) {
       {/* KPI Summary Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
         {[
-          { label: 'Total Revenue', value: fmt(totalRevenue), color: '#6366f1', icon: <TrendingUp size={14} />, tab: 'sales' },
-          { label: 'Total Orders', value: totalOrders, color: '#0ea5e9', icon: <ShoppingBag size={14} />, tab: 'sales' },
-          { label: 'Avg Order Value', value: fmt(avgOrderValue), color: '#10b981', icon: <CreditCard size={14} />, tab: 'sales' },
-          { label: 'Delivered Revenue', value: fmt(deliveredRevenue), color: '#f59e0b', icon: <Package size={14} />, tab: 'sales' },
+          { label: 'Total Revenue', value: fmt(totalRevenue), color: '#6366f1', icon: <TrendingUp size={14} />, navTab: 'orders' },
+          { label: 'Total Orders', value: totalOrders, color: '#0ea5e9', icon: <ShoppingBag size={14} />, navTab: 'orders' },
+          { label: 'Avg Order Value', value: fmt(avgOrderValue), color: '#10b981', icon: <CreditCard size={14} />, navTab: 'orders' },
+          { label: 'Delivered Revenue', value: fmt(deliveredRevenue), color: '#f59e0b', icon: <Package size={14} />, navTab: 'orders' },
         ].map((kpi, i) => (
           <div key={i} className="glass-card kpi-card-hover" 
-            onClick={() => { if (setActiveSubTab && kpi.tab) setActiveSubTab(kpi.tab); }}
+            onClick={() => { 
+              if (onNavigate) onNavigate(kpi.navTab);
+            }}
             style={{
               margin: 0, padding: '14px 16px', borderLeft: `4px solid ${kpi.color}`,
               background: `linear-gradient(135deg, hsl(var(--bg-card)) 0%, ${kpi.color}06 100%)`,

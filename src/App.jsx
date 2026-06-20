@@ -34,6 +34,7 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [cart, setCart] = useState({});
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [postLoginAction, setPostLoginAction] = useState(null); // callback to run after login
 
   const [activeAlarm, setActiveAlarm] = useState(null);
   const [activeAlarmClient, setActiveAlarmClient] = useState(null);
@@ -281,13 +282,22 @@ export default function App() {
       case 'dashboard':
         return <DashboardScreen authUser={authUser} onNavigate={setActiveTab} />;
       case 'catalog':
-        return <ProductCatalog authUser={authUser} cart={cart} onCartChange={setCart} onOrderPlaced={() => setActiveTab('sales')} onLoginRequired={() => setShowLoginModal(true)} />;
+        return <ProductCatalog 
+          authUser={authUser} 
+          cart={cart} 
+          onCartChange={setCart} 
+          onOrderPlaced={() => setActiveTab('sales')} 
+          onLoginRequired={(afterLoginFn) => { 
+            if (afterLoginFn) setPostLoginAction(() => afterLoginFn); 
+            setShowLoginModal(true); 
+          }} 
+        />;
       case 'orders':
         return <OrderManagement />;
       case 'products':
         return <ProductManagement />;
       case 'sales':
-        return isAdmin ? <ProSalesSubscreen lang={lang} profile={profile} /> : <DoctorOrders authUser={authUser} onGoToCatalog={() => setActiveTab('catalog')} />;
+        return isAdmin ? <ProSalesSubscreen lang={lang} profile={profile} onNavigate={setActiveTab} /> : <DoctorOrders authUser={authUser} onGoToCatalog={() => setActiveTab('catalog')} />;
       case 'implants':
         return <ProImplantsSubscreen lang={lang} profile={profile} />;
       case 'inventory':
@@ -682,6 +692,7 @@ export default function App() {
           </>
         )}
       </div>
+      </div> {/* END main-layout-container */}
 
       {/* Floating Scroll to Top / Bottom Buttons */}
       <div className="floating-scroll-controls">
@@ -800,22 +811,35 @@ export default function App() {
       )}
 
       {showLoginModal && (
-        <div className="modal-overlay-container animate-fade-in" style={{ zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
-          <div onClick={() => setShowLoginModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }} />
-          <div style={{ 
-            background: '#ffffff', 
-            border: '1px solid hsl(var(--border-color))', 
-            padding: '28px 24px', 
-            maxWidth: 420, 
-            width: 'calc(100% - 32px)', 
-            borderRadius: 24, 
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', 
-            maxHeight: '90vh', 
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            position: 'relative'
-          }}>
+        <div 
+          onClick={() => setShowLoginModal(false)}
+          style={{ 
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 100000, 
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(15, 23, 42, 0.7)', 
+            backdropFilter: 'blur(8px)', 
+            WebkitBackdropFilter: 'blur(8px)',
+            padding: '16px'
+          }}
+        >
+          <div 
+            onClick={e => e.stopPropagation()}
+            style={{ 
+              background: '#ffffff', 
+              border: '1px solid hsl(var(--border-color))', 
+              padding: '28px 24px', 
+              maxWidth: 420, 
+              width: '100%', 
+              borderRadius: 24, 
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)', 
+              maxHeight: '90vh', 
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative'
+            }}
+          >
             <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
               <button 
                 onClick={() => setShowLoginModal(false)} 
@@ -839,8 +863,12 @@ export default function App() {
               onLogin={(user) => { 
                 setAuthUser(user); 
                 setIsLoggedIn(true); 
-                setShowLoginModal(false); 
-                setActiveTab(user.role === 'admin' ? 'dashboard' : 'catalog'); 
+                setShowLoginModal(false);
+                setActiveTab(user.role === 'admin' ? 'dashboard' : 'catalog');
+                // Execute any pending action (e.g., place order after login)
+                if (postLoginAction) {
+                  setTimeout(() => { postLoginAction(user); setPostLoginAction(null); }, 400);
+                }
               }} 
             />
           </div>
@@ -903,7 +931,6 @@ export default function App() {
           align-items: center;
         }
       `}</style>
-      </div>
     </>
   );
 }

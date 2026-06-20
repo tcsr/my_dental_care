@@ -88,13 +88,25 @@ export default function OrderManagement() {
       const localClients = await db.b2bClients.toArray();
       const localProducts = await db.b2bProducts.toArray();
 
+      // Map B2B local order statuses → standard OrderManagement statuses
+      const normalizeLocalStatus = (s) => {
+        if (!s) return 'pending';
+        const sl = s.toLowerCase();
+        if (sl === 'in production' || sl === 'draft' || sl === 'new') return 'pending';
+        if (sl === 'confirmed' || sl === 'confirm') return 'confirmed';
+        if (sl === 'dispatched' || sl === 'shipped' || sl === 'in transit') return 'dispatched';
+        if (sl === 'delivered' || sl === 'completed') return 'delivered';
+        if (sl === 'cancelled' || sl === 'returned') return 'cancelled';
+        return 'pending'; // fallback
+      };
+
       const localOrders = localOrdersRaw.map(lo => {
         const client = localClients.find(c => c.id === lo.clientId) || {};
         const product = localProducts.find(p => p.id === lo.productIds?.[0]) || {};
         return {
           id: `local-${lo.id}`,
           doctor_id: `local_client_${lo.clientId}`,
-          status: lo.status?.toLowerCase() || 'pending',
+          status: normalizeLocalStatus(lo.status),
           total: lo.finalAmount,
           created_at: new Date(lo.orderDate).toISOString(),
           order_items: [{
@@ -137,7 +149,9 @@ export default function OrderManagement() {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // Clear stale cache to ensure normalization fix applies
+    sessionStorage.removeItem('om_orders_cache');
+    sessionStorage.removeItem('om_profiles_cache');
     fetchOrders();
   }, []);
 
@@ -154,10 +168,10 @@ export default function OrderManagement() {
   };
 
   // Calculations for dashboard
-  const activeCount = orders.filter(o => ['pending', 'confirmed'].includes(o.status)).length;
-  const inTransitCount = orders.filter(o => o.status === 'dispatched').length;
+  const activeCount = orders.filter(o => ['pending', 'confirmed'].includes((o.status || '').toLowerCase())).length;
+  const inTransitCount = orders.filter(o => (o.status || '').toLowerCase() === 'dispatched').length;
   const totalRevenue = orders
-    .filter(o => o.status !== 'cancelled')
+    .filter(o => (o.status || '').toLowerCase() !== 'cancelled')
     .reduce((sum, o) => sum + (o.total || 0), 0);
 
   const formatCurrency = (val) => {
@@ -175,7 +189,7 @@ export default function OrderManagement() {
 
   const filtered = orders.filter(order => {
     // 1. Tab filter
-    if (tab !== 'all' && order.status !== tab) return false;
+    if (tab !== 'all' && (order.status || '').toLowerCase() !== tab) return false;
 
     // 2. Search filter
     if (!searchQuery) return true;
@@ -195,7 +209,7 @@ export default function OrderManagement() {
   });
 
   const counts = STATUSES.slice(1).reduce((acc, s) => {
-    acc[s] = orders.filter(o => o.status === s).length;
+    acc[s] = orders.filter(o => (o.status || '').toLowerCase() === s).length;
     return acc;
   }, {});
 
@@ -412,7 +426,7 @@ export default function OrderManagement() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {filtered.map(order => {
-            const cfg = STATUS_CFG[order.status] || STATUS_CFG.pending;
+            const cfg = STATUS_CFG[(order.status || '').toLowerCase()] || STATUS_CFG.pending;
             const doctor = profiles[order.doctor_id];
             const isUpdating = updating === order.id;
             const isExpanded = expanded === order.id;

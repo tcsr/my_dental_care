@@ -156,21 +156,13 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
 
   const clearCart = () => onCartChange({});
 
-  const placeOrder = async () => {
+  const placeOrderWithUser = async (user) => {
     if (!cartItems.length || placing) return;
-    if (!authUser) {
-      if (onLoginRequired) {
-        onLoginRequired();
-      } else {
-        alert('Please log in to place an order.');
-      }
-      return;
-    }
     setPlacing(true);
     const finalTotal = Math.round(cartTotal * 1.12);
     const { data: order, error } = await supabase
       .from('orders')
-      .insert({ doctor_id: authUser.user.id, status: 'pending', total: finalTotal })
+      .insert({ doctor_id: user.user.id, status: 'pending', total: finalTotal })
       .select().single();
 
     if (error || !order) {
@@ -193,6 +185,22 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
     setOrderDone(true);
     fetchProducts();
     setTimeout(() => { setOrderDone(false); }, 5000);
+  };
+
+  const placeOrder = async () => {
+    if (!cartItems.length || placing) return;
+    if (!authUser) {
+      if (onLoginRequired) {
+        // Pass placeOrder as the action to run after login completes
+        onLoginRequired((loggedInUser) => {
+          if (loggedInUser) placeOrderWithUser(loggedInUser);
+        });
+      } else {
+        alert('Please log in to place an order.');
+      }
+      return;
+    }
+    await placeOrderWithUser(authUser);
   };
 
   if (loading) return (
@@ -293,8 +301,8 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                   {p.category || 'General'}
                 </span>
 
-                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1.3 }}>
-                  {p.name}
+                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                  {(p.name || '').replace(/`/g, '')}
                 </div>
 
                 {p.description && (
@@ -322,7 +330,11 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                     >
                       <Minus size={13} strokeWidth={2.5} />
                     </button>
-                    <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit' }}>{inCart.qty}</span>
+                    <span 
+                      onClick={(e) => { e.stopPropagation(); setCartOpen(true); }} 
+                      style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 6px', borderRadius: 6, transition: 'background 0.15s' }}
+                      title="View Cart"
+                    >{inCart.qty}</span>
                     <button 
                       className="qty-btn"
                       onClick={(e) => { e.stopPropagation(); addToCart(p); }} 
@@ -542,8 +554,8 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                     <span style={{ fontSize: '0.6rem', fontWeight: 800, color: cs.color, background: cs.bg, padding: '3px 8px', borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'inline-block', marginBottom: 6 }}>
                       {selectedProduct.category || 'General'}
                     </span>
-                    <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, lineHeight: 1.3 }}>
-                      {selectedProduct.name}
+                    <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, lineHeight: 1.3, wordBreak: 'break-word' }}>
+                      {(selectedProduct.name || '').replace(/`/g, '')}
                     </h2>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -641,7 +653,11 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                         <Minus size={14} strokeWidth={2.5} />
                       </button>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit' }}>{inCart.qty}</span>
+                        <span 
+                          onClick={() => { setSelectedProduct(null); setCartOpen(true); }}
+                          style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 8px', borderRadius: 6, transition: 'background 0.15s' }}
+                          title="View Cart"
+                        >{inCart.qty}</span>
                         <span style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>IN CART</span>
                       </div>
                       <button 

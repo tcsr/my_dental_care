@@ -63,7 +63,7 @@ const calculateCategoryForecast = (orders, products, category) => {
   return Math.round(Math.max(forecast, salesArray[n - 1] * 0.9)); // floor at 90% of last month to be realistic
 };
 
-export default function ProSalesSubscreen({ lang, profile }) {
+export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
   const isDoctor = profile?.activeRole === 'doctor';
   const actingClientId = profile?.actingClientId ? parseInt(profile.actingClientId) : null;
 
@@ -2333,7 +2333,12 @@ export default function ProSalesSubscreen({ lang, profile }) {
 
       {/* 5. Analytics Tab */}
       {activeSubTab === 'analytics' && (
-        <SalesAnalytics setActiveSubTab={setActiveSubTab} />
+        <SalesAnalytics 
+          setActiveSubTab={setActiveSubTab} 
+          setOrderDispatchFilter={setOrderDispatchFilter}
+          setOrderCurrentPage={setOrderCurrentPage}
+          onNavigate={onNavigate}
+        />
       )}
 
       {/* Printable Tax Invoice Modal */}
