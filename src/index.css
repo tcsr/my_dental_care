@@ -545,6 +545,30 @@ button {
   box-shadow: 0 0 0 3px hsl(var(--primary) / 6%);
 }
 
+.form-select-sm {
+  background: hsl(var(--bg-card));
+  border: 1px solid hsl(var(--border-color));
+  color: hsl(var(--text-primary));
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 0.8rem;
+  padding: 8px 12px;
+  border-radius: 10px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.form-select-sm:hover {
+  border-color: #0ea5e9;
+}
+
+.form-select-sm:focus {
+  border-color: #0ea5e9;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
 /* Tabs System */
 .tab-group {
   display: flex;

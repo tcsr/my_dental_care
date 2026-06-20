@@ -14,43 +14,6 @@ const CAT = {
 };
 const DEFAULT_CAT = { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', icon: '📦' };
 
-const FALLBACK_IMAGES = {
-  Implants: [
-    'https://images.unsplash.com/photo-1606811971618-4486d14f3f99?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80'
-  ],
-  Instruments: [
-    'https://images.unsplash.com/photo-1512223792601-592a9809eed4?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80'
-  ],
-  Materials: [
-    'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1612115539055-fa377042c16e?auto=format&fit=crop&w=600&q=80'
-  ],
-  PPE: [
-    'https://images.unsplash.com/photo-1584515901367-f1c27b744afe?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1584483766114-2ece65485222?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?auto=format&fit=crop&w=600&q=80'
-  ],
-  Equipment: [
-    'https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1551076805-e18690237571?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=600&q=80'
-  ],
-  Consumables: [
-    'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1603398938378-e54eab446dde?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=600&q=80'
-  ],
-  General: [
-    'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80'
-  ]
-};
 
 const splitImageUrls = (imageUrlStr) => {
   if (!imageUrlStr) return [];
@@ -70,11 +33,23 @@ const splitImageUrls = (imageUrlStr) => {
   return result;
 };
 
+const getCategoryKey = (cat) => {
+  if (!cat) return 'General';
+  const c = cat.toLowerCase();
+  if (c.includes('implant')) return 'Implants';
+  if (c.includes('instrument') || c.includes('tool')) return 'Instruments';
+  if (c.includes('material') || c.includes('crown') || c.includes('bridge') || c.includes('abutment')) return 'Materials';
+  if (c.includes('ppe')) return 'PPE';
+  if (c.includes('equipment')) return 'Equipment';
+  if (c.includes('consumable')) return 'Consumables';
+  return 'General';
+};
+
 const getProductImages = (product) => {
   if (product && product.image_url && product.image_url.trim()) {
     return splitImageUrls(product.image_url);
   }
-  return FALLBACK_IMAGES[product.category] || FALLBACK_IMAGES.General;
+  return []; // No uploaded image — return empty, show placeholder
 };
 
 export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPlaced, onLoginRequired }) {
@@ -257,6 +232,7 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
             const inCart = cart[p.id];
             const outOfStock = p.stock_qty === null || p.stock_qty === undefined || p.stock_qty <= 0;
             const lowStock = !outOfStock && p.stock_qty <= 5;
+            const images = getProductImages(p);
             return (
               <div 
                 key={p.id} 
@@ -282,16 +258,20 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                     : '0 2px 8px rgba(15,23,42,0.04)';
                 }}
               >
-                {/* Decorative icon bg */}
-                <div style={{ position: 'absolute', top: -10, right: -10, width: 52, height: 52, borderRadius: '50%', background: cs.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
-                  {cs.icon}
+                {/* Product Image Thumbnail */}
+                <div style={{ width: '100%', height: 110, borderRadius: 12, overflow: 'hidden', background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {images && images.length > 0 ? (
+                    <img src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                  ) : (
+                    <div style={{ fontSize: '2.5rem', color: cs.color }}>{cs.icon}</div>
+                  )}
                 </div>
 
                 <span style={{ fontSize: '0.55rem', fontWeight: 800, color: cs.color, background: cs.bg, padding: '2px 7px', borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.06em', alignSelf: 'flex-start' }}>
                   {p.category || 'General'}
                 </span>
 
-                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1.3, paddingRight: 28 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1.3 }}>
                   {p.name}
                 </div>
 
@@ -456,13 +436,21 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
             <div style={{ position: 'relative', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', borderRadius: 24, width: '100%', maxWidth: 440, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 64px rgba(15, 23, 42, 0.25)', animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)', zIndex: 1 }}>
               
               {/* Image Carousel */}
-              <div style={{ position: 'relative', width: '100%', height: 260, background: 'hsl(var(--bg-dark))', overflow: 'hidden' }}>
-                <img 
-                  src={images[carouselIndex]} 
-                  alt={selectedProduct.name} 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'all 0.3s ease' }} 
-                />
-                
+              <div style={{ position: 'relative', width: '100%', height: 260, background: 'hsl(var(--bg-dark))', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {images.length > 0 ? (
+                  <img 
+                    src={images[carouselIndex]} 
+                    alt={selectedProduct.name} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'all 0.3s ease' }} 
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, opacity: 0.45 }}>
+                    <div style={{ fontSize: '4rem' }}>{cs.icon}</div>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'hsl(var(--text-muted))', fontFamily: 'Outfit' }}>No images uploaded</span>
+                  </div>
+                )}
+
                 {/* Close Button overlay */}
                 <button 
                   className="modal-close-btn dark-overlay"
@@ -477,7 +465,7 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                   <X size={15} strokeWidth={2.5} />
                 </button>
 
-                {/* Left/Right buttons */}
+                {/* Left/Right nav buttons — only when multiple images exist */}
                 {images.length > 1 && (
                   <>
                     <button 
@@ -555,6 +543,47 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                       Tracked by Serial
                     </span>
                   )}
+                </div>
+
+                {/* B2C Product Details Grid */}
+                <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: 12 }}>
+                  <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px 0' }}>Product Details</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: 'hsl(var(--bg-dark))', padding: 12, borderRadius: 12, border: '1px solid hsl(var(--border-color))' }}>
+                    <div>
+                      <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Stock Qty</div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981', marginTop: 2 }}>
+                        {outOfStock ? '0 (Out)' : `${selectedProduct.stock_qty} units`}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Availability</div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981', marginTop: 2 }}>
+                        {outOfStock ? 'Out of Stock' : lowStock ? `Low — ${selectedProduct.stock_qty} left` : '✅ Available'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Category</div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: cs.color, marginTop: 2 }}>{selectedProduct.category || 'General'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Listing Status</div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: selectedProduct.active === false ? '#ef4444' : '#10b981', marginTop: 2 }}>
+                        {selectedProduct.active === false ? 'Inactive ❌' : 'Active ✅'}
+                      </div>
+                    </div>
+                    {selectedProduct.sku && (
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>SKU / Product Code</div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2, fontFamily: 'monospace' }}>{selectedProduct.sku}</div>
+                      </div>
+                    )}
+                    {selectedProduct.unit && (
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Unit</div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2 }}>per {selectedProduct.unit}</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Description */}
