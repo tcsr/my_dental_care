@@ -849,7 +849,7 @@ export default function ProInventorySubscreen({ lang }) {
                     )}
 
                     {/* Visual Barcode Simulator */}
-                    <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: 'hsl(var(--border-color) / 5%)', padding: '8px', borderRadius: '8px' }}>
+                    <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: 'hsl(var(--border-color) / 5%)', padding: '8px', borderRadius: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Barcode size={24} color="hsl(var(--text-primary))" />
                         <div>

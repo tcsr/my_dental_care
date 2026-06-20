@@ -1235,7 +1235,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
                       color: q.status === 'Converted' ? 'hsl(var(--secondary))' : 'hsl(var(--primary))'
                     }}>{q.status}</span>
                   </div>
-                  <div style={{ marginTop: '8px', fontSize: '0.72rem', color: 'hsl(var(--text-muted))', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ marginTop: 'auto', paddingTop: '8px', fontSize: '0.72rem', color: 'hsl(var(--text-muted))', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       Qty: {q.qty}x {product.sku} ({product.name})
                       <br />
@@ -1612,7 +1612,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
                           </div>
 
                           {/* Credit limit numerical tracking */}
-                          <div style={{ marginTop: '8px', borderTop: '1px dotted hsl(var(--border-color))', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem', color: 'hsl(var(--text-muted))' }}>
+                          <div style={{ marginTop: 'auto', borderTop: '1px dotted hsl(var(--border-color))', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem', color: 'hsl(var(--text-muted))' }}>
                             <span>Outstanding: <strong style={{ color: 'hsl(var(--text-primary))' }}>₹{outstanding.toLocaleString('en-IN')}</strong></span>
                             <span>Limit: <strong>₹{limit.toLocaleString('en-IN')}</strong></span>
                           </div>

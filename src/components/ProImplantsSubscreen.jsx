@@ -354,7 +354,7 @@ export default function ProImplantsSubscreen({ lang, profile }) {
                 </div>
 
                 {/* Progress Visualizer - Sleek Medical Timeline */}
-                <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+                <div style={{ marginTop: 'auto', paddingTop: '12px', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
                     
                     {/* Background Progress Line */}
