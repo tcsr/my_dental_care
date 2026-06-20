@@ -84,7 +84,10 @@ export default function LoginScreen({ onLogin }) {
       setScreen('pending');
     } catch (err) {
       console.error('Register error:', err);
-      const msg = err?.message || err?.error_description || err?.details || err?.hint || (typeof err === 'string' ? err : null) || 'Registration failed. Check console for details.';
+      const msg = err?.message
+        || err?.error_description
+        || (err && JSON.stringify(err, Object.getOwnPropertyNames(err)))
+        || 'Registration failed.';
       setError(msg);
     } finally {
       setLoading(false);
