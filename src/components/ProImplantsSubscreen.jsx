@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import { Trash2, Edit3, X, Activity, Plus, Folder, Wrench, Cpu, RotateCcw } from 'lucide-react';
+import PremiumSelect from './ui/PremiumSelect';
 import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
 
@@ -234,7 +235,7 @@ export default function ProImplantsSubscreen({ lang, profile }) {
           <div style={{ display: 'flex', gap: '8px' }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>{t('attendingDoctor', lang)}</label>
-              <select 
+              <PremiumSelect 
                 value={selectedDoctorId} 
                 onChange={(e) => setSelectedDoctorId(e.target.value)}
                 style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
@@ -243,11 +244,11 @@ export default function ProImplantsSubscreen({ lang, profile }) {
                 {clients.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
-              </select>
+              </PremiumSelect>
             </div>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>{t('implantModel', lang)}</label>
-              <select 
+              <PremiumSelect 
                 value={selectedProductId} 
                 onChange={(e) => setSelectedProductId(e.target.value)}
                 style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
@@ -256,7 +257,7 @@ export default function ProImplantsSubscreen({ lang, profile }) {
                 {products.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
-              </select>
+              </PremiumSelect>
             </div>
           </div>
 
@@ -463,7 +464,7 @@ export default function ProImplantsSubscreen({ lang, profile }) {
                 <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px', color: 'hsl(var(--text-dim))' }}>
                   Link to Patient Case
                 </label>
-                <select
+                <PremiumSelect
                   value={associatedCaseId}
                   onChange={(e) => {
                     setAssociatedCaseId(e.target.value);
@@ -481,14 +482,14 @@ export default function ProImplantsSubscreen({ lang, profile }) {
                   {cases.map(c => (
                     <option key={c.id} value={c.id}>{c.patientName} (Tooth #{c.toothNumber})</option>
                   ))}
-                </select>
+                </PremiumSelect>
               </div>
 
               <div>
                 <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px', color: 'hsl(var(--text-dim))' }}>
                   1. Select Fixture (Bone Anchor)
                 </label>
-                <select
+                <PremiumSelect
                   value={selectedFixture}
                   onChange={(e) => {
                     setSelectedFixture(e.target.value);
@@ -501,14 +502,14 @@ export default function ProImplantsSubscreen({ lang, profile }) {
                   <option value="narrow">Narrow Body (3.3mm Platform)</option>
                   <option value="std">Tapered Standard (4.0mm Platform)</option>
                   <option value="wide">Wide Platform (5.0mm Platform)</option>
-                </select>
+                </PremiumSelect>
               </div>
 
               <div>
                 <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px', color: 'hsl(var(--text-dim))' }}>
                   2. Select Abutment (Connector Post)
                 </label>
-                <select
+                <PremiumSelect
                   value={selectedAbutment}
                   onChange={(e) => {
                     setSelectedAbutment(e.target.value);
@@ -522,14 +523,14 @@ export default function ProImplantsSubscreen({ lang, profile }) {
                   <option value="std">Standard Straight (4.0mm Connection)</option>
                   <option value="wide">Wide Healing Cap (5.0mm Connection)</option>
                   <option value="angled">Angled Multi-Unit (4.0mm Connection)</option>
-                </select>
+                </PremiumSelect>
               </div>
 
               <div>
                 <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px', color: 'hsl(var(--text-dim))' }}>
                   3. Select Crown (Prosthetic Tooth)
                 </label>
-                <select
+                <PremiumSelect
                   value={selectedCrown}
                   onChange={(e) => {
                     setSelectedCrown(e.target.value);
@@ -542,7 +543,7 @@ export default function ProImplantsSubscreen({ lang, profile }) {
                   <option value="anterior">Narrow Anterior (3.3mm Fit)</option>
                   <option value="bicuspid">Cement-Retained Bicuspid (4.0mm Fit)</option>
                   <option value="molar">Screw-Retained Molar (5.0mm Fit)</option>
-                </select>
+                </PremiumSelect>
               </div>
 
               {/* Compatibility Check */}
@@ -954,23 +955,23 @@ export default function ProImplantsSubscreen({ lang, profile }) {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('attendingDoctor', lang)}</label>
-                  <select value={editDoctorId} onChange={(e) => setEditDoctorId(e.target.value)} required
+                  <PremiumSelect value={editDoctorId} onChange={(e) => setEditDoctorId(e.target.value)} required
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     <option value="">-- {t('attendingDoctor', lang)} --</option>
                     {clients.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
-                  </select>
+                  </PremiumSelect>
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('implantModel', lang)}</label>
-                  <select value={editProductId} onChange={(e) => setEditProductId(e.target.value)} required
+                  <PremiumSelect value={editProductId} onChange={(e) => setEditProductId(e.target.value)} required
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     <option value="">-- {t('implantModel', lang)} --</option>
                     {products.map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
-                  </select>
+                  </PremiumSelect>
                 </div>
               </div>
 

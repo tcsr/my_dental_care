@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import { Play, X, Film, Trash2, Edit3, Plus, ExternalLink, ShoppingBag, Activity, Package, MessageSquare, Settings, ChevronDown, BookOpen, Link } from 'lucide-react';
+import PremiumSelect from './ui/PremiumSelect';
 import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
 
@@ -196,7 +197,7 @@ export default function ProGuidesSubscreen({ lang }) {
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('category', lang)}</label>
-                <select 
+                <PremiumSelect 
                   value={newTag} 
                   onChange={(e) => setNewTag(e.target.value)}
                   style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
@@ -206,7 +207,7 @@ export default function ProGuidesSubscreen({ lang }) {
                   <option value="Abutment">Abutment</option>
                   <option value="Crown">Crown</option>
                   <option value="System Guide">Portal Guide</option>
-                </select>
+                </PremiumSelect>
               </div>
             </div>
 
@@ -482,14 +483,14 @@ export default function ProGuidesSubscreen({ lang }) {
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.72rem', fontWeight: 'bold' }}>{t('category', lang)}</label>
-                  <select value={editTag} onChange={(e) => setEditTag(e.target.value)}
+                  <PremiumSelect value={editTag} onChange={(e) => setEditTag(e.target.value)}
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     <option value="Implant">Implant</option>
                     <option value="Surgical">Surgical</option>
                     <option value="Abutment">Abutment</option>
                     <option value="Crown">Crown</option>
                     <option value="System Guide">Portal Guide</option>
-                  </select>
+                  </PremiumSelect>
                 </div>
               </div>
 

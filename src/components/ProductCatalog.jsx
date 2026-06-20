@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../utils/supabase';
 import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import PremiumLoader from './ui/PremiumLoader';
+import EmptyStateCard from './EmptyStateCard';
 
 const CATEGORIES = ['All', 'Implants', 'Instruments', 'Materials', 'PPE', 'Equipment', 'Consumables'];
 
@@ -172,10 +174,8 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
   };
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 12 }}>
-      <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid hsl(var(--border-color))', borderTopColor: '#0ea5e9', animation: 'spin 0.8s linear infinite' }} />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <p style={{ fontSize: '0.78rem', color: 'hsl(var(--text-muted))' }}>Loading catalog...</p>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+      <PremiumLoader text="Loading catalog..." />
     </div>
   );
 
@@ -220,11 +220,11 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
 
       {/* Product grid */}
       {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <Package size={44} color="hsl(var(--text-dim))" style={{ margin: '0 auto 14px', display: 'block' }} />
-          <p style={{ fontFamily: 'Outfit', fontWeight: 700, color: 'hsl(var(--text-muted))', marginBottom: 4 }}>No products found</p>
-          <p style={{ fontSize: '0.72rem', color: 'hsl(var(--text-dim))' }}>Try a different search or category</p>
-        </div>
+        <EmptyStateCard 
+          icon={Package} 
+          title="No Products Found" 
+          message="Try a different search or category to find what you're looking for." 
+        />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {filtered.map(p => {

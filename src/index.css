@@ -1247,7 +1247,7 @@ button {
   /* Make buttons smaller on desktop browser and prevent stretching */
   body.is-browser .btn-primary,
   body.is-browser .btn-secondary,
-  body.is-browser main button:not(.tab-btn):not(.sidebar-link):not(.sidebar-header button):not(.app-header button):not(.qty-btn):not(.modal-close-btn):not(.carousel-nav-btn) {
+  body.is-browser main button:not(.tab-btn):not(.sidebar-link):not(.sidebar-header button):not(.app-header button):not(.qty-btn):not(.modal-close-btn):not(.carousel-nav-btn):not(.premium-select-btn) {
     width: auto !important;
     min-width: unset !important;
     max-width: 320px !important;

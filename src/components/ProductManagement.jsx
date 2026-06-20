@@ -3,6 +3,10 @@ import { supabase } from '../utils/supabase';
 import { db } from '../utils/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Edit3, Trash2, Package, Search, X, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, Barcode, Warehouse } from 'lucide-react';
+import PremiumDatePicker from './ui/PremiumDatePicker';
+import PremiumSelect from './ui/PremiumSelect';
+import PremiumLoader from './ui/PremiumLoader';
+import EmptyStateCard from './EmptyStateCard';
 
 const CATEGORIES = ['Implants', 'Instruments', 'Materials', 'PPE', 'Equipment', 'Consumables'];
 const CAT_COLOR = { Implants: '#6366f1', Instruments: '#0ea5e9', Materials: '#10b981', PPE: '#f59e0b', Equipment: '#a855f7', Consumables: '#ec4899' };
@@ -368,15 +372,18 @@ export default function ProductManagement() {
 
       {/* Product list */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'hsl(var(--text-muted))', fontSize: '0.8rem' }}>Loading...</div>
+        <PremiumLoader text="Retrieving products..." />
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <Package size={44} color="hsl(var(--text-dim))" style={{ margin: '0 auto 14px', display: 'block' }} />
-          <p style={{ fontFamily: 'Outfit', fontWeight: 700, color: 'hsl(var(--text-muted))', marginBottom: 6 }}>No products yet</p>
-          <button onClick={openAdd} style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit' }}>
-            Add First Product
-          </button>
-        </div>
+        <EmptyStateCard 
+          icon={Package} 
+          title="No Products Found" 
+          message="There are no products matching your search criteria."
+          action={
+            <button onClick={openAdd} style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit' }}>
+              Add First Product
+            </button>
+          }
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.map(p => {
@@ -562,16 +569,16 @@ export default function ProductManagement() {
                             </div>
                             <div>
                               <label style={{ fontSize: '0.62rem', fontWeight: 800, color: 'hsl(var(--text-muted))', display: 'block', marginBottom: 4 }}>Expiry Date</label>
-                              <input type="date" value={form.batchExpiry} onChange={e => setForm(f => ({ ...f, batchExpiry: e.target.value }))} className="form-input" style={{ ...inputStyle, padding: '8px 12px', fontSize: '0.8rem' }} />
+                              <PremiumDatePicker value={form.batchExpiry} onChange={e => setForm(f => ({ ...f, batchExpiry: e.target.value }))} className="form-input" style={{ ...inputStyle, padding: '8px 12px', fontSize: '0.8rem' }} />
                             </div>
                           </div>
                           <div>
                             <label style={{ fontSize: '0.62rem', fontWeight: 800, color: 'hsl(var(--text-muted))', display: 'block', marginBottom: 4 }}>Warehouse Location</label>
-                            <select value={form.batchLocation} onChange={e => setForm(f => ({ ...f, batchLocation: e.target.value }))} className="form-select" style={{ padding: '8px 12px', fontSize: '0.8rem' }}>
+                            <PremiumSelect value={form.batchLocation} onChange={e => setForm(f => ({ ...f, batchLocation: e.target.value }))} className="form-select" style={{ padding: '8px 12px', fontSize: '0.8rem' }}>
                               {warehousesList.map(w => (
                                 <option key={w.id} value={w.name}>{w.name}</option>
                               ))}
-                            </select>
+                            </PremiumSelect>
                           </div>
                         </div>
                       </div>
@@ -594,12 +601,12 @@ export default function ProductManagement() {
                 )}
 
                 <Field label="Category">
-                  <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="form-select">
+                  <PremiumSelect value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="form-select">
                     {isB2b 
                       ? B2B_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)
                       : categoriesList.map(c => <option key={c} value={c}>{c}</option>)
                     }
-                  </select>
+                  </PremiumSelect>
                 </Field>
 
                 {!isB2b && (

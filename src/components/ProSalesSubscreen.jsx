@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import { supabase } from '../utils/supabase';
 import { Trash2, UserPlus, Edit3, X, ClipboardList, TrendingUp, Landmark, Truck, ShoppingBag, FileText, Users, Download, Camera, Sparkles, Mic, MicOff, Printer, Search, BarChart2 } from 'lucide-react';
+import PremiumSelect from './ui/PremiumSelect';
 import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
 import SalesAnalytics from './SalesAnalytics';
@@ -998,7 +999,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
             <form onSubmit={handlePlaceOrder} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('selectClient', lang)}</label>
-                <select 
+                <PremiumSelect 
                   value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required
                   disabled={isDoctor}
                   style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', cursor: isDoctor ? 'not-allowed' : 'default' }}
@@ -1007,13 +1008,13 @@ export default function ProSalesSubscreen({ lang, profile }) {
                   {clients.map(c => (
                     <option key={c.id} value={c.id}>{c.name} ({c.discountTier} Tier • {c.state || 'Telangana'})</option>
                   ))}
-                </select>
+                </PremiumSelect>
               </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.72rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('selectProduct', lang)}</label>
-                  <select 
+                  <PremiumSelect 
                     value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} required
                     style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
                   >
@@ -1021,7 +1022,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
                     {products.map(p => (
                       <option key={p.id} value={p.id}>{p.sku} ({p.name} - ₹{p.price})</option>
                     ))}
-                  </select>
+                  </PremiumSelect>
                 </div>
 
                 <div style={{ width: '70px' }}>
@@ -1034,14 +1035,14 @@ export default function ProSalesSubscreen({ lang, profile }) {
 
                 <div style={{ width: '90px' }}>
                   <label style={{ fontSize: '0.72rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>GST %</label>
-                  <select 
+                  <PremiumSelect 
                     value={selectedGstRate} onChange={(e) => setSelectedGstRate(parseInt(e.target.value))} required
                     style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
                   >
                     {gstRates.map((rate, idx) => (
                       <option key={idx} value={rate}>{rate}%</option>
                     ))}
-                  </select>
+                  </PremiumSelect>
                 </div>
               </div>
 
@@ -1049,7 +1050,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
               {currentSelectedProduct && currentSelectedProduct.batches && currentSelectedProduct.batches.length > 0 && (
                 <div>
                   <label style={{ fontSize: '0.72rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('selectBatch', lang)}</label>
-                  <select
+                  <PremiumSelect
                     value={selectedBatchNo} onChange={(e) => setSelectedBatchNo(e.target.value)}
                     style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
                   >
@@ -1059,7 +1060,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
                         {b.batchNo} (Qty: {b.stock} left in {b.location})
                       </option>
                     ))}
-                  </select>
+                  </PremiumSelect>
                 </div>
               )}
 
@@ -1134,7 +1135,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
 
               {/* Dropdowns on the Right */}
               <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                <select
+                <PremiumSelect
                   value={orderPaymentFilter}
                   onChange={(e) => { setOrderPaymentFilter(e.target.value); setOrderCurrentPage(1); }}
                   className="form-select-sm"
@@ -1143,8 +1144,8 @@ export default function ProSalesSubscreen({ lang, profile }) {
                   <option value="all">💳 All Payments</option>
                   <option value="Paid">Paid</option>
                   <option value="Unpaid">Unpaid</option>
-                </select>
-                <select
+                </PremiumSelect>
+                <PremiumSelect
                   value={orderDispatchFilter}
                   onChange={(e) => { setOrderDispatchFilter(e.target.value); setOrderCurrentPage(1); }}
                   className="form-select-sm"
@@ -1155,7 +1156,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
                   <option value="Dispatched">Dispatched</option>
                   <option value="Transit">Transit</option>
                   <option value="Delivered">Delivered</option>
-                </select>
+                </PremiumSelect>
               </div>
             </div>
             {filteredOrders.length === 0 ? (
@@ -1325,21 +1326,21 @@ export default function ProSalesSubscreen({ lang, profile }) {
             <form onSubmit={handleCreateQuote} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div>
                 <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('selectClient', lang)}</label>
-                <select value={quoteClientId} onChange={(e) => setQuoteClientId(e.target.value)} required
+                <PremiumSelect value={quoteClientId} onChange={(e) => setQuoteClientId(e.target.value)} required
                   disabled={isDoctor}
                   style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', cursor: isDoctor ? 'not-allowed' : 'default' }}>
                   <option value="">-- Choose Clinic --</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                </PremiumSelect>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Select Product Item:</label>
-                  <select value={quoteProductId} onChange={(e) => setQuoteProductId(e.target.value)} required
+                  <PremiumSelect value={quoteProductId} onChange={(e) => setQuoteProductId(e.target.value)} required
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     <option value="">-- Choose --</option>
                     {products.map(p => <option key={p.id} value={p.id}>{p.sku} ({p.name})</option>)}
-                  </select>
+                  </PremiumSelect>
                 </div>
                 <div style={{ width: '70px' }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Qty:</label>
@@ -1348,12 +1349,12 @@ export default function ProSalesSubscreen({ lang, profile }) {
                 </div>
                 <div style={{ width: '95px' }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>GST %</label>
-                  <select value={quoteGstRate} onChange={(e) => setQuoteGstRate(parseInt(e.target.value))} required
+                  <PremiumSelect value={quoteGstRate} onChange={(e) => setQuoteGstRate(parseInt(e.target.value))} required
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     {gstRates.map((rate, idx) => (
                       <option key={idx} value={rate}>{rate}%</option>
                     ))}
-                  </select>
+                  </PremiumSelect>
                 </div>
               </div>
               <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit' }}>
@@ -1483,24 +1484,24 @@ export default function ProSalesSubscreen({ lang, profile }) {
                 </div>
                 <div style={{ width: '100px' }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('clientType', lang)}</label>
-                  <select value={clientType} onChange={(e) => setClientType(e.target.value)}
+                  <PremiumSelect value={clientType} onChange={(e) => setClientType(e.target.value)}
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     <option value="Doctor">Doctor</option>
                     <option value="Hospital">Hospital</option>
-                  </select>
+                  </PremiumSelect>
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('discountTier', lang)}</label>
-                  <select value={discountTier} onChange={(e) => setDiscountTier(e.target.value)}
+                  <PremiumSelect value={discountTier} onChange={(e) => setDiscountTier(e.target.value)}
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     <option value="Standard">Standard (0%)</option>
                     <option value="Gold">Gold (10%)</option>
                     <option value="Platinum">Platinum (15%)</option>
                     <option value="VIP">VIP (20%)</option>
-                  </select>
+                  </PremiumSelect>
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('creditLimit', lang)} (₹):</label>
@@ -1531,12 +1532,12 @@ export default function ProSalesSubscreen({ lang, profile }) {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('clinicState', lang)}</label>
-                  <select value={clientState} onChange={(e) => setClientState(e.target.value)}
+                  <PremiumSelect value={clientState} onChange={(e) => setClientState(e.target.value)}
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     {allStatesUnique.map((stateName, idx) => (
                       <option key={idx} value={stateName}>{stateName}</option>
                     ))}
-                  </select>
+                  </PremiumSelect>
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '6px' }}>Logo / Photo</label>
@@ -1639,7 +1640,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: '80px' }}>
                   <label style={{ fontSize: '0.58rem', fontWeight: 'bold', display: 'block', marginBottom: '2px', color: 'hsl(var(--text-muted))' }}>Type</label>
-                  <select
+                  <PremiumSelect
                     value={clientFilterType}
                     onChange={(e) => {
                       setClientFilterType(e.target.value);
@@ -1650,12 +1651,12 @@ export default function ProSalesSubscreen({ lang, profile }) {
                     <option value="All">All Types</option>
                     <option value="Doctor">Doctor</option>
                     <option value="Hospital">Hospital</option>
-                  </select>
+                  </PremiumSelect>
                 </div>
 
                 <div style={{ flex: 1, minWidth: '80px' }}>
                   <label style={{ fontSize: '0.58rem', fontWeight: 'bold', display: 'block', marginBottom: '2px', color: 'hsl(var(--text-muted))' }}>Tier</label>
-                  <select
+                  <PremiumSelect
                     value={clientFilterTier}
                     onChange={(e) => {
                       setClientFilterTier(e.target.value);
@@ -1668,12 +1669,12 @@ export default function ProSalesSubscreen({ lang, profile }) {
                     <option value="Gold">Gold</option>
                     <option value="Platinum">Platinum</option>
                     <option value="VIP">VIP</option>
-                  </select>
+                  </PremiumSelect>
                 </div>
 
                 <div style={{ flex: 1, minWidth: '80px' }}>
                   <label style={{ fontSize: '0.58rem', fontWeight: 'bold', display: 'block', marginBottom: '2px', color: 'hsl(var(--text-muted))' }}>State</label>
-                  <select
+                  <PremiumSelect
                     value={clientFilterState}
                     onChange={(e) => {
                       setClientFilterState(e.target.value);
@@ -1685,7 +1686,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
                     {allStatesUnique.map((stateName, idx) => (
                       <option key={idx} value={stateName}>{stateName}</option>
                     ))}
-                  </select>
+                  </PremiumSelect>
                 </div>
               </div>
             </div>
@@ -2660,21 +2661,21 @@ export default function ProSalesSubscreen({ lang, profile }) {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('clientType', lang)}</label>
-                  <select value={editClientType} onChange={(e) => setEditClientType(e.target.value)}
+                  <PremiumSelect value={editClientType} onChange={(e) => setEditClientType(e.target.value)}
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     <option value="Doctor">Doctor</option>
                     <option value="Hospital">Hospital</option>
-                  </select>
+                  </PremiumSelect>
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('discountTier', lang)}</label>
-                  <select value={editDiscountTier} onChange={(e) => setEditDiscountTier(e.target.value)}
+                  <PremiumSelect value={editDiscountTier} onChange={(e) => setEditDiscountTier(e.target.value)}
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     <option value="Standard">Standard (0%)</option>
                     <option value="Gold">Gold (10%)</option>
                     <option value="Platinum">Platinum (15%)</option>
                     <option value="VIP">VIP (20%)</option>
-                  </select>
+                  </PremiumSelect>
                 </div>
               </div>
 
@@ -2712,7 +2713,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
 
               <div style={{ marginBottom: '10px' }}>
                 <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('clinicState', lang)}</label>
-                <select value={editClientState} onChange={(e) => setEditClientState(e.target.value)}
+                <PremiumSelect value={editClientState} onChange={(e) => setEditClientState(e.target.value)}
                   style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                   {(() => {
                     const ALL_INDIAN_STATES_AND_UTS = ["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"];
@@ -2721,7 +2722,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
                       <option key={idx} value={stateName}>{stateName}</option>
                     ));
                   })()}
-                </select>
+                </PremiumSelect>
               </div>
 
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
@@ -2921,14 +2922,14 @@ function PaymentGatewayModal({ order, amount, onClose, onSuccess }) {
               {method === 'netbanking' && (
                 <div>
                   <label style={{ fontSize: '0.58rem', fontWeight: 'bold', display: 'block', marginBottom: '4px', color: 'hsl(var(--text-muted))' }}>CHOOSE BANK</label>
-                  <select value={selectedBank} onChange={(e) => setSelectedBank(e.target.value)}
+                  <PremiumSelect value={selectedBank} onChange={(e) => setSelectedBank(e.target.value)}
                     style={{ width: '100%', padding: '10px', fontSize: '0.75rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', outline: 'none' }}>
                     <option value="HDFC Bank">HDFC Bank</option>
                     <option value="ICICI Bank">ICICI Bank</option>
                     <option value="State Bank of India">State Bank of India (SBI)</option>
                     <option value="Axis Bank">Axis Bank</option>
                     <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
-                  </select>
+                  </PremiumSelect>
                 </div>
               )}
 

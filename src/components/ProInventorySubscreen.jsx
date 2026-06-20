@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import { AlertTriangle, X, Barcode, ClipboardList, Warehouse, Package, Truck, Camera, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import PremiumDatePicker from './ui/PremiumDatePicker';
+import PremiumSelect from './ui/PremiumSelect';
 import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
 
@@ -889,11 +891,11 @@ export default function ProInventorySubscreen({ lang }) {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Select SKU to Buy:</label>
-                  <select value={poSku} onChange={(e) => setPoSku(e.target.value)} required
+                  <PremiumSelect value={poSku} onChange={(e) => setPoSku(e.target.value)} required
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     <option value="">-- Choose --</option>
                     {products.map(p => <option key={p.id} value={p.sku}>{p.sku} ({p.name})</option>)}
-                  </select>
+                  </PremiumSelect>
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Order Quantity:</label>
@@ -909,7 +911,7 @@ export default function ProInventorySubscreen({ lang }) {
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('expectedDelivery', lang)}</label>
-                  <input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)}
+                  <PremiumDatePicker value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)}
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
                 </div>
               </div>
@@ -1029,20 +1031,20 @@ export default function ProInventorySubscreen({ lang }) {
             <form onSubmit={handleWarehouseTransfer} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div>
                 <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Select Product:</label>
-                <select value={transferProdId} onChange={(e) => {
+                <PremiumSelect value={transferProdId} onChange={(e) => {
                   setTransferProdId(e.target.value);
                   setSourceBatchNo('');
                 }} required
                   style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                   <option value="">-- Choose Product --</option>
                   {products.map(p => <option key={p.id} value={p.id}>{p.sku} ({p.name})</option>)}
-                </select>
+                </PremiumSelect>
               </div>
 
               {transferProdId && (
                 <div>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Select Source Batch / Warehouse:</label>
-                  <select value={sourceBatchNo} onChange={(e) => setSourceBatchNo(e.target.value)} required
+                  <PremiumSelect value={sourceBatchNo} onChange={(e) => setSourceBatchNo(e.target.value)} required
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     <option value="">-- Choose Batch --</option>
                     {(products.find(p => p.id === parseInt(transferProdId))?.batches || []).map(b => (
@@ -1050,20 +1052,20 @@ export default function ProInventorySubscreen({ lang }) {
                         Batch: {b.batchNo} at {b.location} (Stock: {b.stock})
                       </option>
                     ))}
-                  </select>
+                  </PremiumSelect>
                 </div>
               )}
 
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Destination Warehouse:</label>
-                  <select value={destWarehouseName} onChange={(e) => setDestWarehouseName(e.target.value)} required
+                  <PremiumSelect value={destWarehouseName} onChange={(e) => setDestWarehouseName(e.target.value)} required
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                     <option value="">-- Choose Destination --</option>
                     {warehousesList.map(w => (
                       <option key={w.id} value={w.name}>{w.name}</option>
                     ))}
-                  </select>
+                  </PremiumSelect>
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Quantity to Transfer:</label>
@@ -1161,13 +1163,13 @@ export default function ProInventorySubscreen({ lang }) {
               </div>
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Adjustment Reason:</label>
-                <select value={reconcileReason} onChange={(e) => setReconcileReason(e.target.value)}
+                <PremiumSelect value={reconcileReason} onChange={(e) => setReconcileReason(e.target.value)}
                   style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                   <option value="Physical Audit Discrepancy">Physical Audit Discrepancy</option>
                   <option value="Loss / Damaged">Loss / Damaged</option>
                   <option value="Bonus / Vendor Correction">Bonus / Vendor Correction</option>
                   <option value="Expired Product Disposal">Expired Product Disposal</option>
-                </select>
+                </PremiumSelect>
               </div>
               <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: '6px' }}>
                 Confirm Stock Adjustment
@@ -1225,18 +1227,18 @@ export default function ProInventorySubscreen({ lang }) {
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Expiry Date:</label>
-                  <input type="date" value={newBatchExpiry} onChange={(e) => setNewBatchExpiry(e.target.value)}
+                  <PremiumDatePicker value={newBatchExpiry} onChange={(e) => setNewBatchExpiry(e.target.value)}
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
                 </div>
               </div>
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Warehouse Location:</label>
-                <select value={newBatchLocation} onChange={(e) => setNewBatchLocation(e.target.value)}
+                <PremiumSelect value={newBatchLocation} onChange={(e) => setNewBatchLocation(e.target.value)}
                   style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                   {warehousesList.map(w => (
                     <option key={w.id} value={w.name}>{w.name}</option>
                   ))}
-                </select>
+                </PremiumSelect>
               </div>
               <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: '6px' }}>
                 Add Batch to Inventory
@@ -1272,20 +1274,20 @@ export default function ProInventorySubscreen({ lang }) {
 
             <div>
               <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Choose Settlement Account:</label>
-              <select style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+              <PremiumSelect style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                 <option value="corporate-axis">HDFC Bank Corporate A/c - *9908 (INR)</option>
                 <option value="corporate-sbi">SBI Cash Credit A/c - *4451 (INR)</option>
                 <option value="nodal-icici">ICICI Nodal Escrow A/c - *2289 (INR)</option>
-              </select>
+              </PremiumSelect>
             </div>
 
             <div>
               <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Payment Method:</label>
-              <select style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+              <PremiumSelect style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
                 <option value="neft">NEFT / RTGS (Immediate B2B Settlement)</option>
                 <option value="imps">IMPS Instant Corporate Payout</option>
                 <option value="upi">UPI ID / Corporate QR Code</option>
-              </select>
+              </PremiumSelect>
             </div>
 
             <button

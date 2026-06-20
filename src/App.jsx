@@ -13,6 +13,7 @@ import ProProfileSettingsSubscreen from './components/ProProfileSettingsSubscree
 import AiAssistant from './components/AiAssistant';
 import LoginScreen from './components/LoginScreen';
 import AdminPanel from './components/AdminPanel';
+import PremiumSelect from './components/ui/PremiumSelect';
 import DashboardScreen from './components/DashboardScreen';
 import ProductCatalog from './components/ProductCatalog';
 import DoctorOrders from './components/DoctorOrders';
@@ -265,9 +266,10 @@ export default function App() {
     }
   };
 
-  const handleLangChange = (newLang) => {
+  const handleLangChange = (e) => {
+    const newLang = e && e.target ? e.target.value : e;
     setLang(newLang);
-    localStorage.setItem('dentalLang', newLang);
+    localStorage.setItem('dental_lang', newLang);
   };
 
   const isAdmin = authUser?.role === 'admin';
@@ -382,7 +384,7 @@ export default function App() {
             </div>
           ) : (
             <div
-              onClick={() => { setShowLoginModal(true); setIsSidebarOpen(false); }}
+              onClick={() => { setIsSidebarOpen(false); setTimeout(() => setShowLoginModal(true), 150); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 marginTop: '14px', padding: '10px 12px', flexShrink: 0,
@@ -420,7 +422,7 @@ export default function App() {
                     <span>Product Catalog</span>
                     {cartCount > 0 && <span style={{ marginLeft: 'auto', background: '#0ea5e9', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: 10, minWidth: 18, textAlign: 'center' }}>{cartCount}</span>}
                   </button>
-                  <button className="sidebar-link" onClick={() => { setShowLoginModal(true); setIsSidebarOpen(false); }} style={{ color: 'hsl(var(--primary))' }}>
+                  <button className="sidebar-link" onClick={() => { setIsSidebarOpen(false); setTimeout(() => setShowLoginModal(true), 150); }} style={{ color: 'hsl(var(--primary))' }}>
                     <LogIn size={16} /><span>Log In / Register</span>
                   </button>
                 </>
@@ -496,24 +498,35 @@ export default function App() {
                   setIsLoggedIn(false);
                   setAuthUser(null);
                   setIsSidebarOpen(false);
+                  setActiveTab('catalog');
                 }}
                 style={{
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                  padding: '9px 8px', borderRadius: '10px',
-                  border: '1px solid hsl(var(--border-color))',
-                  background: 'transparent', color: 'hsl(var(--text-muted))',
-                  fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', fontFamily: 'Outfit',
-                  transition: 'all 0.2s'
+                  padding: '10px 8px', borderRadius: '12px',
+                  border: '1px solid hsla(0, 84%, 60%, 0.2)',
+                  background: 'linear-gradient(135deg, hsla(0, 84%, 60%, 0.05) 0%, hsla(0, 84%, 60%, 0.01) 100%)',
+                  color: 'hsl(348, 83%, 47%)',
+                  fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', fontFamily: 'Outfit',
+                  boxShadow: '0 2px 8px rgba(225, 29, 72, 0.05)',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'hsl(var(--bg-dark))'; e.currentTarget.style.color = 'hsl(var(--text-primary))'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'hsl(var(--text-muted))'; }}
+                onMouseEnter={(e) => { 
+                  e.currentTarget.style.background = 'linear-gradient(135deg, hsla(0, 84%, 60%, 0.1) 0%, hsla(0, 84%, 60%, 0.05) 100%)'; 
+                  e.currentTarget.style.borderColor = 'hsla(0, 84%, 60%, 0.4)'; 
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(225, 29, 72, 0.15)';
+                }}
+                onMouseLeave={(e) => { 
+                  e.currentTarget.style.background = 'linear-gradient(135deg, hsla(0, 84%, 60%, 0.05) 0%, hsla(0, 84%, 60%, 0.01) 100%)'; 
+                  e.currentTarget.style.borderColor = 'hsla(0, 84%, 60%, 0.2)'; 
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(225, 29, 72, 0.05)';
+                }}
                 title="Log Out / Switch Portal"
               >
                 <LogOut size={13} /> Log Out
               </button>
             ) : (
               <button
-                onClick={() => { setShowLoginModal(true); setIsSidebarOpen(false); }}
+                onClick={() => { setIsSidebarOpen(false); setTimeout(() => setShowLoginModal(true), 150); }}
                 style={{
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                   padding: '9px 8px', borderRadius: '10px',
@@ -580,38 +593,38 @@ export default function App() {
             <MessageSquare size={14} />
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'hsl(var(--bg-dark))', padding: '4px 8px', borderRadius: '8px', border: '1px solid hsl(var(--border-color))' }}>
-            <Globe size={14} color="hsl(var(--text-muted))" />
-            <select 
+          <div style={{ width: 140 }}>
+            <PremiumSelect 
               value={lang} 
-              onChange={(e) => handleLangChange(e.target.value)}
-              style={{
-                background: 'transparent', border: 'none', outline: 'none', fontSize: '0.68rem', fontWeight: 'bold',
-                color: 'hsl(var(--text-primary))', cursor: 'pointer', fontFamily: 'Inter'
-              }}
-            >
-              <option value="en">EN</option>
-              <option value="te">తెలుగు</option>
-              <option value="hi">हिंदी</option>
-              <option value="ta">தமிழ்</option>
-            </select>
+              onChange={handleLangChange}
+              options={[
+                { label: 'English', value: 'en' },
+                { label: 'Telugu', value: 'te' },
+                { label: 'Hindi', value: 'hi' },
+                { label: 'Tamil', value: 'ta' }
+              ]}
+              icon={<Globe size={14} />}
+              style={{ fontSize: '0.7rem' }}
+            />
           </div>
 
-          <button 
-            onClick={() => setActiveTab('profile')} 
-            style={{ 
-              background: 'hsl(var(--bg-dark))', border: activeTab === 'profile' ? '1.5px solid hsl(var(--primary))' : '1px solid hsl(var(--border-color))', 
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s'
-            }}
-            title="Profile & Settings"
-          >
-            {activeProfileImage ? (
-              <img src={activeProfileImage} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-            ) : (
-              <User size={14} color="hsl(var(--text-primary))" />
-            )}
-          </button>
+          {isLoggedIn && (
+            <button 
+              onClick={() => setActiveTab('profile')} 
+              style={{ 
+                background: 'hsl(var(--bg-dark))', border: activeTab === 'profile' ? '1.5px solid hsl(var(--primary))' : '1px solid hsl(var(--border-color))', 
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s'
+              }}
+              title="Profile & Settings"
+            >
+              {activeProfileImage ? (
+                <img src={activeProfileImage} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+              ) : (
+                <User size={14} color="hsl(var(--text-primary))" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -628,7 +641,7 @@ export default function App() {
               {cartCount > 0 && <span style={{ position: 'absolute', top: 4, right: '50%', transform: 'translateX(10px)', background: '#ef4444', color: '#fff', fontSize: '0.5rem', fontWeight: 800, padding: '1px 4px', borderRadius: 8, minWidth: 14, textAlign: 'center' }}>{cartCount}</span>}
               <span>Catalog</span>
             </button>
-            <button className="nav-item" onClick={() => setShowLoginModal(true)}>
+            <button className="nav-item" onClick={() => { setIsSidebarOpen(false); setTimeout(() => setShowLoginModal(true), 150); }}>
               <User /><span>Log In</span>
             </button>
           </>

@@ -6,6 +6,7 @@ import {
   User, Mail, Phone, Briefcase, Building, RefreshCw, 
   Download, Upload, Check, Camera, Shield, Database, Trash2, MapPin 
 } from 'lucide-react';
+import PremiumSelect from './ui/PremiumSelect';
 
 export default function ProProfileSettingsSubscreen() {
   // Read all user profile keys from IndexedDB
@@ -544,7 +545,7 @@ export default function ProProfileSettingsSubscreen() {
               <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
                 Access Role (RBAC Settings)
               </label>
-              <select 
+              <PremiumSelect 
                 value={activeRole} 
                 onChange={(e) => {
                   setActiveRole(e.target.value);
@@ -564,7 +565,7 @@ export default function ProProfileSettingsSubscreen() {
               >
                 <option value="rep">B2B Sales Representative (Full Console Access)</option>
                 <option value="doctor">Doctor / Clinic Owner (Direct Clinic Portal)</option>
-              </select>
+              </PremiumSelect>
             </div>
 
             {activeRole === 'doctor' && (
@@ -572,7 +573,7 @@ export default function ProProfileSettingsSubscreen() {
                 <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
                   Choose Active Doctor Clinic Identity
                 </label>
-                <select 
+                <PremiumSelect 
                   value={actingClientId} 
                   onChange={(e) => handleClientSelectForRole(e.target.value)}
                   style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', outline: 'none', fontWeight: 'bold' }}
@@ -581,7 +582,7 @@ export default function ProProfileSettingsSubscreen() {
                   {clientsList.map(c => (
                     <option key={c.id} value={c.id}>{c.name} ({c.discountTier} tier)</option>
                   ))}
-                </select>
+                </PremiumSelect>
               </div>
             )}
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import { Play, RefreshCw, Trash2, CheckCircle, Smartphone, Mail, AlertCircle, Bell, X, Send, Plus, Volume2, Clock } from 'lucide-react';
+import PremiumSelect from './ui/PremiumSelect';
 import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
 
@@ -399,7 +400,7 @@ export default function ProRemindersSubscreen({ lang }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-muted))', display: 'block', marginBottom: '4px' }}>Doctor / Clinic</label>
-                  <select
+                  <PremiumSelect
                     value={customClient}
                     onChange={e => setCustomClient(e.target.value)}
                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'hsl(var(--bg-dark))', color: 'hsl(var(--text-primary))', fontSize: '0.78rem', height: '38px' }}
@@ -408,11 +409,11 @@ export default function ProRemindersSubscreen({ lang }) {
                     {clients.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
-                  </select>
+                  </PremiumSelect>
                 </div>
                 <div>
                   <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-muted))', display: 'block', marginBottom: '4px' }}>Priority Level</label>
-                  <select
+                  <PremiumSelect
                     value={customPriority}
                     onChange={e => setCustomPriority(e.target.value)}
                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'hsl(var(--bg-dark))', color: 'hsl(var(--text-primary))', fontSize: '0.78rem', height: '38px' }}
@@ -420,7 +421,7 @@ export default function ProRemindersSubscreen({ lang }) {
                     <option value="High">🔴 High Priority</option>
                     <option value="Medium">🟡 Medium Priority</option>
                     <option value="Low">🔵 Low Priority</option>
-                  </select>
+                  </PremiumSelect>
                 </div>
               </div>
 

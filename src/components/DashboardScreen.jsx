@@ -4,6 +4,8 @@ import {
   TrendingUp, Users, AlertTriangle,
   Clock, Truck, Package
 } from 'lucide-react';
+import PremiumLoader from './ui/PremiumLoader';
+import EmptyStateCard from './EmptyStateCard';
 
 export default function DashboardScreen({ authUser, onNavigate }) {
   const [stats, setStats] = useState(null);
@@ -88,10 +90,8 @@ export default function DashboardScreen({ authUser, onNavigate }) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid hsl(var(--border-color))', borderTopColor: '#0ea5e9', animation: 'spin 0.8s linear infinite' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <p style={{ fontSize: '0.78rem', color: 'hsl(var(--text-muted))' }}>Loading dashboard...</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <PremiumLoader text="Loading dashboard..." />
       </div>
     );
   }
@@ -314,7 +314,11 @@ export default function DashboardScreen({ authUser, onNavigate }) {
         </div>
 
         {recentOrders.length === 0 ? (
-          <p style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', textAlign: 'center', padding: '16px 0' }}>No orders yet</p>
+          <EmptyStateCard 
+            icon={Package} 
+            title="No Recent Orders" 
+            message="There are no orders to display yet." 
+          />
         ) : (
           recentOrders.map(order => (
             <div key={order.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid hsl(var(--border-color))' }}>

@@ -11,7 +11,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import EmptyStateCard from './EmptyStateCard';
-
+import PremiumLoader from './ui/PremiumLoader';
 const STATUS_CFG = {
   pending:    { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  label: 'Pending' },
   confirmed:  { color: '#0ea5e9', bg: 'rgba(14,165,233,0.08)', label: 'Confirmed' },
@@ -66,10 +66,8 @@ export default function DoctorOrders({ authUser, onGoToCatalog }) {
     .reduce((sum, o) => sum + (o.total || 0), 0);
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 12 }}>
-      <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid hsl(var(--border-color))', borderTopColor: 'hsl(var(--primary))', animation: 'spin 0.8s linear infinite' }} />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <p style={{ fontSize: '0.78rem', color: 'hsl(var(--text-muted))', fontWeight: 600, fontFamily: 'Outfit' }}>Loading your orders...</p>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+      <PremiumLoader text="Loading your orders..." />
     </div>
   );
 

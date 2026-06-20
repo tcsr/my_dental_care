@@ -13,6 +13,8 @@ import {
   ChevronRight,
   Phone
 } from 'lucide-react';
+import PremiumLoader from './ui/PremiumLoader';
+import EmptyStateCard from './EmptyStateCard';
 
 const STATUSES = ['all', 'pending', 'confirmed', 'dispatched', 'delivered'];
 
@@ -182,39 +184,51 @@ export default function OrderManagement() {
       </div>
 
       {/* Premium Statistics Overview Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
         {/* Active Stats */}
-        <div className="glass-card" style={{ padding: '14px 16px', margin: 0, display: 'flex', alignItems: 'center', gap: 14, borderLeft: '4px solid #f59e0b' }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Clock size={18} />
+        <div style={{ 
+          background: 'hsl(var(--bg-card))', borderRadius: '16px', padding: '20px', 
+          border: '1px solid hsl(var(--border-color))', borderTop: '4px solid #f59e0b',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', textAlign: 'center', transition: 'transform 0.2s',
+          cursor: 'default'
+        }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+          <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+            <Clock size={20} />
           </div>
-          <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active Orders</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', marginTop: 2 }}>{activeCount}</div>
-          </div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Active Orders</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1 }}>{activeCount}</div>
         </div>
 
         {/* Shipped Stats */}
-        <div className="glass-card" style={{ padding: '14px 16px', margin: 0, display: 'flex', alignItems: 'center', gap: 14, borderLeft: '4px solid #6366f1' }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Truck size={18} />
+        <div style={{ 
+          background: 'hsl(var(--bg-card))', borderRadius: '16px', padding: '20px', 
+          border: '1px solid hsl(var(--border-color))', borderTop: '4px solid #6366f1',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', textAlign: 'center', transition: 'transform 0.2s',
+          cursor: 'default'
+        }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+          <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+            <Truck size={20} />
           </div>
-          <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.04em' }}>In Transit</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', marginTop: 2 }}>{inTransitCount}</div>
-          </div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>In Transit</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1 }}>{inTransitCount}</div>
         </div>
 
         {/* Revenue Stats */}
-        <div className="glass-card" style={{ padding: '14px 16px', margin: 0, display: 'flex', alignItems: 'center', gap: 14, borderLeft: '4px solid #10b981' }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <TrendingUp size={18} />
+        <div style={{ 
+          background: 'hsl(var(--bg-card))', borderRadius: '16px', padding: '20px', 
+          border: '1px solid hsl(var(--border-color))', borderTop: '4px solid #10b981',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', textAlign: 'center', transition: 'transform 0.2s',
+          cursor: 'default'
+        }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+          <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+            <TrendingUp size={20} />
           </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Value</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', marginTop: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-              {formatCurrency(totalRevenue)}
-            </div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Total Value</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+            {formatCurrency(totalRevenue)}
           </div>
         </div>
       </div>
@@ -281,6 +295,7 @@ export default function OrderManagement() {
           return (
             <button 
               key={key} 
+              className="tab-btn"
               onClick={() => setTab(key)} 
               style={{
                 flexShrink: 0, 
@@ -324,33 +339,13 @@ export default function OrderManagement() {
 
       {/* Main Order List Section */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '64px 0', background: 'hsl(var(--bg-card))', borderRadius: 20, border: '1px solid hsl(var(--border-color))' }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid hsl(var(--border-color))', borderTopColor: 'hsl(var(--primary))', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
-          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-          <p style={{ fontSize: '0.78rem', color: 'hsl(var(--text-muted))', fontWeight: 600, fontFamily: 'Outfit' }}>Retrieving dental orders...</p>
-        </div>
+        <PremiumLoader text="Retrieving dental orders..." />
       ) : filtered.length === 0 ? (
-        <div style={{ 
-          padding: '60px 20px', 
-          textAlign: 'center', 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          border: '1.5px dashed hsl(var(--border-color))', 
-          borderRadius: 20, 
-          background: 'hsl(var(--bg-card) / 40%)', 
-          backdropFilter: 'blur(8px)',
-          gap: 12
-        }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(0,0,0,0.03)' }}>
-            <Package size={24} />
-          </div>
-          <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>No Orders Found</h4>
-          <p style={{ margin: 0, fontSize: '0.74rem', color: 'hsl(var(--text-muted))', maxWidth: 260, lineHeight: 1.4 }}>
-            {searchQuery ? `No orders match "${searchQuery}". Try editing the keyword.` : `No orders in status tab "${tab}".`}
-          </p>
-        </div>
+        <EmptyStateCard 
+          icon={Package} 
+          title="No Orders Found" 
+          message={searchQuery ? `No orders match "${searchQuery}". Try editing the keyword.` : `No orders in status tab "${tab}".`} 
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {filtered.map(order => {

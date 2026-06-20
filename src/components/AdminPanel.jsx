@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import { CheckCircle, XCircle, Clock, Building2, Phone, MapPin, FileText, RefreshCw, Users } from 'lucide-react';
-
+import PremiumLoader from './ui/PremiumLoader';
+import EmptyStateCard from './EmptyStateCard';
 export default function AdminPanel() {
   const [pending, setPending] = useState([]);
   const [approved, setApproved] = useState([]);
@@ -46,7 +47,7 @@ export default function AdminPanel() {
   const list = tab === 'pending' ? pending : approved;
 
   return (
-    <div style={{ padding: '24px 20px', maxWidth: 760, margin: '0 auto' }}>
+    <div style={{ padding: '24px 20px', maxWidth: 1000, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h2 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1.35rem', color: 'hsl(var(--text-primary))', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
@@ -66,7 +67,7 @@ export default function AdminPanel() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 6, background: 'hsl(var(--border-color) / 10%)', padding: 6, borderRadius: 12, border: '1px solid hsl(var(--border-color) / 15%)', marginBottom: 24 }}>
         {[['pending', `Pending Hub (${pending.length})`], ['approved', `Verified Members (${approved.length})`]].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} style={{
+          <button key={key} className="tab-btn" onClick={() => setTab(key)} style={{
             flex: 1, padding: '10px 14px', border: 'none', borderRadius: 9, fontSize: '0.78rem',
             fontWeight: 800, fontFamily: 'Outfit', cursor: 'pointer', transition: 'all 0.25s ease',
             background: tab === key ? 'hsl(var(--bg-card))' : 'transparent',
@@ -94,19 +95,15 @@ export default function AdminPanel() {
 
       {/* List */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '50px 0', color: 'hsl(var(--text-muted))', fontSize: '0.88rem', fontFamily: 'Inter' }}>
-          <span style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid hsl(var(--border-color))', borderTopColor: 'hsl(var(--primary))', borderRadius: '50%', animation: 'spin 1s linear infinite', marginRight: '8px', verticalAlign: 'middle' }} />
-          Retrieving profiles...
-        </div>
+        <PremiumLoader text="Retrieving profiles..." />
       ) : list.length === 0 ? (
-        <div className="glass-card" style={{ textAlign: 'center', padding: '56px 20px', border: '1px solid hsl(var(--border-color))' }}>
-          <Users size={40} color="hsl(var(--text-dim))" style={{ margin: '0 auto 16px', display: 'block', opacity: 0.6 }} />
-          <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>
-            {tab === 'pending' ? 'No pending registrations to verify.' : 'No approved clinics yet.'}
-          </p>
-        </div>
+        <EmptyStateCard 
+          icon={Users} 
+          title="No Profiles Found" 
+          message={tab === 'pending' ? 'No pending registrations to verify.' : 'No approved clinics yet.'} 
+        />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', alignItems: 'stretch' }}>
           {list.map(doc => (
             <DoctorCard
               key={doc.id}
@@ -127,11 +124,13 @@ export default function AdminPanel() {
 function DoctorCard({ doc, isPending, onApprove, onReject, approveLoading, rejectLoading }) {
   return (
     <div className="glass-card animate-fade-in" style={{ 
+      display: 'flex', flexDirection: 'column', height: '100%',
       padding: '20px 22px', 
       border: '1px solid hsl(var(--border-color))',
       borderLeft: isPending ? '4px solid #f59e0b' : '4px solid #10b981',
       transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.02)'
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.02)',
+      boxSizing: 'border-box'
     }}
     onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.05)'; }}
     onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.02)'; }}
@@ -165,7 +164,7 @@ function DoctorCard({ doc, isPending, onApprove, onReject, approveLoading, rejec
 
       {/* Actions */}
       {isPending && (
-        <div style={{ display: 'flex', gap: 12, borderTop: '1px solid hsl(var(--border-color) / 10%)', paddingTop: '14px' }}>
+        <div style={{ marginTop: 'auto', display: 'flex', gap: 12, borderTop: '1px solid hsl(var(--border-color) / 10%)', paddingTop: '14px' }}>
           <button
             onClick={onReject}
             disabled={rejectLoading}
@@ -205,19 +204,26 @@ function DoctorCard({ doc, isPending, onApprove, onReject, approveLoading, rejec
 
 function StatCard({ icon, label, value, color, border }) {
   return (
-    <div className="glass-card" style={{ 
-      padding: '16px 20px', 
+    <div style={{ 
+      background: 'hsl(var(--bg-card))', 
+      borderRadius: '16px', 
+      padding: '24px 20px', 
+      border: '1px solid hsl(var(--border-color))', 
+      borderTop: `4px solid ${border}`,
+      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)', 
       display: 'flex', 
+      flexDirection: 'column',
       alignItems: 'center', 
-      gap: 14, 
-      borderLeft: `4px solid ${border}`,
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.01)'
-    }}>
-      <div style={{ display: 'flex', padding: '8px', borderRadius: '10px', background: color }}>{icon}</div>
-      <div>
-        <div style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'hsl(var(--text-primary))', lineHeight: 1.1 }}>{value}</div>
-        <div style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', fontWeight: 700, marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+      justifyContent: 'center', 
+      textAlign: 'center', 
+      transition: 'transform 0.2s',
+      cursor: 'default'
+    }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+      <div style={{ width: 44, height: 44, borderRadius: '12px', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+        {icon}
       </div>
+      <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{label}</div>
+      <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1 }}>{value}</div>
     </div>
   );
 }
