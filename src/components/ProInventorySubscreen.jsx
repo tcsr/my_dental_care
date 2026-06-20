@@ -1,0 +1,1816 @@
+import { useState, useEffect, useRef } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../utils/db';
+import { AlertTriangle, Trash2, Edit3, X, Barcode, ClipboardList, Warehouse, PlusCircle, Package, Truck, Camera, Download } from 'lucide-react';
+import { t } from '../utils/i18n';
+import EmptyStateCard from './EmptyStateCard';
+
+const getCurrentTimestamp = () => Date.now();
+const getRandomNumber = (min, max) => Math.floor(min + Math.random() * (max - min));
+
+export default function ProInventorySubscreen({ lang }) {
+  const [subTab, setSubTab] = useState('catalog'); // 'catalog' | 'po'
+  const products = useLiveQuery(() => db.b2bProducts.toArray()) || [];
+  const purchaseOrders = useLiveQuery(() => db.b2bPurchaseOrders.toArray()) || [];
+  const stockAdjustments = useLiveQuery(() => db.stockAdjustments.toArray()) || [];
+
+  // Search & Pagination states
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [catalogPage, setCatalogPage] = useState(1);
+
+  const [poSearch, setPoSearch] = useState('');
+  const [poPage, setPoPage] = useState(1);
+
+  const [transferSearch, setTransferSearch] = useState('');
+  const [transferPage, setTransferPage] = useState(1);
+
+  const itemsPerPage = 5;
+
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(catalogSearch.toLowerCase()) || 
+    p.sku.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+    p.category.toLowerCase().includes(catalogSearch.toLowerCase())
+  );
+  const totalCatalogPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
+  const displayedProducts = filteredProducts.slice((catalogPage - 1) * itemsPerPage, catalogPage * itemsPerPage);
+
+  const exportInventoryToCSV = () => {
+    try {
+      const headers = ['Product ID', 'Product Name', 'SKU Code', 'Category', 'Stock Level', 'Min Required', 'Unit Price'];
+      const rows = products.map(item => [
+        item.id,
+        `"${item.name.replace(/"/g, '""')}"`,
+        item.sku,
+        item.category,
+        item.stock,
+        item.minStock,
+        item.unitPrice
+      ]);
+
+      const csvContent = "data:text/csv;charset=utf-8," 
+        + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "lal_dental_inventory_catalog.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("CSV Export error", err);
+    }
+  };
+
+  const filteredPOs = purchaseOrders.filter(po => 
+    po.supplierName.toLowerCase().includes(poSearch.toLowerCase()) || 
+    po.id.toString().includes(poSearch) ||
+    po.items.some(it => it.sku.toLowerCase().includes(poSearch.toLowerCase()))
+  );
+  const totalPoPages = Math.ceil(filteredPOs.length / itemsPerPage) || 1;
+  const displayedPOs = filteredPOs.slice((poPage - 1) * itemsPerPage, poPage * itemsPerPage);
+
+  const transferLogs = stockAdjustments.filter(adj => adj.type === 'Transfer');
+  const filteredTransfers = transferLogs.filter(log => {
+    const prod = products.find(p => p.id === log.productId);
+    return (
+      (prod?.name || '').toLowerCase().includes(transferSearch.toLowerCase()) || 
+      (prod?.sku || '').toLowerCase().includes(transferSearch.toLowerCase()) || 
+      (log.reason || '').toLowerCase().includes(transferSearch.toLowerCase())
+    );
+  });
+  const totalTransferPages = Math.ceil(filteredTransfers.length / itemsPerPage) || 1;
+  const displayedTransfers = [...filteredTransfers].reverse().slice((transferPage - 1) * itemsPerPage, transferPage * itemsPerPage);
+  const warehouses = useLiveQuery(() => db.b2bWarehouses.toArray()) || [];
+  const warehousesList = warehouses.length > 0 ? warehouses : [
+    { id: 'wh-1', name: 'Main Warehouse' },
+    { id: 'wh-2', name: 'Hyderabad Hub' },
+    { id: 'wh-3', name: 'Rep Kit' }
+  ];
+
+  // Form State - Add Product
+  const [prodName, setProdName] = useState('');
+  const [prodCategory, setProdCategory] = useState('Implant');
+  const [prodSku, setProdSku] = useState('');
+  const [prodPrice, setProdPrice] = useState('');
+  const [prodCost, setProdCost] = useState('');
+  const [prodStock, setProdStock] = useState('');
+  const [prodMinStock, setProdMinStock] = useState('');
+  const [isSerialized, setIsSerialized] = useState(false);
+  const [initialSerial, setInitialSerial] = useState('');
+  const [batchNo, setBatchNo] = useState('');
+  const [batchExpiry, setBatchExpiry] = useState('');
+  const [batchLocation, setBatchLocation] = useState('Main Warehouse');
+  const [prodImage, setProdImage] = useState('');
+  const [editProdImage, setEditProdImage] = useState('');
+
+  // Form State - Add Batch
+  const [targetProdId, setTargetProdId] = useState(null);
+  const [qrScanProduct, setQrScanProduct] = useState(null);
+  const [newBatchNo, setNewBatchNo] = useState('');
+  const [newBatchExpiry, setNewBatchExpiry] = useState('');
+  const [newBatchQty, setNewBatchQty] = useState('');
+  const [newBatchLocation, setNewBatchLocation] = useState('Main Warehouse');
+
+  // Form State - Add PO
+  const [supplierName, setSupplierName] = useState('');
+  const [poSku, setPoSku] = useState('');
+  const [poQty, setPoQty] = useState('');
+  const [poCost, setPoCost] = useState('');
+
+  useEffect(() => {
+    if (warehousesList.length > 0) {
+      if (!warehousesList.some(w => w.name === batchLocation)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setBatchLocation(warehousesList[0].name);
+      }
+      if (!warehousesList.some(w => w.name === newBatchLocation)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setNewBatchLocation(warehousesList[0].name);
+      }
+    }
+  }, [warehouses]);
+
+  const handleFileChange = (e, callback) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert('Image size too big! Please select an image under 1MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      callback(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+  const [expectedDate, setExpectedDate] = useState('');
+  const [paymentPo, setPaymentPo] = useState(null);
+
+  // Form State - Warehouse Transfer
+  const [transferProdId, setTransferProdId] = useState('');
+  const [sourceBatchNo, setSourceBatchNo] = useState('');
+  const [destWarehouseName, setDestWarehouseName] = useState('');
+  const [transferQty, setTransferQty] = useState('');
+
+  // Reconcile State
+  const [reconcileProduct, setReconcileProduct] = useState(null);
+  const [physicalCount, setPhysicalCount] = useState('');
+  const [reconcileReason, setReconcileReason] = useState('Physical Audit Discrepancy');
+
+  // Edit Product States
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editProdName, setEditProdName] = useState('');
+  const [editProdCategory, setEditProdCategory] = useState('Implant');
+  const [editProdSku, setEditProdSku] = useState('');
+  const [editProdPrice, setEditProdPrice] = useState('');
+  const [editProdCost, setEditProdCost] = useState('');
+  const [editProdMinStock, setEditProdMinStock] = useState('');
+  const [editIsSerialized, setEditIsSerialized] = useState(false);
+
+  // Serial number registration state
+  const [targetSerialProdId, setTargetSerialProdId] = useState(null);
+  const [newSerialNumber, setNewSerialNumber] = useState('');
+
+  const startEditProduct = (prod) => {
+    setEditingProduct(prod);
+    setEditProdName(prod.name);
+    setEditProdCategory(prod.category);
+    setEditProdSku(prod.sku);
+    setEditProdPrice(prod.price);
+    setEditProdCost(prod.purchaseCost || '');
+    setEditProdMinStock(prod.minStock);
+    setEditIsSerialized(!!prod.isSerialized);
+    setEditProdImage(prod.image || '');
+  };
+
+  const handleUpdateProduct = async (e) => {
+    e.preventDefault();
+    if (!editingProduct || !editProdName || !editProdSku) return;
+    await db.b2bProducts.update(editingProduct.id, {
+      name: editProdName,
+      category: editProdCategory,
+      sku: editProdSku,
+      price: parseFloat(editProdPrice),
+      purchaseCost: parseFloat(editProdCost) || 0,
+      minStock: parseInt(editProdMinStock) || 5,
+      isSerialized: editIsSerialized,
+      image: editProdImage
+    });
+    setEditingProduct(null);
+    setEditProdImage('');
+    alert('Product details updated successfully!');
+  };
+
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    if (!prodName || !prodSku || !prodPrice || !prodStock) {
+      alert('Please fill out product details (Name, SKU, Price, Stock).');
+      return;
+    }
+
+    const priceNum = parseFloat(prodPrice);
+    const costNum = parseFloat(prodCost) || Math.round(priceNum * 0.5);
+    const stockQty = parseInt(prodStock);
+    const finalBatchNo = batchNo || 'BATCH-GEN-' + getRandomNumber(100, 1000);
+    const finalExpiry = batchExpiry ? new Date(batchExpiry).getTime() : getCurrentTimestamp() + 365 * 24 * 60 * 60 * 1000;
+
+    const newProduct = {
+      name: prodName,
+      category: prodCategory,
+      sku: prodSku,
+      price: priceNum,
+      purchaseCost: costNum,
+      stock: stockQty,
+      minStock: parseInt(prodMinStock) || 5,
+      isSerialized,
+      serialNumbers: isSerialized && initialSerial ? [initialSerial] : [],
+      image: prodImage,
+      batches: [
+        {
+          batchNo: finalBatchNo,
+          expiryDate: finalExpiry,
+          stock: stockQty,
+          location: batchLocation
+        }
+      ]
+    };
+
+    await db.b2bProducts.add(newProduct);
+
+    setProdName('');
+    setProdSku('');
+    setProdPrice('');
+    setProdCost('');
+    setProdStock('');
+    setProdMinStock('');
+    setIsSerialized(false);
+    setInitialSerial('');
+    setBatchNo('');
+    setBatchExpiry('');
+    setProdImage('');
+    alert('Product added successfully with initial batch!');
+  };
+
+  const handleAddBatch = async (e) => {
+    e.preventDefault();
+    if (!targetProdId || !newBatchNo || !newBatchQty) return;
+
+    const prod = products.find(p => p.id === targetProdId);
+    if (!prod) return;
+
+    const qtyVal = parseInt(newBatchQty);
+    const expiryVal = newBatchExpiry ? new Date(newBatchExpiry).getTime() : getCurrentTimestamp() + 365 * 24 * 60 * 60 * 1000;
+
+    const updatedBatches = [...(prod.batches || [])];
+    const existingIndex = updatedBatches.findIndex(b => b.batchNo === newBatchNo);
+    if (existingIndex > -1) {
+      updatedBatches[existingIndex].stock += qtyVal;
+    } else {
+      updatedBatches.push({
+        batchNo: newBatchNo,
+        expiryDate: expiryVal,
+        stock: qtyVal,
+        location: newBatchLocation
+      });
+    }
+
+    await db.b2bProducts.update(targetProdId, {
+      stock: prod.stock + qtyVal,
+      batches: updatedBatches
+    });
+
+    setTargetProdId(null);
+    setNewBatchNo('');
+    setNewBatchQty('');
+    setNewBatchExpiry('');
+    alert('New batch registered successfully!');
+  };
+
+  const handleAdjustStock = async (productId, amount) => {
+    const item = products.find(p => p.id === productId);
+    if (!item) return;
+    const nextStock = Math.max(0, item.stock + amount);
+
+    // Adjust in batches too (first batch or matching)
+    let updatedBatches = [...(item.batches || [])];
+    if (updatedBatches.length > 0) {
+      if (amount > 0) {
+        updatedBatches[0].stock += amount;
+      } else {
+        // deduct from batches sequentially
+        let rem = Math.abs(amount);
+        for (let i = 0; i < updatedBatches.length; i++) {
+          if (updatedBatches[i].stock >= rem) {
+            updatedBatches[i].stock -= rem;
+            break;
+          } else {
+            rem -= updatedBatches[i].stock;
+            updatedBatches[i].stock = 0;
+          }
+        }
+      }
+    }
+
+    await db.b2bProducts.update(productId, { stock: nextStock, batches: updatedBatches });
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (confirm('Delete this product catalog item permanently?')) {
+      await db.b2bProducts.delete(productId);
+    }
+  };
+
+  // Reconcile physically counted stock
+  const handleReconcile = async (e) => {
+    e.preventDefault();
+    if (!reconcileProduct || physicalCount === '') return;
+
+    const countVal = parseInt(physicalCount);
+    const diff = countVal - reconcileProduct.stock;
+
+    if (diff === 0) {
+      alert('Physical count matches system stock. No change needed.');
+      setReconcileProduct(null);
+      return;
+    }
+
+    // Log adjustment
+    await db.stockAdjustments.add({
+      productId: reconcileProduct.id,
+      type: diff > 0 ? 'Surplus / Found' : 'Loss / Damaged',
+      qtyChange: diff,
+      reason: reconcileReason,
+      date: Date.now()
+    });
+
+    // Update product stock and first batch stock
+    let updatedBatches = [...(reconcileProduct.batches || [])];
+    if (updatedBatches.length > 0) {
+      updatedBatches[0].stock = Math.max(0, updatedBatches[0].stock + diff);
+    }
+
+    await db.b2bProducts.update(reconcileProduct.id, {
+      stock: countVal,
+      batches: updatedBatches
+    });
+
+    alert(`Reconciliation applied. Stock adjusted by ${diff > 0 ? '+' : ''}${diff} units.`);
+    setReconcileProduct(null);
+    setPhysicalCount('');
+  };
+
+  // Add Serial Number
+  const handleAddSerialNumber = async (e) => {
+    e.preventDefault();
+    if (!targetSerialProdId || !newSerialNumber) return;
+
+    const prod = products.find(p => p.id === targetSerialProdId);
+    if (!prod) return;
+
+    const updatedSerials = [...(prod.serialNumbers || []), newSerialNumber];
+    await db.b2bProducts.update(targetSerialProdId, {
+      serialNumbers: updatedSerials
+    });
+
+    setTargetSerialProdId(null);
+    setNewSerialNumber('');
+    alert('Serial number added!');
+  };
+
+  // Submit PO to supplier
+  const handleCreatePO = async (e) => {
+    e.preventDefault();
+    if (!supplierName || !poSku || !poQty || !poCost) return;
+
+    await db.b2bPurchaseOrders.add({
+      supplierName,
+      status: 'Pending',
+      paymentStatus: 'Unpaid',
+      orderDate: Date.now(),
+      expectedDate: expectedDate ? new Date(expectedDate).getTime() : Date.now() + 7 * 24 * 60 * 60 * 1000,
+      items: [{ sku: poSku, qty: parseInt(poQty), cost: parseFloat(poCost) }]
+    });
+
+    setSupplierName('');
+    setPoSku('');
+    setPoQty('');
+    setPoCost('');
+    setExpectedDate('');
+    alert('Supplier Purchase Order generated!');
+  };
+
+  // Receive PO
+  const handleReceivePO = async (poId) => {
+    const po = purchaseOrders.find(o => o.id === poId);
+    if (!po) return;
+
+    // Receive items into inventory
+    for (const poItem of po.items) {
+      const prod = products.find(p => p.sku === poItem.sku);
+      if (prod) {
+        const addedStock = poItem.qty;
+        const newBatch = {
+          batchNo: 'PO-' + po.id + '-' + getRandomNumber(100, 1000),
+          expiryDate: getCurrentTimestamp() + 365 * 24 * 60 * 60 * 1000,
+          stock: addedStock,
+          location: 'Main Warehouse'
+        };
+
+        const updatedBatches = [...(prod.batches || []), newBatch];
+        await db.b2bProducts.update(prod.id, {
+          stock: prod.stock + addedStock,
+          batches: updatedBatches
+        });
+      }
+    }
+
+    await db.b2bPurchaseOrders.update(poId, { status: 'Completed' });
+    alert('Purchase order marked as Completed. Items added to Main Warehouse!');
+  };
+
+  // Warehouse Stock Transfer Handler
+  const handleWarehouseTransfer = async (e) => {
+    e.preventDefault();
+    if (!transferProdId || !sourceBatchNo || !destWarehouseName || !transferQty) return;
+    const qtyVal = parseInt(transferQty);
+    if (qtyVal <= 0) return;
+
+    const prod = products.find(p => p.id === parseInt(transferProdId));
+    if (!prod) return;
+
+    const updatedBatches = [...(prod.batches || [])];
+    const sourceBatchIdx = updatedBatches.findIndex(b => b.batchNo === sourceBatchNo);
+    if (sourceBatchIdx === -1) {
+      alert('Source batch not found.');
+      return;
+    }
+
+    const sourceBatch = updatedBatches[sourceBatchIdx];
+    if (sourceBatch.stock < qtyVal) {
+      alert(`Insufficient stock in batch ${sourceBatchNo}. Available: ${sourceBatch.stock}`);
+      return;
+    }
+
+    if (sourceBatch.location === destWarehouseName) {
+      alert('Source location and destination location must be different.');
+      return;
+    }
+
+    if (!confirm(`Confirm transfer of ${qtyVal} units of ${prod.name} from ${sourceBatch.location} to ${destWarehouseName}?`)) {
+      return;
+    }
+
+    // Deduct from source batch
+    sourceBatch.stock -= qtyVal;
+
+    // Add to destination batch
+    const destBatchNo = sourceBatchNo;
+    const destBatchIdx = updatedBatches.findIndex(b => b.batchNo === destBatchNo && b.location === destWarehouseName);
+    
+    if (destBatchIdx > -1) {
+      updatedBatches[destBatchIdx].stock += qtyVal;
+    } else {
+      updatedBatches.push({
+        batchNo: destBatchNo,
+        expiryDate: sourceBatch.expiryDate,
+        stock: qtyVal,
+        location: destWarehouseName
+      });
+    }
+
+    // Clean up empty source batch entry if stock is 0
+    if (sourceBatch.stock === 0) {
+      updatedBatches.splice(sourceBatchIdx, 1);
+    }
+
+    // Update database
+    await db.b2bProducts.update(prod.id, {
+      batches: updatedBatches
+    });
+
+    // Add log
+    await db.stockAdjustments.add({
+      productId: prod.id,
+      type: 'Transfer',
+      qtyChange: -qtyVal,
+      reason: `Transferred from ${sourceBatch.location} to ${destWarehouseName}`,
+      date: Date.now()
+    });
+
+    // Reset states
+    setTransferProdId('');
+    setSourceBatchNo('');
+    setDestWarehouseName('');
+    setTransferQty('');
+    alert('Stock transfer completed successfully!');
+  };
+
+  return (
+    <div className="animate-fade-in" style={{ paddingBottom: '30px' }}>
+      
+      {/* Sub-tabs Selection */}
+      <div className="tab-group">
+        <button
+          onClick={() => setSubTab('catalog')}
+          className={`tab-btn ${subTab === 'catalog' ? 'active' : ''}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Package size={14} /> {t('tabCatalog', lang)}
+        </button>
+        <button
+          onClick={() => setSubTab('po')}
+          className={`tab-btn ${subTab === 'po' ? 'active' : ''}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <ClipboardList size={14} /> {t('tabPurchaseOrders', lang)}
+        </button>
+        <button
+          onClick={() => setSubTab('transfers')}
+          className={`tab-btn ${subTab === 'transfers' ? 'active' : ''}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Truck size={14} /> Transfers
+        </button>
+      </div>
+
+      {subTab === 'catalog' && (
+        <>
+          {/* Stock Alerts */}
+          {products.some(p => p.stock < p.minStock) && (
+            <div style={{
+              background: 'hsl(var(--color-hyper) / 8%)', border: '1px solid hsl(var(--color-hyper))',
+              borderRadius: '16px', padding: '12px 16px', display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '16px'
+            }}>
+              <AlertTriangle color="hsl(var(--color-hyper))" size={24} />
+              <div>
+                <h4 style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'hsl(var(--color-hyper))', fontFamily: 'Outfit' }}>{t('criticalStockAlert', lang)}</h4>
+                <p style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))' }}>{t('stockAlertDesc', lang)}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Inventory Visual Stock Chart */}
+          <div className="glass-card" style={{ padding: '16px 20px', marginBottom: '18px', border: '1px solid hsl(var(--border-color))' }}>
+            <h4 style={{ fontSize: '0.78rem', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'hsl(var(--text-dim))' }}>
+              Stock Level Analysis
+            </h4>
+            {products.length === 0 ? (
+              <span style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))' }}>No inventory logged.</span>
+            ) : (
+              <div style={{ width: '100%', overflowX: 'auto', background: 'hsl(var(--bg-card))', borderRadius: '12px', padding: '8px' }}>
+                <svg width="100%" height="180" viewBox="0 0 450 180" preserveAspectRatio="xMidYMid meet">
+                  <defs>
+                    <linearGradient id="healthyGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                      <stop offset="0%" stopColor="hsl(var(--secondary))" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.85" />
+                    </linearGradient>
+                    <linearGradient id="lowGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                      <stop offset="0%" stopColor="hsl(var(--color-hyper))" />
+                      <stop offset="100%" stopColor="#ef4444" stopOpacity="0.85" />
+                    </linearGradient>
+                  </defs>
+                  
+                  {/* Grid Lines */}
+                  <line x1="45" y1="20" x2="430" y2="20" stroke="hsl(var(--border-color) / 30%)" strokeDasharray="3,3" />
+                  <line x1="45" y1="75" x2="430" y2="75" stroke="hsl(var(--border-color) / 30%)" strokeDasharray="3,3" />
+                  <line x1="45" y1="130" x2="430" y2="130" stroke="hsl(var(--border-color) / 30%)" strokeDasharray="3,3" />
+                  
+                  {/* Axis */}
+                  <line x1="45" y1="140" x2="430" y2="140" stroke="hsl(var(--border-color))" strokeWidth="1.5" />
+                  
+                  {products.slice(0, 7).map((prod, idx) => {
+                    const maxStockVal = Math.max(...products.map(p => p.stock), 10);
+                    const heightScale = 110;
+                    const barHeight = (prod.stock / maxStockVal) * heightScale;
+                    const minHeight = (prod.minStock / maxStockVal) * heightScale;
+                    const barWidth = 32;
+                    const spacing = (380 - (7 * barWidth)) / 8;
+                    const x = 45 + spacing + idx * (barWidth + spacing);
+                    const y = 140 - barHeight;
+                    const isLow = prod.stock < prod.minStock;
+                    
+                    return (
+                      <g key={prod.id}>
+                        {/* Minimum Stock Limit Indicator Mark */}
+                        <line 
+                          x1={x - 4} 
+                          y1={140 - minHeight} 
+                          x2={x + barWidth + 4} 
+                          y2={140 - minHeight} 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth="2" 
+                          strokeDasharray="2,2"
+                          opacity="0.8"
+                        />
+                        {/* Main Stock Bar */}
+                        <rect
+                          x={x}
+                          y={y}
+                          width={barWidth}
+                          height={Math.max(barHeight, 4)}
+                          rx="4"
+                          fill={isLow ? "url(#lowGrad)" : "url(#healthyGrad)"}
+                          style={{
+                            transition: 'all 0.3s ease',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = '0.8';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = '1';
+                          }}
+                        />
+                        {/* Qty Label */}
+                        <text
+                          x={x + barWidth / 2}
+                          y={y - 6}
+                          textAnchor="middle"
+                          fill={isLow ? "hsl(var(--color-hyper))" : "hsl(var(--text-primary))"}
+                          fontSize="9.5"
+                          fontWeight="800"
+                          fontFamily="Outfit"
+                        >
+                          {prod.stock}
+                        </text>
+                        {/* Product SKU Label */}
+                        <text
+                          x={x + barWidth / 2}
+                          y="156"
+                          textAnchor="middle"
+                          fill="hsl(var(--text-muted))"
+                          fontSize="8.5"
+                          fontWeight="600"
+                          fontFamily="Inter"
+                        >
+                          {prod.sku}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+                {/* Legend */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '6px', fontSize: '0.62rem', fontWeight: 'bold' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'hsl(var(--secondary))' }}>
+                    <span style={{ width: '8px', height: '8px', background: 'hsl(var(--secondary))', borderRadius: '2px' }} /> Healthy Stock
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'hsl(var(--color-hyper))' }}>
+                    <span style={{ width: '8px', height: '8px', background: 'hsl(var(--color-hyper))', borderRadius: '2px' }} /> Under Minimum Stock
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'hsl(var(--primary))' }}>
+                    <span style={{ width: '10px', height: '2px', borderTop: '2.5px dashed hsl(var(--primary))' }} /> Min Target Line
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Catalog list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ padding: '6px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
+                  <Package size={16} />
+                </div>
+                <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', fontWeight: '800', fontFamily: 'Outfit', margin: 0 }}>{t('catalogStock', lang)}</h3>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <button
+                  onClick={exportInventoryToCSV}
+                  className="btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '0.68rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                  <Download size={12} /> Export CSV
+                </button>
+                <input 
+                  type="text" 
+                  placeholder="Search catalog..." 
+                  value={catalogSearch} 
+                  onChange={(e) => { setCatalogSearch(e.target.value); setCatalogPage(1); }}
+                  style={{ padding: '6px 10px', fontSize: '0.72rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', width: '120px' }}
+                />
+              </div>
+            </div>
+
+            {filteredProducts.length === 0 ? (
+              <EmptyStateCard 
+                icon={Package} 
+                title="No Products Found" 
+                message="No products match your search or inventory is empty." 
+              />
+            ) : (
+              displayedProducts.map(item => {
+                const isLowStock = item.stock < item.minStock;
+                const profitMargin = item.purchaseCost ? ((item.price - item.purchaseCost) / item.price * 100).toFixed(1) : '0';
+
+                return (
+                  <div key={item.id} className="glass-card" style={{
+                    padding: '16px', border: isLowStock ? '1px solid hsl(var(--color-hyper))' : '1px solid hsl(var(--border-color))',
+                    background: isLowStock ? 'hsl(var(--color-hyper) / 2%)' : 'hsl(var(--bg-card))'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flex: 1 }}>
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid hsl(var(--border-color))', flexShrink: 0 }} />
+                        ) : (
+                          <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1rem', flexShrink: 0 }}>
+                            {item.name.charAt(0)}
+                          </div>
+                        )}
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: '0.55rem', fontWeight: '800', color: 'hsl(var(--text-dim))', letterSpacing: '0.05em' }}>
+                            {item.sku} • {item.category.toUpperCase()}
+                          </span>
+                          <h4 style={{ fontSize: '0.88rem', fontWeight: '800', margin: '2px 0 0', color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>
+                            {item.name}
+                          </h4>
+                        <p style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))', marginTop: '2px' }}>
+                          {t('unitPrice', lang)} <strong style={{ color: 'hsl(var(--text-primary))' }}>₹{item.price}</strong> • Cost: <span style={{ color: 'hsl(var(--text-muted))' }}>₹{item.purchaseCost || 0}</span> • Margin: <strong style={{ color: 'hsl(var(--secondary))' }}>{profitMargin}%</strong>
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: 'hsl(var(--primary))' }}>₹{item.price.toLocaleString('en-IN')}</span>
+                        <span style={{ display: 'block', fontSize: '0.58rem', color: 'hsl(var(--text-muted))' }}>Margin: {profitMargin}%</span>
+                      </div>
+                    </div>
+
+                    {/* Stock Alert Warning */}
+                    {isLowStock && (
+                      <div style={{
+                        marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px',
+                        background: 'hsl(var(--color-hyper) / 8%)', padding: '6px 10px', borderRadius: '6px',
+                        color: 'hsl(var(--color-hyper))', fontSize: '0.68rem', fontWeight: 'bold'
+                      }}>
+                        <AlertTriangle size={12} />
+                        <span>Critical stock level! Minimum required: {item.minStock} units</span>
+                      </div>
+                    )}
+
+                    {/* Serial Numbers Section */}
+                    {item.isSerialized && (
+                      <div style={{ marginTop: '8px', borderTop: '1px dotted hsl(var(--border-color))', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.62rem', fontWeight: '800', color: 'hsl(var(--text-dim))', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Barcode size={10} /> SERIALIZED surgical tools:
+                        </span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                          {item.serialNumbers && item.serialNumbers.map((sn, idx) => (
+                            <span key={idx} style={{
+                              fontSize: '0.58rem', background: 'hsl(var(--border-color) / 30%)',
+                              padding: '2px 5px', borderRadius: '4px', fontFamily: 'monospace'
+                            }}>
+                              {sn}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Batch numbers and Locations */}
+                    {item.batches && item.batches.length > 0 && (
+                      <div style={{ marginTop: '8px', borderTop: '1px dotted hsl(var(--border-color))', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.62rem', fontWeight: '800', color: 'hsl(var(--text-dim))', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Warehouse size={10} /> Batches & Multi-warehouse hubs:
+                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '4px' }}>
+                          {item.batches.map((b, idx) => {
+                            const isExpired = b.expiryDate < Date.now();
+                            const isExpiringSoon = !isExpired && b.expiryDate < Date.now() + 90 * 24 * 60 * 60 * 1000;
+
+                            return (
+                              <div key={idx} style={{
+                                display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem',
+                                background: isExpired ? 'hsl(var(--color-hyper) / 5%)' : 'hsl(var(--border-color) / 15%)',
+                                padding: '4px 8px', borderRadius: '4px'
+                              }}>
+                                <span>Batch: <strong>{b.batchNo}</strong> • {b.location}</span>
+                                <span style={{ fontWeight: 'bold' }}>
+                                  Qty: {b.stock}
+                                  {isExpired && <span style={{ color: 'hsl(var(--color-hyper))', marginLeft: '6px' }}>(Expired)</span>}
+                                  {isExpiringSoon && <span style={{ color: 'orange', marginLeft: '6px' }}>(Expiring soon)</span>}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Visual Barcode Simulator */}
+                    <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: 'hsl(var(--border-color) / 5%)', padding: '8px', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Barcode size={24} color="hsl(var(--text-primary))" />
+                        <div>
+                          <div style={{ letterSpacing: '2px', fontFamily: 'monospace', fontSize: '0.52rem', fontWeight: 'bold', color: 'hsl(var(--text-dim))' }}>
+                            |||||||||| | || || |||
+                          </div>
+                          <span style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))' }}>{item.sku}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setQrScanProduct(item)}
+                        className="btn-primary"
+                        style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: '0.62rem', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Camera size={11} /> {t('scanBarcode', lang)}
+                      </button>
+                    </div>
+
+                    {/* Actions Panel */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid hsl(var(--border-color))' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => setTargetProdId(item.id)}
+                          style={{ border: 'none', background: 'none', color: 'hsl(var(--primary))', fontSize: '0.68rem', fontWeight: 'bold', cursor: 'pointer' }}
+                        >
+                          + {t('addBatch', lang)}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setReconcileProduct(item);
+                            setPhysicalCount(item.stock);
+                          }}
+                          style={{ border: 'none', background: 'none', color: 'hsl(var(--secondary))', fontSize: '0.68rem', fontWeight: 'bold', cursor: 'pointer' }}
+                        >
+                          ⚖️ {t('stockReconciliation', lang)}
+                        </button>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button 
+                          onClick={() => handleAdjustStock(item.id, 5)}
+                          style={{
+                            border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '800',
+                            background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))', cursor: 'pointer'
+                          }}
+                        >
+                          +5
+                        </button>
+                        <button 
+                          onClick={() => handleAdjustStock(item.id, -1)}
+                          disabled={item.stock === 0}
+                          style={{
+                            border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '800',
+                            background: 'hsl(var(--border-color))', color: 'hsl(var(--text-muted))', cursor: item.stock === 0 ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          -1
+                        </button>
+                        <button 
+                          onClick={() => startEditProduct(item)}
+                          style={{ background: 'none', border: 'none', color: 'hsl(var(--primary))', cursor: 'pointer', marginLeft: '6px' }}
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteProduct(item.id)}
+                          style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer', marginLeft: '6px' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {filteredProducts.length > itemsPerPage && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  disabled={catalogPage === 1}
+                  onClick={() => setCatalogPage(prev => Math.max(1, prev - 1))}
+                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: catalogPage === 1 ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: catalogPage === 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  Prev
+                </button>
+                <span style={{ fontSize: '0.72rem', alignSelf: 'center', color: 'hsl(var(--text-muted))' }}>
+                  Page {catalogPage} of {totalCatalogPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={catalogPage === totalCatalogPages}
+                  onClick={() => setCatalogPage(prev => Math.min(totalCatalogPages, prev + 1))}
+                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: catalogPage === totalCatalogPages ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: catalogPage === totalCatalogPages ? 'not-allowed' : 'pointer' }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Add Product Form */}
+          <div className="glass-card" style={{ padding: '18px 20px', border: '1px solid hsl(var(--border-color))' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+              <div style={{ padding: '6px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
+                <PlusCircle size={16} />
+              </div>
+              <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', fontWeight: '800', margin: 0 }}>
+                {t('registerNewProduct', lang)}
+              </h3>
+            </div>
+            <form onSubmit={handleAddProduct} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('productName', lang)}</label>
+                <input 
+                  type="text" required placeholder="e.g. Hexagonal Titanium Screw 2.0mm" 
+                  value={prodName} onChange={(e) => setProdName(e.target.value)}
+                  style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('skuCode', lang)}</label>
+                  <input 
+                    type="text" required placeholder="e.g. SCW-HEX-20" 
+                    value={prodSku} onChange={(e) => setProdSku(e.target.value)}
+                    style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('category', lang)}</label>
+                  <select 
+                    value={prodCategory} onChange={(e) => setProdCategory(e.target.value)}
+                    style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+                  >
+                    <option value="Implant">Implant</option>
+                    <option value="Abutment">Abutment</option>
+                    <option value="Crown">Crown</option>
+                    <option value="Bridge">Bridge</option>
+                    <option value="Surgical Tool">Surgical Tool</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('unitPrice', lang)}</label>
+                  <input 
+                    type="number" required placeholder="e.g. 12500" 
+                    value={prodPrice} onChange={(e) => setProdPrice(e.target.value)}
+                    style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('purchaseCost', lang)}</label>
+                  <input 
+                    type="number" placeholder="Cost (₹) (e.g. 6000)" 
+                    value={prodCost} onChange={(e) => setProdCost(e.target.value)}
+                    style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('initialStock', lang)}</label>
+                  <input 
+                    type="number" required placeholder="e.g. 50" 
+                    value={prodStock} onChange={(e) => setProdStock(e.target.value)}
+                    style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('minStockAlert', lang)}</label>
+                  <input 
+                    type="number" placeholder="e.g. 5" 
+                    value={prodMinStock} onChange={(e) => setProdMinStock(e.target.value)}
+                    style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
+                  />
+                </div>
+              </div>
+
+              <div style={{ background: 'hsl(var(--border-color) / 10%)', padding: '10px', borderRadius: '8px', marginTop: '4px' }}>
+                <h4 style={{ fontSize: '0.75rem', fontWeight: 'bold', margin: '0 0 6px 0', color: 'hsl(var(--text-primary))' }}>Initial Batch & Warehouse Mappings</h4>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '100px' }}>
+                    <label style={{ fontSize: '0.62rem', fontWeight: 'bold', display: 'block' }}>Batch ID:</label>
+                    <input type="text" placeholder="e.g. B-01" value={batchNo} onChange={(e) => setBatchNo(e.target.value)}
+                      style={{ width: '100%', padding: '6px', fontSize: '0.72rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: '100px' }}>
+                    <label style={{ fontSize: '0.62rem', fontWeight: 'bold', display: 'block' }}>Expiry Date:</label>
+                    <input type="date" value={batchExpiry} onChange={(e) => setBatchExpiry(e.target.value)}
+                      style={{ width: '100%', padding: '6px', fontSize: '0.72rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: '100px' }}>
+                    <label style={{ fontSize: '0.62rem', fontWeight: 'bold', display: 'block' }}>Warehouse Location:</label>
+                    <select value={batchLocation} onChange={(e) => setBatchLocation(e.target.value)}
+                      style={{ width: '100%', padding: '6px', fontSize: '0.72rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                      {warehousesList.map(w => (
+                        <option key={w.id} value={w.name}>{w.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                <input type="checkbox" id="serial_check" checked={isSerialized} onChange={(e) => setIsSerialized(e.target.checked)} />
+                <label htmlFor="serial_check" style={{ fontSize: '0.72rem', fontWeight: 'bold', cursor: 'pointer' }}>{t('serializedEquipment', lang)}</label>
+              </div>
+
+              {isSerialized && (
+                <div>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Initial Serial Number (Optional):</label>
+                  <input type="text" placeholder="e.g. SN-99882" value={initialSerial} onChange={(e) => setInitialSerial(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '6px' }}>Product Photo</label>
+                  <div style={{
+                    border: '2px dashed hsl(var(--border-color))',
+                    borderRadius: '12px',
+                    padding: '8px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    background: 'hsl(var(--bg-dark))',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'all 0.25s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'hsl(var(--primary))'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'hsl(var(--border-color))'}
+                  >
+                    <Camera size={16} style={{ color: 'hsl(var(--text-muted))' }} />
+                    <span style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', fontWeight: 'bold' }}>
+                      Drag or Select Image
+                    </span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => handleFileChange(e, setProdImage)}
+                      style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                        opacity: 0, cursor: 'pointer', width: '100%', height: '100%'
+                      }} 
+                    />
+                  </div>
+                </div>
+                {prodImage && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '16px' }}>
+                    <img src={prodImage} alt="Preview" style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover', border: '1px solid hsl(var(--border-color))' }} />
+                    <button 
+                      type="button" 
+                      onClick={() => setProdImage('')} 
+                      style={{ 
+                        border: 'none', background: 'hsl(var(--color-hyper) / 10%)', color: 'hsl(var(--color-hyper))', 
+                        padding: '6px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'transform 0.2s ease, background 0.2s ease, color 0.2s ease',
+                        marginLeft: '12px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.15) rotate(5deg)';
+                        e.currentTarget.style.background = 'hsl(var(--color-hyper))';
+                        e.currentTarget.style.color = '#fff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+                        e.currentTarget.style.background = 'hsl(var(--color-hyper) / 10%)';
+                        e.currentTarget.style.color = 'hsl(var(--color-hyper))';
+                      }}
+                      title="Remove Image"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button type="submit" className="btn-primary" style={{ padding: '12px', borderRadius: '10px', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginTop: '6px', fontFamily: 'Outfit' }}>
+                {t('addProductBtn', lang)}
+              </button>
+            </form>
+          </div>
+        </>
+      )}
+
+      {subTab === 'po' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))' }}>
+            <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontFamily: 'Outfit', fontWeight: '800' }}>
+              📝 {t('createPurchaseOrder', lang)}
+            </h3>
+            <form onSubmit={handleCreatePO} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('supplierName', lang)}</label>
+                <input type="text" required placeholder="e.g. Titanium Implants Inc" value={supplierName} onChange={(e) => setSupplierName(e.target.value)}
+                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Select SKU to Buy:</label>
+                  <select value={poSku} onChange={(e) => setPoSku(e.target.value)} required
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                    <option value="">-- Choose --</option>
+                    {products.map(p => <option key={p.id} value={p.sku}>{p.sku} ({p.name})</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Order Quantity:</label>
+                  <input type="number" required placeholder="Qty" value={poQty} onChange={(e) => setPoQty(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Buy Unit Price (₹):</label>
+                  <input type="number" required placeholder="Price" value={poCost} onChange={(e) => setPoCost(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('expectedDelivery', lang)}</label>
+                  <input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+              </div>
+              <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit' }}>
+                Generate Supplier Purchase Order
+              </button>
+            </form>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '0.88rem', fontWeight: '800', fontFamily: 'Outfit', margin: 0 }}>Active Supplier PO List</h3>
+              <input 
+                type="text" 
+                placeholder="Search POs..." 
+                value={poSearch} 
+                onChange={(e) => { setPoSearch(e.target.value); setPoPage(1); }}
+                style={{ padding: '6px 10px', fontSize: '0.72rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', width: '150px' }}
+              />
+            </div>
+            {filteredPOs.length === 0 ? (
+              <EmptyStateCard 
+                icon={ClipboardList} 
+                title="No Supplier POs Found" 
+                message="No purchase orders match your search or exist in the system." 
+              />
+            ) : (
+              displayedPOs.map(po => (
+                <div key={po.id} className="glass-card" style={{ padding: '12px', border: '1px solid hsl(var(--border-color))' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '0.58rem', color: 'hsl(var(--text-dim))' }}>PO ID: #{po.id} • {t('orderDate', lang)} {new Date(po.orderDate).toLocaleDateString()}</span>
+                      <h4 style={{ fontSize: '0.8rem', fontWeight: 'bold', margin: '2px 0 0' }}>{po.supplierName}</h4>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <span style={{
+                        fontSize: '0.62rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px',
+                        background: po.status === 'Completed' ? 'hsl(var(--secondary) / 10%)' : 'hsl(var(--primary) / 10%)',
+                        color: po.status === 'Completed' ? 'hsl(var(--secondary))' : 'hsl(var(--primary))'
+                      }}>{po.status}</span>
+                      <span style={{
+                        fontSize: '0.62rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px',
+                        background: po.paymentStatus === 'Paid' ? 'hsl(var(--secondary) / 10%)' : 'hsl(var(--color-hyper) / 10%)',
+                        color: po.paymentStatus === 'Paid' ? 'hsl(var(--secondary))' : 'hsl(var(--color-hyper))'
+                      }}>{po.paymentStatus || 'Unpaid'}</span>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: '8px', fontSize: '0.72rem', color: 'hsl(var(--text-muted))' }}>
+                    {po.items.map((it, index) => (
+                      <div key={index}>Buying: <strong style={{ color: 'hsl(var(--text-primary))' }}>{it.qty}x</strong> {it.sku} @ ₹{it.cost}/ea</div>
+                    ))}
+                    <div style={{ fontSize: '0.65rem', marginTop: '4px' }}>Expected By: {new Date(po.expectedDate).toLocaleDateString()}</div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    {po.status === 'Pending' && (
+                      <button
+                        onClick={() => handleReceivePO(po.id)}
+                        style={{
+                          flex: 1, padding: '6px', border: 'none', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer',
+                          background: 'hsl(var(--secondary) / 10%)', color: 'hsl(var(--secondary))'
+                        }}
+                      >
+                        Receive Shipment & Update Stock
+                      </button>
+                    )}
+                    {(po.paymentStatus || 'Unpaid') === 'Unpaid' && (
+                      <button
+                        onClick={() => setPaymentPo(po)}
+                        style={{
+                          flex: 1, padding: '6px', border: 'none', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer',
+                          background: 'hsl(var(--primary) / 10%)', color: 'hsl(var(--primary))'
+                        }}
+                      >
+                        💳 Pay Supplier
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+
+            {filteredPOs.length > itemsPerPage && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  disabled={poPage === 1}
+                  onClick={() => setPoPage(prev => Math.max(1, prev - 1))}
+                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: poPage === 1 ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: poPage === 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  Prev
+                </button>
+                <span style={{ fontSize: '0.72rem', alignSelf: 'center', color: 'hsl(var(--text-muted))' }}>
+                  Page {poPage} of {totalPoPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={poPage === totalPoPages}
+                  onClick={() => setPoPage(prev => Math.min(totalPoPages, prev + 1))}
+                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: poPage === totalPoPages ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: poPage === totalPoPages ? 'not-allowed' : 'pointer' }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {subTab === 'transfers' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))' }}>
+            <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontFamily: 'Outfit', fontWeight: '800' }}>
+              🚚 Warehouse Stock Transfer
+            </h3>
+            <form onSubmit={handleWarehouseTransfer} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Select Product:</label>
+                <select value={transferProdId} onChange={(e) => {
+                  setTransferProdId(e.target.value);
+                  setSourceBatchNo('');
+                }} required
+                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                  <option value="">-- Choose Product --</option>
+                  {products.map(p => <option key={p.id} value={p.id}>{p.sku} ({p.name})</option>)}
+                </select>
+              </div>
+
+              {transferProdId && (
+                <div>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Select Source Batch / Warehouse:</label>
+                  <select value={sourceBatchNo} onChange={(e) => setSourceBatchNo(e.target.value)} required
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                    <option value="">-- Choose Batch --</option>
+                    {(products.find(p => p.id === parseInt(transferProdId))?.batches || []).map(b => (
+                      <option key={b.batchNo} value={b.batchNo}>
+                        Batch: {b.batchNo} at {b.location} (Stock: {b.stock})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Destination Warehouse:</label>
+                  <select value={destWarehouseName} onChange={(e) => setDestWarehouseName(e.target.value)} required
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                    <option value="">-- Choose Destination --</option>
+                    {warehousesList.map(w => (
+                      <option key={w.id} value={w.name}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Quantity to Transfer:</label>
+                  <input type="number" required placeholder="Qty" value={transferQty} onChange={(e) => setTransferQty(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+              </div>
+
+              <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit' }}>
+                Execute Warehouse Stock Transfer
+              </button>
+            </form>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '0.88rem', fontWeight: '800', fontFamily: 'Outfit', margin: 0 }}>Recent Transfer Logs</h3>
+              <input 
+                type="text" 
+                placeholder="Search transfers..." 
+                value={transferSearch} 
+                onChange={(e) => { setTransferSearch(e.target.value); setTransferPage(1); }}
+                style={{ padding: '6px 10px', fontSize: '0.72rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', width: '150px' }}
+              />
+            </div>
+            {filteredTransfers.length === 0 ? (
+              <EmptyStateCard 
+                icon={Truck} 
+                title="No Transfers Found" 
+                message="No stock transfers match your search or exist in the system." 
+              />
+            ) : (
+              displayedTransfers.map(log => {
+                const prod = products.find(p => p.id === log.productId);
+                return (
+                  <div key={log.id} className="glass-card" style={{ padding: '12px', border: '1px solid hsl(var(--border-color))' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
+                      <span><strong>{prod?.name || 'Unknown Product'}</strong> ({prod?.sku})</span>
+                      <span style={{ color: 'hsl(var(--text-muted))' }}>{new Date(log.date).toLocaleString()}</span>
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', marginTop: '4px' }}>
+                      Status: <strong style={{ color: 'hsl(var(--secondary))' }}>Transferred</strong> • {log.reason}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {filteredTransfers.length > itemsPerPage && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  disabled={transferPage === 1}
+                  onClick={() => setTransferPage(prev => Math.max(1, prev - 1))}
+                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: transferPage === 1 ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: transferPage === 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  Prev
+                </button>
+                <span style={{ fontSize: '0.72rem', alignSelf: 'center', color: 'hsl(var(--text-muted))' }}>
+                  Page {transferPage} of {totalTransferPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={transferPage === totalTransferPages}
+                  onClick={() => setTransferPage(prev => Math.min(totalTransferPages, prev + 1))}
+                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: transferPage === totalTransferPages ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: transferPage === totalTransferPages ? 'not-allowed' : 'pointer' }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Reconcile Modal */}
+      {reconcileProduct && (
+        <div className="modal-overlay-container">
+          <div className="modal-content-card animate-fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', fontFamily: 'Outfit' }}>⚖️ Physical Stock Audit Reconciliation</h3>
+              <button onClick={() => setReconcileProduct(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
+                <X size={16} />
+              </button>
+            </div>
+            <p style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))' }}>
+              Item: <strong>{reconcileProduct.name}</strong> ({reconcileProduct.sku})<br />
+              System Stock: <strong>{reconcileProduct.stock}</strong> units.
+            </p>
+            <form onSubmit={handleReconcile} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Actual Physically Counted Count:</label>
+                <input type="number" required value={physicalCount} onChange={(e) => setPhysicalCount(e.target.value)}
+                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Adjustment Reason:</label>
+                <select value={reconcileReason} onChange={(e) => setReconcileReason(e.target.value)}
+                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                  <option value="Physical Audit Discrepancy">Physical Audit Discrepancy</option>
+                  <option value="Loss / Damaged">Loss / Damaged</option>
+                  <option value="Bonus / Vendor Correction">Bonus / Vendor Correction</option>
+                  <option value="Expired Product Disposal">Expired Product Disposal</option>
+                </select>
+              </div>
+              <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: '6px' }}>
+                Confirm Stock Adjustment
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Target Serial registration modal */}
+      {targetSerialProdId && (
+        <div className="modal-overlay-container">
+          <div className="modal-content-card animate-fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', fontFamily: 'Outfit' }}>➕ Register New Serial Number</h3>
+              <button onClick={() => setTargetSerialProdId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleAddSerialNumber} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Serial Number / Barcode Text:</label>
+                <input type="text" required value={newSerialNumber} onChange={(e) => setNewSerialNumber(e.target.value)} placeholder="e.g. SN-ZIR-5521"
+                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+              </div>
+              <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: '6px' }}>
+                Add Serial Number
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Target Add Batch modal */}
+      {targetProdId && (
+        <div className="modal-overlay-container">
+          <div className="modal-content-card animate-fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', fontFamily: 'Outfit' }}>➕ Register New Product Batch</h3>
+              <button onClick={() => setTargetProdId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleAddBatch} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Batch / Lot ID:</label>
+                <input type="text" required value={newBatchNo} onChange={(e) => setNewBatchNo(e.target.value)} placeholder="e.g. F40-26X"
+                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Batch Qty:</label>
+                  <input type="number" required value={newBatchQty} onChange={(e) => setNewBatchQty(e.target.value)} placeholder="e.g. 20"
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Expiry Date:</label>
+                  <input type="date" value={newBatchExpiry} onChange={(e) => setNewBatchExpiry(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Warehouse Location:</label>
+                <select value={newBatchLocation} onChange={(e) => setNewBatchLocation(e.target.value)}
+                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                  {warehousesList.map(w => (
+                    <option key={w.id} value={w.name}>{w.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: '6px' }}>
+                Add Batch to Inventory
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Product Modal Overlay */}
+      {editingProduct && (
+        <div className="modal-overlay-container">
+          <div className="modal-content-card animate-fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(var(--border-color))', paddingBottom: '8px' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>
+                ✏️ {t('editProductTitle', lang)}
+              </h3>
+              <button onClick={() => setEditingProduct(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateProduct} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('productName', lang)}</label>
+                <input type="text" value={editProdName} onChange={(e) => setEditProdName(e.target.value)} required
+                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('skuCode', lang)}</label>
+                  <input type="text" value={editProdSku} onChange={(e) => setEditProdSku(e.target.value)} required
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('category', lang)}</label>
+                  <select value={editProdCategory} onChange={(e) => setEditProdCategory(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                    <option value="Implant">Implant</option>
+                    <option value="Abutment">Abutment</option>
+                    <option value="Crown">Crown</option>
+                    <option value="Bridge">Bridge</option>
+                    <option value="Surgical Tool">Surgical Tool</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('unitPrice', lang)}</label>
+                  <input type="number" value={editProdPrice} onChange={(e) => setEditProdPrice(e.target.value)} required
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('purchaseCost', lang)}</label>
+                  <input type="number" value={editProdCost} onChange={(e) => setEditProdCost(e.target.value)} required
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('minStockAlert', lang)}</label>
+                  <input type="number" value={editProdMinStock} onChange={(e) => setEditProdMinStock(e.target.value)} required
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '6px' }}>Product Photo</label>
+                  <div style={{
+                    border: '2px dashed hsl(var(--border-color))',
+                    borderRadius: '12px',
+                    padding: '8px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    background: 'hsl(var(--bg-dark))',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'all 0.25s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'hsl(var(--primary))'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'hsl(var(--border-color))'}
+                  >
+                    <Camera size={16} style={{ color: 'hsl(var(--text-muted))' }} />
+                    <span style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', fontWeight: 'bold' }}>
+                      Drag or Select Image
+                    </span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => handleFileChange(e, setEditProdImage)}
+                      style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                        opacity: 0, cursor: 'pointer', width: '100%', height: '100%'
+                      }} 
+                    />
+                  </div>
+                </div>
+                {editProdImage && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '16px' }}>
+                    <img src={editProdImage} alt="Preview" style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover', border: '1px solid hsl(var(--border-color))' }} />
+                    <button 
+                      type="button" 
+                      onClick={() => setEditProdImage('')} 
+                      style={{ 
+                        border: 'none', background: 'hsl(var(--color-hyper) / 10%)', color: 'hsl(var(--color-hyper))', 
+                        padding: '6px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'transform 0.2s ease, background 0.2s ease, color 0.2s ease',
+                        marginLeft: '12px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.15) rotate(5deg)';
+                        e.currentTarget.style.background = 'hsl(var(--color-hyper))';
+                        e.currentTarget.style.color = '#fff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+                        e.currentTarget.style.background = 'hsl(var(--color-hyper) / 10%)';
+                        e.currentTarget.style.color = 'hsl(var(--color-hyper))';
+                      }}
+                      title="Remove Image"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button type="submit" className="btn-primary" style={{ padding: '12px', borderRadius: '10px', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginTop: '6px', fontFamily: 'Outfit' }}>
+                {t('saveChanges', lang)}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Supplier PO Payout Simulator */}
+      {paymentPo && (
+        <div className="modal-overlay-container">
+          <div className="modal-content-card animate-fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: '800', fontFamily: 'Outfit' }}>💳 B2B Corporate Payout Simulator</h3>
+              <button onClick={() => setPaymentPo(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div style={{ background: 'hsl(var(--border-color) / 10%)', padding: '12px', borderRadius: '12px', fontSize: '0.72rem' }}>
+              <div style={{ color: 'hsl(var(--text-muted))', marginBottom: '4px' }}>Paying Supplier:</div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'hsl(var(--text-primary))' }}>{paymentPo.supplierName}</div>
+              <div style={{ marginTop: '8px', borderTop: '1px solid hsl(var(--border-color) / 20%)', paddingTop: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Total Amount:</span>
+                <strong style={{ color: 'hsl(var(--primary))' }}>
+                  ₹{(paymentPo.items.reduce((sum, item) => sum + (item.qty * item.cost), 0)).toLocaleString('en-IN')}
+                </strong>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Choose Settlement Account:</label>
+              <select style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                <option value="corporate-axis">HDFC Bank Corporate A/c - *9908 (INR)</option>
+                <option value="corporate-sbi">SBI Cash Credit A/c - *4451 (INR)</option>
+                <option value="nodal-icici">ICICI Nodal Escrow A/c - *2289 (INR)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Payment Method:</label>
+              <select style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                <option value="neft">NEFT / RTGS (Immediate B2B Settlement)</option>
+                <option value="imps">IMPS Instant Corporate Payout</option>
+                <option value="upi">UPI ID / Corporate QR Code</option>
+              </select>
+            </div>
+
+            <button
+              onClick={async () => {
+                await db.b2bPurchaseOrders.update(paymentPo.id, { paymentStatus: 'Paid' });
+                setPaymentPo(null);
+                alert('B2B Corporate Payout approved and settled successfully!');
+              }}
+              className="btn-primary"
+              style={{ padding: '12px', borderRadius: '10px', fontWeight: 'bold', border: 'none', cursor: 'pointer', width: '100%', fontFamily: 'Outfit' }}
+            >
+              Confirm & Authorize Payout
+            </button>
+          </div>
+        </div>
+      )}
+
+      {qrScanProduct && (
+        <QrScannerModal
+          product={qrScanProduct}
+          onClose={() => setQrScanProduct(null)}
+          onSuccess={async (product) => {
+            const nextStock = (product.stock || 0) + 5;
+            await db.b2bProducts.update(product.id, { stock: nextStock });
+            await db.stockAdjustments.add({
+              productId: product.id,
+              type: 'Restock via QR Scan',
+              date: Date.now()
+            });
+            setQrScanProduct(null);
+          }}
+        />
+      )}
+
+    </div>
+  );
+}
+
+function QrScannerModal({ product, onClose, onSuccess }) {
+  const videoRef = useRef(null);
+  const [hasCamera, setHasCamera] = useState(() => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+  const [status, setStatus] = useState('scanning'); // 'scanning' | 'success'
+  const [stream, setStream] = useState(null);
+
+  const handleScanSuccess = () => {
+    if (localStorage.getItem('dentalSoundFx') !== 'false') {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        oscillator.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+        oscillator.stop(audioCtx.currentTime + 0.15);
+      } catch (e) {
+        console.log(e);
+      }
+    }
+    
+    setStatus('success');
+    setTimeout(() => {
+      onSuccess(product);
+    }, 1500);
+  };
+
+  useEffect(() => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(str => {
+          setStream(str);
+          if (videoRef.current) {
+            videoRef.current.srcObject = str;
+          }
+        })
+        .catch(err => {
+          console.warn("Camera access denied or not available:", err);
+          setHasCamera(false);
+        });
+    }
+
+    const timer = setTimeout(() => {
+      handleScanSuccess();
+    }, 2800);
+
+    return () => {
+      clearTimeout(timer);
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  return (
+    <div className="modal-overlay-container">
+      <div className="modal-content-card animate-fade-in">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(var(--border-color))', paddingBottom: '8px' }}>
+          <div>
+            <span style={{ fontSize: '0.6rem', color: 'hsl(var(--primary))', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Inventory Scanner</span>
+            <h3 style={{ fontSize: '0.92rem', fontWeight: '800', fontFamily: 'Outfit', margin: 0 }}>QR & Barcode Scan</h3>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {status === 'scanning' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ position: 'relative', width: '100%', height: '220px', borderRadius: '16px', overflow: 'hidden', background: '#090d16', border: '1px solid hsl(var(--border-color))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {hasCamera ? (
+                <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: 'hsl(var(--text-muted))', padding: '20px', textAlign: 'center' }}>
+                  <Camera size={32} style={{ opacity: 0.5 }} />
+                  <span style={{ fontSize: '0.68rem' }}>Webcam simulator active. Scanning pattern...</span>
+                </div>
+              )}
+              {/* Scanning Target frame */}
+              <div style={{
+                position: 'absolute', width: '160px', height: '160px',
+                border: '2px solid hsl(var(--secondary))', borderRadius: '12px',
+                boxShadow: '0 0 0 9999px rgba(9, 13, 22, 0.65)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {/* Laser animation */}
+                <div style={{
+                  position: 'absolute', left: 0, right: 0, height: '2px',
+                  background: 'hsl(var(--secondary))', boxShadow: '0 0 8px hsl(var(--secondary))',
+                  animation: 'scanLaser 2s linear infinite'
+                }} />
+              </div>
+            </div>
+            
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 'bold' }}>Aligning SKU QR Code:</span>
+              <div style={{ fontSize: '0.78rem', color: 'hsl(var(--primary))', fontFamily: 'monospace', fontWeight: '800', letterSpacing: '1px', marginTop: '2px' }}>
+                {product.sku}
+              </div>
+              <p style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', margin: '4px 0 0' }}>
+                Detecting scan lines...
+              </p>
+            </div>
+
+            <button 
+              onClick={handleScanSuccess} 
+              className="btn-primary" 
+              style={{ padding: '8px', fontSize: '0.7rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              ⚡ Force QR Scan Match
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '30px 0', textAlign: 'center' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'hsl(var(--secondary-glow))', color: 'hsl(var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 'bold' }}>
+              ✓
+            </div>
+            <div>
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'hsl(var(--secondary))', margin: 0 }}>QR Scan Matched!</h4>
+              <p style={{ fontSize: '0.75rem', fontWeight: 'bold', marginTop: '4px' }}>{product.name}</p>
+              <p style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', marginTop: '2px' }}>Stock auto-incremented by +5 units.</p>
+            </div>
+          </div>
+        )}
+      </div>
+      <style>{`
+        @keyframes scanLaser {
+          0% { top: 0%; }
+          50% { top: 100%; }
+          100% { top: 0%; }
+        }
+      `}</style>
+    </div>
+  );
+}

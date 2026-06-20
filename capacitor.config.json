@@ -1,0 +1,12 @@
+{
+  "appId": "com.my.dental.care",
+  "appName": "My Dental Care",
+  "webDir": "dist",
+  "server": {
+    "allowNavigation": [
+      "*.youtube.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com"
+    ]
+  }
+}
