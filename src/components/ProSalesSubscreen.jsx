@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import { supabase } from '../utils/supabase';
-import { Trash2, UserPlus, Edit3, X, ClipboardList, TrendingUp, Landmark, Truck, ShoppingBag, FileText, Users, Download, Camera, Sparkles, Mic, MicOff, Printer, Search } from 'lucide-react';
+import { Trash2, UserPlus, Edit3, X, ClipboardList, TrendingUp, Landmark, Truck, ShoppingBag, FileText, Users, Download, Camera, Sparkles, Mic, MicOff, Printer, Search, BarChart2 } from 'lucide-react';
 import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
+import SalesAnalytics from './SalesAnalytics';
 
 const ALL_INDIAN_STATES_AND_UTS = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
@@ -771,6 +772,164 @@ export default function ProSalesSubscreen({ lang, profile }) {
     alert('Payment details recorded and outstanding balance updated.');
   };
 
+  /* ── GST PDF Invoice Download ── */
+  const handleDownloadPDF = async (order) => {
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+
+    const client = clients.find(c => c.id === order.clientId);
+    const product = products.find(p => p.id === order.productIds?.[0]);
+    if (!client || !product) return;
+
+    const isLocalState = (client.state || 'Telangana') === 'Telangana';
+    const appliedGstRate = order.gstRate || 12;
+    const taxRate = appliedGstRate / 100;
+    const subtotal = order.finalAmount || 0;
+    const taxVal = order.gstPaid !== undefined ? order.gstPaid : subtotal * taxRate;
+    const totalAmt = subtotal + taxVal;
+    const paidAmt = order.amountPaid || 0;
+    const outstanding = totalAmt - paidAmt;
+    const invoiceDate = new Date(order.orderDate).toLocaleDateString('en-IN');
+    const companyName = profile?.clinicName || 'My Dental Care';
+    const companyAddress = profile?.clinicAddress || 'Hyderabad, Telangana';
+    const gstNo = profile?.gstNumber || '36AAAAA1111A1Z1';
+
+    // Amount in words helper
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const numToWords = (n) => {
+      n = Math.round(n);
+      if (n === 0) return 'Zero';
+      if (n < 20) return ones[n];
+      if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+      if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + numToWords(n % 100) : '');
+      if (n < 100000) return numToWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 !== 0 ? ' ' + numToWords(n % 1000) : '');
+      if (n < 10000000) return numToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 !== 0 ? ' ' + numToWords(n % 100000) : '');
+      return numToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 !== 0 ? ' ' + numToWords(n % 10000000) : '');
+    };
+    const amountInWords = numToWords(Math.round(totalAmt)) + ' Rupees Only';
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const PW = 210, M = 14;
+
+    // ── Header band
+    doc.setFillColor(14, 165, 233); // sky-500
+    doc.rect(0, 0, PW, 28, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+    doc.text('🦷 ' + companyName, M, 11);
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text(`GSTIN: ${gstNo}   |   ${companyAddress}`, M, 17);
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+    doc.text('TAX INVOICE', PW - M, 11, { align: 'right' });
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text(`Invoice No: DPC-${order.id}`, PW - M, 17, { align: 'right' });
+    doc.text(`Date: ${invoiceDate}`, PW - M, 22, { align: 'right' });
+
+    // Status badge
+    const statusColor = outstanding <= 0 ? [16, 185, 129] : [239, 68, 68];
+    doc.setFillColor(...statusColor);
+    doc.roundedRect(PW - M - 24, 3, 24, 8, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+    doc.text(outstanding <= 0 ? 'PAID' : 'DUE', PW - M - 12, 8.5, { align: 'center' });
+
+    // ── Bill From / Bill To
+    doc.setTextColor(30, 41, 59);
+    let y = 36;
+    doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 116, 139);
+    doc.text('BILL FROM', M, y); doc.text('BILL TO', PW / 2 + 2, y);
+    y += 4;
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 41, 59); doc.setFontSize(9);
+    doc.text(companyName, M, y); doc.text(client.name, PW / 2 + 2, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(71, 85, 105);
+    const fromLines = doc.splitTextToSize(companyAddress, 86);
+    doc.text(fromLines, M, y + 4);
+    const toLines = doc.splitTextToSize((client.address || '') + (client.state ? ', ' + client.state : ''), 86);
+    doc.text(toLines, PW / 2 + 2, y + 4);
+    y += Math.max(fromLines.length, toLines.length) * 4 + 10;
+
+    // ── Line separator
+    doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.3); doc.line(M, y, PW - M, y); y += 5;
+
+    // ── Items table
+    autoTable(doc, {
+      startY: y,
+      head: [['Item Description', 'HSN/SAC', 'Rate (₹)', 'Qty', 'Disc (₹)', 'Amount (₹)']],
+      body: [[
+        product.name,
+        '9021',
+        product.price?.toLocaleString('en-IN') || '0',
+        order.qty,
+        (order.discountAmount || 0).toLocaleString('en-IN'),
+        subtotal.toLocaleString('en-IN'),
+      ]],
+      headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold', fontSize: 7 },
+      bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
+      columnStyles: {
+        0: { cellWidth: 70 }, 1: { cellWidth: 22, halign: 'center' },
+        2: { cellWidth: 28, halign: 'right' }, 3: { cellWidth: 14, halign: 'center' },
+        4: { cellWidth: 22, halign: 'right' }, 5: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
+      },
+      margin: { left: M, right: M },
+    });
+    y = doc.lastAutoTable.finalY + 6;
+
+    // ── Tax summary (right-aligned box)
+    const boxX = PW - M - 76, boxW = 76;
+    const taxRows = isLocalState ? [
+      ['Subtotal', `₹${subtotal.toLocaleString('en-IN')}`],
+      ...(order.discountAmount > 0 ? [['Discount', `-₹${order.discountAmount.toLocaleString('en-IN')}`]] : []),
+      ['Taxable Value', `₹${subtotal.toLocaleString('en-IN')}`],
+      [`CGST @ ${appliedGstRate / 2}%`, `₹${(taxVal / 2).toFixed(2)}`],
+      [`SGST @ ${appliedGstRate / 2}%`, `₹${(taxVal / 2).toFixed(2)}`],
+    ] : [
+      ['Subtotal', `₹${subtotal.toLocaleString('en-IN')}`],
+      ...(order.discountAmount > 0 ? [['Discount', `-₹${order.discountAmount.toLocaleString('en-IN')}`]] : []),
+      ['Taxable Value', `₹${subtotal.toLocaleString('en-IN')}`],
+      [`IGST @ ${appliedGstRate}%`, `₹${taxVal.toFixed(2)}`],
+    ];
+
+    taxRows.forEach(([label, val], i) => {
+      doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(71, 85, 105);
+      doc.text(label + ':', boxX + 2, y + i * 5);
+      doc.text(val, boxX + boxW - 2, y + i * 5, { align: 'right' });
+    });
+    y += taxRows.length * 5 + 2;
+    doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.3); doc.line(boxX, y, boxX + boxW, y); y += 4;
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(14, 165, 233);
+    doc.text('Gross Total:', boxX + 2, y); doc.text(`₹${totalAmt.toLocaleString('en-IN')}`, boxX + boxW - 2, y, { align: 'right' });
+    y += 5;
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(16, 185, 129);
+    doc.text('Amount Paid:', boxX + 2, y); doc.text(`₹${paidAmt.toLocaleString('en-IN')}`, boxX + boxW - 2, y, { align: 'right' });
+    y += 5;
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+    doc.setTextColor(outstanding <= 0 ? 16 : 239, outstanding <= 0 ? 185 : 68, outstanding <= 0 ? 129 : 68);
+    doc.text('Balance Due:', boxX + 2, y); doc.text(`₹${outstanding.toLocaleString('en-IN')}`, boxX + boxW - 2, y, { align: 'right' });
+    y += 8;
+
+    // ── Amount in words
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'italic'); doc.setTextColor(71, 85, 105);
+    doc.text(`Amount in Words: ${amountInWords}`, M, y);
+    y += 10;
+
+    // ── Signature line
+    doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.3);
+    doc.line(PW - M - 50, y, PW - M, y);
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
+    doc.text('Authorised Signature', PW - M - 25, y + 4, { align: 'center' });
+    doc.text(companyName, PW - M - 25, y + 8, { align: 'center' });
+
+    // ── Footer band
+    doc.setFillColor(241, 245, 249);
+    doc.rect(0, 280, PW, 17, 'F');
+    doc.setFontSize(6.5); doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal');
+    doc.text('This is a computer-generated invoice and does not require a physical signature.', PW / 2, 287, { align: 'center' });
+    doc.text(`Generated by My Dental Care App  |  ${new Date().toLocaleString('en-IN')}`, PW / 2, 292, { align: 'center' });
+
+    doc.save(`Invoice-DPC-${order.id}.pdf`);
+  };
+
   // Selected product batches lookup
   const currentSelectedProduct = products.find(p => p.id === parseInt(selectedProductId));
 
@@ -809,6 +968,15 @@ export default function ProSalesSubscreen({ lang, profile }) {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <TrendingUp size={14} /> Stats
+          </button>
+        )}
+        {!isDoctor && (
+          <button
+            onClick={() => setActiveSubTab('analytics')}
+            className={`tab-btn ${activeSubTab === 'analytics' ? 'active' : ''}`}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <BarChart2 size={14} /> Analytics
           </button>
         )}
       </div>
@@ -2163,6 +2331,11 @@ export default function ProSalesSubscreen({ lang, profile }) {
         </div>
       )}
 
+      {/* 5. Analytics Tab */}
+      {activeSubTab === 'analytics' && (
+        <SalesAnalytics />
+      )}
+
       {/* Printable Tax Invoice Modal */}
       {selectedInvoiceOrder && (() => {
         const order = selectedInvoiceOrder;
@@ -2312,9 +2485,19 @@ export default function ProSalesSubscreen({ lang, profile }) {
                   <Printer size={14} /> {t('invoicePrint', lang)}
                 </button>
                 <button 
+                  onClick={() => handleDownloadPDF(order)}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 'bold', border: 'none',
+                    background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', cursor: 'pointer', fontFamily: 'Outfit',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  }}
+                >
+                  <Download size={14} /> Download PDF
+                </button>
+                <button 
                   onClick={() => setSelectedInvoiceOrder(null)}
                   style={{
-                    flex: 1, padding: '10px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 'bold', border: '1px solid #cbd5e1',
+                    padding: '10px 14px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 'bold', border: '1px solid #cbd5e1',
                     background: '#f8fafc', color: '#475569', cursor: 'pointer', fontFamily: 'Outfit'
                   }}
                 >
