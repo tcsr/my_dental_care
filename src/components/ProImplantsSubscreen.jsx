@@ -144,8 +144,8 @@ export default function ProImplantsSubscreen({ lang, profile }) {
   };
 
   const handleDeleteCase = async (caseId) => {
-    if (confirm('Delete this implant case record?')) {
-      await db.implantCases.delete(caseId);
+    if (await confirm('Delete this implant case record?')) {
+       await db.implantCases.delete(caseId);
     }
   };
 

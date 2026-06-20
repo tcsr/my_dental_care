@@ -1221,7 +1221,7 @@ button {
   /* Make buttons smaller on desktop browser and prevent stretching */
   body.is-browser .btn-primary,
   body.is-browser .btn-secondary,
-  body.is-browser main button:not(.tab-btn):not(.sidebar-link):not(.sidebar-header button):not(.app-header button) {
+  body.is-browser main button:not(.tab-btn):not(.sidebar-link):not(.sidebar-header button):not(.app-header button):not(.qty-btn):not(.modal-close-btn):not(.carousel-nav-btn) {
     width: auto !important;
     min-width: unset !important;
     max-width: 320px !important;
@@ -1326,10 +1326,151 @@ button {
   50% { filter: drop-shadow(0 0 12px hsl(var(--secondary))); }
 }
 
+/* Exclude quantity selector buttons from desktop browser button overrides */
+body.is-browser main button.qty-btn {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: unset !important;
+  max-width: 28px !important;
+  align-self: center !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* Exclude modal close buttons and carousel arrows from desktop overrides */
+body.is-browser main button.modal-close-btn,
+body.is-browser main button.carousel-nav-btn {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: unset !important;
+  max-width: 32px !important;
+  align-self: center !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* Quantity selector button styling */
+.qty-btn {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: #0ea5e9 !important;
+  color: #ffffff !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.2) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.qty-btn:hover:not(:disabled) {
+  background: #0284c7 !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 4px 10px rgba(14, 165, 233, 0.35) !important;
+}
+
+.qty-btn:active:not(:disabled) {
+  transform: scale(0.9) !important;
+}
+
+.qty-btn:disabled {
+  background: hsl(var(--border-color)) !important;
+  color: hsl(var(--text-dim)) !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+/* Modal close button styling with light and dark variants */
+.modal-close-btn {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Light background variant (e.g., for modal headers / cart overlay) */
+.modal-close-btn.light-bg {
+  background: hsl(var(--bg-dark)) !important;
+  border: 1px solid hsl(var(--border-color)) !important;
+  color: hsl(var(--text-muted)) !important;
+}
+
+.modal-close-btn.light-bg:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+  color: #ef4444 !important;
+  transform: scale(1.1) rotate(90deg) !important;
+}
+
+.modal-close-btn.light-bg:active {
+  transform: scale(0.95) rotate(90deg) !important;
+}
+
+/* Dark/Overlay background variant (e.g., image carousel overlay) */
+.modal-close-btn.dark-overlay {
+  background: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.modal-close-btn.dark-overlay:hover {
+  background: rgba(239, 68, 68, 0.85) !important;
+  border-color: rgba(239, 68, 68, 0.9) !important;
+  color: #ffffff !important;
+  transform: scale(1.1) rotate(90deg) !important;
+}
+
+.modal-close-btn.dark-overlay:active {
+  transform: scale(0.95) rotate(90deg) !important;
+}
+
+/* Carousel navigation button styling */
+.carousel-nav-btn {
+  background: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 50% !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #ffffff !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  padding: 0 !important;
+}
+
+.carousel-nav-btn:hover {
+  background: rgba(14, 165, 233, 0.8) !important;
+  border-color: rgba(14, 165, 233, 0.9) !important;
+  transform: translateY(-50%) scale(1.1) !important;
+}
+
+.carousel-nav-btn:active {
+  transform: translateY(-50%) scale(0.9) !important;
+}
+
 @keyframes rotationIndicator {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-
-
-

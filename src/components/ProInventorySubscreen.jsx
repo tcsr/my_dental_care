@@ -34,6 +34,20 @@ export default function ProInventorySubscreen({ lang }) {
   const totalCatalogPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
   const displayedProducts = filteredProducts.slice((catalogPage - 1) * itemsPerPage, catalogPage * itemsPerPage);
 
+  const safetyShortages = products.filter(p => p.stock < p.minStock);
+  const allBatches = products.reduce((acc, p) => {
+    if (p.batches) {
+      p.batches.forEach(b => {
+        acc.push({ ...b, productName: p.name, productId: p.id });
+      });
+    }
+    return acc;
+  }, []);
+  // eslint-disable-next-line react-hooks/purity
+  const expiredBatches = allBatches.filter(b => b.expiryDate < Date.now());
+  // eslint-disable-next-line react-hooks/purity
+  const nearExpiryBatches = allBatches.filter(b => b.expiryDate >= Date.now() && b.expiryDate < Date.now() + 90 * 24 * 60 * 60 * 1000);
+
   const exportInventoryToCSV = () => {
     try {
       const headers = ['Product ID', 'Product Name', 'SKU Code', 'Category', 'Stock Level', 'Min Required', 'Unit Price'];
@@ -316,7 +330,7 @@ export default function ProInventorySubscreen({ lang }) {
   };
 
   const handleDeleteProduct = async (productId) => {
-    if (confirm('Delete this product catalog item permanently?')) {
+    if (await confirm('Delete this product catalog item permanently?')) {
       await db.b2bProducts.delete(productId);
     }
   };
@@ -457,7 +471,7 @@ export default function ProInventorySubscreen({ lang }) {
       return;
     }
 
-    if (!confirm(`Confirm transfer of ${qtyVal} units of ${prod.name} from ${sourceBatch.location} to ${destWarehouseName}?`)) {
+    if (!(await confirm(`Confirm transfer of ${qtyVal} units of ${prod.name} from ${sourceBatch.location} to ${destWarehouseName}?`))) {
       return;
     }
 
@@ -536,16 +550,38 @@ export default function ProInventorySubscreen({ lang }) {
 
       {subTab === 'catalog' && (
         <>
-          {/* Stock Alerts */}
-          {products.some(p => p.stock < p.minStock) && (
-            <div style={{
-              background: 'hsl(var(--color-hyper) / 8%)', border: '1px solid hsl(var(--color-hyper))',
-              borderRadius: '16px', padding: '12px 16px', display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '16px'
-            }}>
-              <AlertTriangle color="hsl(var(--color-hyper))" size={24} />
-              <div>
-                <h4 style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'hsl(var(--color-hyper))', fontFamily: 'Outfit' }}>{t('criticalStockAlert', lang)}</h4>
-                <p style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))' }}>{t('stockAlertDesc', lang)}</p>
+          {/* Premium Critical Alerts Hub */}
+          {(safetyShortages.length > 0 || expiredBatches.length > 0 || nearExpiryBatches.length > 0) && (
+            <div className="glass-card" style={{ padding: '16px 20px', marginBottom: '18px', border: '1px solid hsl(var(--color-hyper) / 15%)', background: 'linear-gradient(135deg, hsl(var(--bg-card)) 0%, hsl(var(--color-hyper) / 2%) 100%)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <AlertTriangle size={16} color="hsl(var(--color-hyper))" />
+                <h4 style={{ fontSize: '0.82rem', fontWeight: '800', fontFamily: 'Outfit', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'hsl(var(--color-hyper))', margin: 0 }}>
+                  Critical Inventory Alerts Hub
+                </h4>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))', gap: '8px' }}>
+                {/* Safety Shortages Alert Card */}
+                <div className="glass-card" style={{ margin: 0, padding: '10px', textAlign: 'center', background: safetyShortages.length > 0 ? 'hsl(var(--color-hyper) / 4%)' : 'hsl(var(--border-color) / 10%)', borderColor: safetyShortages.length > 0 ? 'hsl(var(--color-hyper) / 18%)' : 'hsl(var(--border-color))' }}>
+                  <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', display: 'block', fontWeight: 'bold' }}>STOCK SHORTAGES</span>
+                  <strong style={{ fontSize: '1.1rem', color: safetyShortages.length > 0 ? 'hsl(var(--color-hyper))' : 'hsl(var(--text-primary))', fontFamily: 'Outfit', display: 'block', marginTop: '2px' }}>
+                    {safetyShortages.length}
+                  </strong>
+                </div>
+                {/* Expired Batches Alert Card */}
+                <div className="glass-card" style={{ margin: 0, padding: '10px', textAlign: 'center', background: expiredBatches.length > 0 ? 'hsl(var(--color-hyper) / 6%)' : 'hsl(var(--border-color) / 10%)', borderColor: expiredBatches.length > 0 ? 'hsl(var(--color-hyper) / 22%)' : 'hsl(var(--border-color))' }}>
+                  <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', display: 'block', fontWeight: 'bold' }}>EXPIRED BATCHES</span>
+                  <strong style={{ fontSize: '1.1rem', color: expiredBatches.length > 0 ? 'hsl(var(--color-hyper))' : 'hsl(var(--text-primary))', fontFamily: 'Outfit', display: 'block', marginTop: '2px' }}>
+                    {expiredBatches.length}
+                  </strong>
+                </div>
+                {/* Near Expiry Alert Card */}
+                <div className="glass-card" style={{ margin: 0, padding: '10px', textAlign: 'center', background: nearExpiryBatches.length > 0 ? 'rgba(245, 158, 11, 0.06)' : 'hsl(var(--border-color) / 10%)', borderColor: nearExpiryBatches.length > 0 ? 'rgba(245, 158, 11, 0.22)' : 'hsl(var(--border-color))' }}>
+                  <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', display: 'block', fontWeight: 'bold' }}>EXPIRING SOON</span>
+                  <strong style={{ fontSize: '1.1rem', color: nearExpiryBatches.length > 0 ? '#d97706' : 'hsl(var(--text-primary))', fontFamily: 'Outfit', display: 'block', marginTop: '2px' }}>
+                    {nearExpiryBatches.length}
+                  </strong>
+                </div>
               </div>
             </div>
           )}
@@ -780,16 +816,31 @@ export default function ProInventorySubscreen({ lang }) {
 
                             return (
                               <div key={idx} style={{
-                                display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem',
-                                background: isExpired ? 'hsl(var(--color-hyper) / 5%)' : 'hsl(var(--border-color) / 15%)',
-                                padding: '4px 8px', borderRadius: '4px'
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.62rem',
+                                background: isExpired ? 'hsl(var(--color-hyper) / 4%)' : isExpiringSoon ? 'rgba(245, 158, 11, 0.04)' : 'hsl(var(--border-color) / 15%)',
+                                border: '1px solid ' + (isExpired ? 'hsl(var(--color-hyper) / 10%)' : isExpiringSoon ? 'rgba(245, 158, 11, 0.15)' : 'transparent'),
+                                padding: '4px 8px', borderRadius: '6px', margin: '2px 0'
                               }}>
                                 <span>Batch: <strong>{b.batchNo}</strong> • {b.location}</span>
-                                <span style={{ fontWeight: 'bold' }}>
-                                  Qty: {b.stock}
-                                  {isExpired && <span style={{ color: 'hsl(var(--color-hyper))', marginLeft: '6px' }}>(Expired)</span>}
-                                  {isExpiringSoon && <span style={{ color: 'orange', marginLeft: '6px' }}>(Expiring soon)</span>}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontWeight: 'bold' }}>Qty: {b.stock}</span>
+                                  {isExpired && (
+                                    <span style={{
+                                      fontSize: '0.52rem', fontWeight: '800', background: 'hsl(var(--color-hyper) / 10%)',
+                                      color: 'hsl(var(--color-hyper))', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase'
+                                    }}>
+                                      Expired
+                                    </span>
+                                  )}
+                                  {isExpiringSoon && (
+                                    <span style={{
+                                      fontSize: '0.52rem', fontWeight: '800', background: 'rgba(245, 158, 11, 0.12)',
+                                      color: '#d97706', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase'
+                                    }}>
+                                      Expiring Soon
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}

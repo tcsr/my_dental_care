@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
-import { CheckCircle, XCircle, Clock, Building2, Phone, MapPin, FileText, Mail, RefreshCw, Users } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Building2, Phone, MapPin, FileText, RefreshCw, Users } from 'lucide-react';
 
 export default function AdminPanel() {
   const [pending, setPending] = useState([]);
@@ -24,6 +24,7 @@ export default function AdminPanel() {
     setLoading(false);
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchDoctors(); }, []);
 
   const handleApprove = async (id) => {
@@ -34,7 +35,7 @@ export default function AdminPanel() {
   };
 
   const handleReject = async (id) => {
-    if (!confirm('Reject and delete this registration?')) return;
+    if (!(await confirm('Reject and delete this registration?'))) return;
     setActionLoading(id + '_reject');
     await supabase.from('profiles').delete().eq('id', id);
     // Also delete auth user via admin API not possible from client — just remove profile
@@ -45,61 +46,67 @@ export default function AdminPanel() {
   const list = tab === 'pending' ? pending : approved;
 
   return (
-    <div style={{ padding: '20px 16px', maxWidth: 700, margin: '0 auto' }}>
+    <div style={{ padding: '24px 20px', maxWidth: 760, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1.2rem', color: 'hsl(var(--text-primary))', margin: '0 0 4px' }}>
+      <div style={{ marginBottom: 28 }}>
+        <h2 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1.35rem', color: 'hsl(var(--text-primary))', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
           Admin Panel
         </h2>
-        <p style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', margin: 0 }}>
-          Manage clinic & doctor registrations
+        <p style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', margin: 0 }}>
+          Manage clinic & doctor registrations with active verification hub
         </p>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-        <StatCard icon={<Clock size={18} color="#f59e0b" />} label="Pending Approval" value={pending.length} color="rgba(245,158,11,0.1)" border="rgba(245,158,11,0.2)" />
-        <StatCard icon={<CheckCircle size={18} color="#10b981" />} label="Approved Clinics" value={approved.length} color="rgba(16,185,129,0.1)" border="rgba(16,185,129,0.2)" />
+      {/* Stats / Verification Summary Hub */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28 }}>
+        <StatCard icon={<Clock size={20} color="#f59e0b" />} label="Pending Verification" value={pending.length} color="rgba(245,158,11,0.08)" border="#f59e0b" />
+        <StatCard icon={<CheckCircle size={20} color="#10b981" />} label="Approved Clinics" value={approved.length} color="rgba(16,185,129,0.08)" border="#10b981" />
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, background: 'hsl(var(--bg-dark))', padding: 4, borderRadius: 10, border: '1px solid hsl(var(--border-color))', marginBottom: 20 }}>
-        {[['pending', `Pending (${pending.length})`], ['approved', `Approved (${approved.length})`]].map(([key, label]) => (
+      <div style={{ display: 'flex', gap: 6, background: 'hsl(var(--border-color) / 10%)', padding: 6, borderRadius: 12, border: '1px solid hsl(var(--border-color) / 15%)', marginBottom: 24 }}>
+        {[['pending', `Pending Hub (${pending.length})`], ['approved', `Verified Members (${approved.length})`]].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{
-            flex: 1, padding: '9px', border: 'none', borderRadius: 8, fontSize: '0.75rem',
-            fontWeight: 700, fontFamily: 'Outfit', cursor: 'pointer', transition: 'all 0.2s',
+            flex: 1, padding: '10px 14px', border: 'none', borderRadius: 9, fontSize: '0.78rem',
+            fontWeight: 800, fontFamily: 'Outfit', cursor: 'pointer', transition: 'all 0.25s ease',
             background: tab === key ? 'hsl(var(--bg-card))' : 'transparent',
             color: tab === key ? 'hsl(var(--primary))' : 'hsl(var(--text-muted))',
-            boxShadow: tab === key ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+            boxShadow: tab === key ? '0 4px 12px rgba(0,0,0,0.08)' : 'none',
           }}>{label}</button>
         ))}
       </div>
 
       {/* Refresh */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
         <button onClick={fetchDoctors} style={{
-          display: 'flex', alignItems: 'center', gap: 6, background: 'none',
-          border: '1px solid hsl(var(--border-color))', borderRadius: 8, padding: '6px 12px',
-          fontSize: '0.7rem', fontWeight: 700, color: 'hsl(var(--text-muted))', cursor: 'pointer', fontFamily: 'Outfit'
-        }}>
-          <RefreshCw size={12} /> Refresh
+          display: 'flex', alignItems: 'center', gap: 6, background: 'hsl(var(--bg-card))',
+          border: '1px solid hsl(var(--border-color))', borderRadius: 9, padding: '8px 16px',
+          fontSize: '0.75rem', fontWeight: 700, color: 'hsl(var(--text-muted))', cursor: 'pointer', fontFamily: 'Outfit',
+          transition: 'all 0.2s',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'hsl(var(--primary))'; e.currentTarget.style.color = 'hsl(var(--primary))'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'hsl(var(--border-color))'; e.currentTarget.style.color = 'hsl(var(--text-muted))'; }}
+        >
+          <RefreshCw size={13} /> Refresh List
         </button>
       </div>
 
       {/* List */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'hsl(var(--text-muted))', fontSize: '0.82rem' }}>
-          Loading...
+        <div style={{ textAlign: 'center', padding: '50px 0', color: 'hsl(var(--text-muted))', fontSize: '0.88rem', fontFamily: 'Inter' }}>
+          <span style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid hsl(var(--border-color))', borderTopColor: 'hsl(var(--primary))', borderRadius: '50%', animation: 'spin 1s linear infinite', marginRight: '8px', verticalAlign: 'middle' }} />
+          Retrieving profiles...
         </div>
       ) : list.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '48px 0' }}>
-          <Users size={36} color="hsl(var(--text-dim))" style={{ margin: '0 auto 12px', display: 'block' }} />
-          <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.82rem' }}>
-            {tab === 'pending' ? 'No pending registrations' : 'No approved clinics yet'}
+        <div className="glass-card" style={{ textAlign: 'center', padding: '56px 20px', border: '1px solid hsl(var(--border-color))' }}>
+          <Users size={40} color="hsl(var(--text-dim))" style={{ margin: '0 auto 16px', display: 'block', opacity: 0.6 }} />
+          <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>
+            {tab === 'pending' ? 'No pending registrations to verify.' : 'No approved clinics yet.'}
           </p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {list.map(doc => (
             <DoctorCard
               key={doc.id}
@@ -119,61 +126,76 @@ export default function AdminPanel() {
 
 function DoctorCard({ doc, isPending, onApprove, onReject, approveLoading, rejectLoading }) {
   return (
-    <div className="glass-card" style={{ padding: '16px 18px', border: isPending ? '1px solid rgba(245,158,11,0.2)' : '1px solid hsl(var(--border-color))' }}>
+    <div className="glass-card animate-fade-in" style={{ 
+      padding: '20px 22px', 
+      border: '1px solid hsl(var(--border-color))',
+      borderLeft: isPending ? '4px solid #f59e0b' : '4px solid #10b981',
+      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.02)'
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.05)'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.02)'; }}
+    >
       {/* Top row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
         <div>
-          <h4 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '0.95rem', color: 'hsl(var(--text-primary))', margin: '0 0 2px' }}>
-            {doc.name || 'Unknown'}
+          <h4 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1rem', color: 'hsl(var(--text-primary))', margin: '0 0 4px', letterSpacing: '-0.01em' }}>
+            {doc.name || 'Unknown User'}
           </h4>
           <span style={{
-            fontSize: '0.6rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6,
-            background: isPending ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
+            fontSize: '0.62rem', fontWeight: 800, padding: '3px 8px', borderRadius: 6,
+            background: isPending ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)',
             color: isPending ? '#f59e0b' : '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em'
           }}>
-            {isPending ? '⏳ Pending' : '✓ Approved'}
+            {isPending ? '⏳ Verification Required' : '✓ Verified Doctor'}
           </span>
         </div>
-        <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))' }}>
+        <span style={{ fontSize: '0.68rem', color: 'hsl(var(--text-dim))', fontWeight: 600 }}>
           {new Date(doc.created_at).toLocaleDateString('en-IN')}
         </span>
       </div>
 
-      {/* Details */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: 14 }}>
-        {doc.clinic_name && <Detail icon={<Building2 size={11} />} text={doc.clinic_name} />}
-        {doc.phone && <Detail icon={<Phone size={11} />} text={doc.phone} />}
-        {doc.address && <Detail icon={<MapPin size={11} />} text={doc.address} />}
-        {doc.gst_number && <Detail icon={<FileText size={11} />} text={doc.gst_number} />}
+      {/* Details Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px', marginBottom: 18, borderTop: '1px solid hsl(var(--border-color) / 10%)', paddingTop: '12px' }}>
+        {doc.clinic_name && <Detail icon={<Building2 size={13} style={{ color: 'hsl(var(--primary))' }} />} text={doc.clinic_name} label="Clinic" />}
+        {doc.phone && <Detail icon={<Phone size={13} style={{ color: 'hsl(var(--secondary))' }} />} text={doc.phone} label="Phone" />}
+        {doc.address && <Detail icon={<MapPin size={13} style={{ color: 'hsl(var(--primary))' }} />} text={doc.address} label="Address" />}
+        {doc.gst_number && <Detail icon={<FileText size={13} style={{ color: 'hsl(var(--text-muted))' }} />} text={doc.gst_number} label="GSTIN" />}
       </div>
 
       {/* Actions */}
       {isPending && (
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 12, borderTop: '1px solid hsl(var(--border-color) / 10%)', paddingTop: '14px' }}>
           <button
             onClick={onReject}
             disabled={rejectLoading}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '9px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)',
-              background: 'rgba(239,68,68,0.06)', color: '#ef4444',
-              fontSize: '0.72rem', fontWeight: 700, fontFamily: 'Outfit', cursor: 'pointer',
-              opacity: rejectLoading ? 0.6 : 1
-            }}>
-            <XCircle size={13} /> {rejectLoading ? 'Rejecting...' : 'Reject'}
+              padding: '10px', borderRadius: 9, border: '1px solid rgba(239,68,68,0.2)',
+              background: 'rgba(239,68,68,0.04)', color: '#ef4444',
+              fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Outfit', cursor: 'pointer',
+              opacity: rejectLoading ? 0.6 : 1, transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => { if (!rejectLoading) e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+            onMouseLeave={(e) => { if (!rejectLoading) e.currentTarget.style.background = 'rgba(239,68,68,0.04)'; }}
+            >
+            <XCircle size={14} /> {rejectLoading ? 'Rejecting...' : 'Reject Application'}
           </button>
           <button
             onClick={onApprove}
             disabled={approveLoading}
             style={{
-              flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '9px', borderRadius: 8, border: 'none',
+              flex: 1.8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '10px', borderRadius: 9, border: 'none',
               background: 'linear-gradient(135deg, #10b981, #0ea5e9)',
-              color: '#fff', fontSize: '0.72rem', fontWeight: 700, fontFamily: 'Outfit',
-              cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.25)',
-              opacity: approveLoading ? 0.7 : 1
-            }}>
-            <CheckCircle size={13} /> {approveLoading ? 'Approving...' : 'Approve Access'}
+              color: '#fff', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Outfit',
+              cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.2)',
+              opacity: approveLoading ? 0.7 : 1, transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => { if (!approveLoading) { e.currentTarget.style.boxShadow = '0 6px 16px rgba(16,185,129,0.3)'; e.currentTarget.style.opacity = '0.95'; } }}
+            onMouseLeave={(e) => { if (!approveLoading) { e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.2)'; e.currentTarget.style.opacity = '1'; } }}
+            >
+            <CheckCircle size={14} /> {approveLoading ? 'Approving...' : 'Verify & Approve'}
           </button>
         </div>
       )}
@@ -183,21 +205,31 @@ function DoctorCard({ doc, isPending, onApprove, onReject, approveLoading, rejec
 
 function StatCard({ icon, label, value, color, border }) {
   return (
-    <div style={{ background: color, border: `1px solid ${border}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ display: 'flex' }}>{icon}</div>
+    <div className="glass-card" style={{ 
+      padding: '16px 20px', 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: 14, 
+      borderLeft: `4px solid ${border}`,
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.01)'
+    }}>
+      <div style={{ display: 'flex', padding: '8px', borderRadius: '10px', background: color }}>{icon}</div>
       <div>
-        <div style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'Outfit', color: 'hsl(var(--text-primary))', lineHeight: 1 }}>{value}</div>
-        <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', fontWeight: 700, marginTop: 2 }}>{label}</div>
+        <div style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'hsl(var(--text-primary))', lineHeight: 1.1 }}>{value}</div>
+        <div style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', fontWeight: 700, marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
       </div>
     </div>
   );
 }
 
-function Detail({ icon, text }) {
+function Detail({ icon, text, label }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'hsl(var(--text-muted))' }}>
-      <span style={{ flexShrink: 0 }}>{icon}</span>
-      <span style={{ fontSize: '0.72rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'hsl(var(--text-muted))' }}>
+      <span style={{ display: 'flex', padding: '5px', borderRadius: '6px', background: 'hsl(var(--border-color) / 8%)', flexShrink: 0 }}>{icon}</span>
+      <div style={{ overflow: 'hidden' }}>
+        <span style={{ fontSize: '0.55rem', color: 'hsl(var(--text-dim))', display: 'block', textTransform: 'uppercase', fontWeight: 700, lineHeight: 1 }}>{label}</span>
+        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'hsl(var(--text-primary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', marginTop: '2px' }}>{text}</span>
+      </div>
     </div>
   );
 }

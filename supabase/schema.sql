@@ -64,9 +64,9 @@ create table products (
 
 alter table products enable row level security;
 
-create policy "authenticated users view active products"
-  on products for select to authenticated
-  using (active = true);
+create policy "anyone can view active products"
+  on products for select
+  using (active = true or active is null);
 
 create policy "admin manages products"
   on products for all to authenticated

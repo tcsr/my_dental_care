@@ -82,7 +82,7 @@ export default function ProRemindersSubscreen({ lang }) {
   };
 
   const handleDeleteAlarm = async (id) => {
-    if (confirm('Delete this alarm?')) {
+    if (await confirm('Delete this alarm?')) {
       await db.automatedReminders.delete(id);
     }
   };
@@ -203,7 +203,7 @@ export default function ProRemindersSubscreen({ lang }) {
   };
 
   const handleClearReminders = async () => {
-    if (confirm('Clear all reminder logs?')) {
+    if (await confirm('Clear all reminder logs?')) {
       await db.automatedReminders.clear();
     }
   };

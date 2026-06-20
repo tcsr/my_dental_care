@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../utils/supabase';
 import { Eye, EyeOff, Mail, Lock, User, Building2, Phone, MapPin, FileText, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
 
-export default function LoginScreen({ onLogin }) {
+export default function LoginScreen({ onLogin, isModal = false }) {
   const [screen, setScreen] = useState('login'); // 'login' | 'register' | 'pending'
   const [portal, setPortal] = useState('admin');
   const [showPass, setShowPass] = useState(false);
@@ -97,7 +97,7 @@ export default function LoginScreen({ onLogin }) {
   // ── PENDING ──────────────────────────────────────────────────────────────────
   if (screen === 'pending') {
     return (
-      <Wrapper>
+      <Wrapper isModal={isModal}>
         <div style={{ textAlign: 'center', padding: '40px 24px' }}>
           <div style={{
             width: 72, height: 72, borderRadius: '50%', margin: '0 auto 20px',
@@ -124,7 +124,7 @@ export default function LoginScreen({ onLogin }) {
   // ── REGISTER ─────────────────────────────────────────────────────────────────
   if (screen === 'register') {
     return (
-      <Wrapper>
+      <Wrapper isModal={isModal}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
           <button onClick={() => { setScreen('login'); setError(''); setStep(1); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex' }}>
@@ -223,7 +223,7 @@ export default function LoginScreen({ onLogin }) {
 
   // ── LOGIN ─────────────────────────────────────────────────────────────────────
   return (
-    <Wrapper>
+    <Wrapper isModal={isModal}>
       {/* Brand */}
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <div style={{
@@ -298,7 +298,14 @@ export default function LoginScreen({ onLogin }) {
 
 // ── SHARED COMPONENTS ─────────────────────────────────────────────────────────
 
-function Wrapper({ children }) {
+function Wrapper({ children, isModal }) {
+  if (isModal) {
+    return (
+      <div style={{ width: '100%', boxSizing: 'border-box' }}>
+        {children}
+      </div>
+    );
+  }
   return (
     <div style={{
       minHeight: '100vh', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -324,7 +331,7 @@ function PremiumInput({ icon, label, required, type = 'text', placeholder, value
       <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6, letterSpacing: '0.02em' }}>
         {label}{required && <span style={{ color: '#0ea5e9', marginLeft: 2 }}>*</span>}
       </label>
-      <div style={{
+      <div className="premium-input-container" style={{
         display: 'flex', alignItems: 'center', gap: 10,
         border: `1.5px solid ${focused ? '#0ea5e9' : '#e2e8f0'}`,
         borderRadius: 10, padding: '0 12px', background: focused ? '#f0f9ff' : '#f8fafc',

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
-import { Trash2, UserPlus, Edit3, X, ClipboardList, TrendingUp, Landmark, Truck, ShoppingBag, FileText, Users, Download, Camera, Sparkles, Mic, MicOff, Printer } from 'lucide-react';
+import { supabase } from '../utils/supabase';
+import { Trash2, UserPlus, Edit3, X, ClipboardList, TrendingUp, Landmark, Truck, ShoppingBag, FileText, Users, Download, Camera, Sparkles, Mic, MicOff, Printer, Search } from 'lucide-react';
 import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
 
@@ -66,6 +67,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
 
   const [activeSubTab, setActiveSubTab] = useState('orders'); // 'orders' | 'quotes' | 'clients' | 'dashboard'
   const [showForecasting, setShowForecasting] = useState(false);
+  const [dynamicStatesList, setDynamicStatesList] = useState([]);
 
   // Reset scroll to top on sub-tab change
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
   const states = useLiveQuery(() => db.b2bStates.toArray()) || [];
 
   const dbStateNames = states.map(s => s.name);
-  const allStatesUnique = Array.from(new Set([...ALL_INDIAN_STATES_AND_UTS, ...dbStateNames])).sort();
+  const allStatesUnique = Array.from(new Set([...ALL_INDIAN_STATES_AND_UTS, ...dynamicStatesList, ...dbStateNames])).sort();
 
 
   // Form states - New Client
@@ -176,10 +178,40 @@ export default function ProSalesSubscreen({ lang, profile }) {
   const [quoteQty, setQuoteQty] = useState(1);
 
   // GST Rates States
-  const gstRates = profile?.gstRates || [5, 12, 18, 28];
-  // const defaultGstRate = profile?.defaultGstRate || 12;
+  const [gstRates, setGstRates] = useState(profile?.gstRates || [5, 12, 18, 28]);
   const [selectedGstRate, setSelectedGstRate] = useState(() => profile?.defaultGstRate || 12);
   const [quoteGstRate, setQuoteGstRate] = useState(() => profile?.defaultGstRate || 12);
+
+  useEffect(() => {
+    const fetchLookups = async () => {
+      try {
+        const { data, error } = await supabase.from('gst_rates').select('*').order('rate');
+        if (error) throw error;
+        if (data && data.length > 0) {
+          const rates = data.map(r => r.rate);
+          setGstRates(rates);
+          const def = data.find(r => r.is_default);
+          if (def) {
+            setSelectedGstRate(def.rate);
+            setQuoteGstRate(def.rate);
+          }
+        }
+      } catch (e) {
+        console.warn('Fallback to local GST rates:', e);
+      }
+
+      try {
+        const { data, error } = await supabase.from('states').select('*').eq('active', true).order('name');
+        if (error) throw error;
+        if (data && data.length > 0) {
+          setDynamicStatesList(data.map(s => s.name));
+        }
+      } catch (e) {
+        console.warn('Fallback to local states:', e);
+      }
+    };
+    fetchLookups();
+  }, [profile]);
 
 
 
@@ -273,6 +305,8 @@ export default function ProSalesSubscreen({ lang, profile }) {
   // Search & Pagination for Orders and Quotes
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [orderCurrentPage, setOrderCurrentPage] = useState(1);
+  const [orderPaymentFilter, setOrderPaymentFilter] = useState('all'); // 'all' | 'Paid' | 'Unpaid'
+  const [orderDispatchFilter, setOrderDispatchFilter] = useState('all'); // 'all' | 'Pending' | 'Dispatched' | 'Transit' | 'Delivered'
   const [quoteSearchQuery, setQuoteSearchQuery] = useState('');
   const [quoteCurrentPage, setQuoteCurrentPage] = useState(1);
   const ordersPerPage = 5;
@@ -281,13 +315,29 @@ export default function ProSalesSubscreen({ lang, profile }) {
   const filteredOrders = orders.filter(order => {
     const client = clients.find(c => c.id === order.clientId);
     const product = products.find(p => p.id === order.productIds[0]);
+    const challan = challans.find(ch => ch.orderId === order.id);
     const query = orderSearchQuery.toLowerCase();
-    return (
+    
+    const matchesQuery = (
       (client?.name || '').toLowerCase().includes(query) ||
       (product?.name || '').toLowerCase().includes(query) ||
       order.id.toString().includes(query) ||
       order.status.toLowerCase().includes(query)
     );
+
+    const matchesPayment = orderPaymentFilter === 'all' || order.paymentStatus === orderPaymentFilter;
+    
+    let matchesDispatch = true;
+    if (orderDispatchFilter !== 'all') {
+      const challanStatus = challan ? challan.status : 'Pending';
+      if (orderDispatchFilter === 'Pending') {
+        matchesDispatch = !challan || challanStatus === 'Pending';
+      } else {
+        matchesDispatch = challanStatus === orderDispatchFilter;
+      }
+    }
+
+    return matchesQuery && matchesPayment && matchesDispatch;
   });
   const totalOrdersCount = filteredOrders.length;
   const totalOrderPages = Math.ceil(totalOrdersCount / ordersPerPage) || 1;
@@ -394,14 +444,14 @@ export default function ProSalesSubscreen({ lang, profile }) {
   };
 
   const handleDeleteOrder = async (id) => {
-    if (confirm('Are you sure you want to delete this sales order permanently?')) {
+    if (await confirm('Are you sure you want to delete this sales order permanently?')) {
       await db.b2bOrders.delete(id);
       alert('Sales order deleted successfully.');
     }
   };
 
   const handleDeleteQuote = async (id) => {
-    if (confirm('Are you sure you want to delete this quotation permanently?')) {
+    if (await confirm('Are you sure you want to delete this quotation permanently?')) {
       await db.b2bQuotes.delete(id);
       alert('Quotation deleted successfully.');
     }
@@ -473,7 +523,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
       }
     }
 
-    if (!confirm(`Confirm and place this B2B Sales Order for ₹${grossOrderCost.toLocaleString('en-IN')}?`)) return;
+    if (!(await confirm(`Confirm and place this B2B Sales Order for ₹${grossOrderCost.toLocaleString('en-IN')}?`))) return;
 
     // Update Product Stock
     await db.b2bProducts.update(product.id, {
@@ -514,7 +564,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
 
-    if (!confirm('Process return and generate credit note for this order?')) return;
+    if (!(await confirm('Process return and generate credit note for this order?'))) return;
 
     // Generate credit note
     const refundVal = order.finalAmount + (order.gstPaid || 0);
@@ -609,7 +659,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
     const discountVal = baseVal * tierRate;
     const finalVal = baseVal - discountVal;
 
-    if (!confirm(`Confirm and generate this B2B Sales Quote for ₹${finalVal.toLocaleString('en-IN')}?`)) return;
+    if (!(await confirm(`Confirm and generate this B2B Sales Quote for ₹${finalVal.toLocaleString('en-IN')}?`))) return;
 
     await db.b2bQuotes.add({
       clientId: client.id,
@@ -633,7 +683,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
     const q = quotes.find(qt => qt.id === quoteId);
     if (!q) return;
 
-    if (!confirm('Are you sure you want to convert this quote to an active invoice order?')) return;
+    if (!(await confirm('Are you sure you want to convert this quote to an active invoice order?'))) return;
 
     const client = clients.find(c => c.id === q.clientId);
     const product = products.find(p => p.id === q.productIds[0]);
@@ -864,28 +914,80 @@ export default function ProSalesSubscreen({ lang, profile }) {
 
           {/* Active sales orders list */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ padding: '6px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
                   <ClipboardList size={16} />
                 </div>
                 <h3 style={{ fontSize: '0.88rem', fontWeight: '800', fontFamily: 'Outfit', margin: 0 }}>{t('activeOrders', lang)}</h3>
               </div>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <button
-                  onClick={exportOrdersToCSV}
-                  className="btn-primary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '0.68rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
-                >
-                  <Download size={12} /> Export CSV
-                </button>
+              <button
+                onClick={exportOrdersToCSV}
+                className="btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '0.68rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                <Download size={12} /> Export CSV
+              </button>
+            </div>
+
+            {/* Premium Full-Width Filters Row */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginBottom: '14px' }}>
+              {/* Search Container - 100% Full Width */}
+              <div style={{ position: 'relative', width: '100%' }}>
+                <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-dim))', pointerEvents: 'none' }} />
                 <input 
                   type="text" 
                   placeholder="Search orders..." 
                   value={orderSearchQuery} 
                   onChange={(e) => { setOrderSearchQuery(e.target.value); setOrderCurrentPage(1); }}
-                  style={{ padding: '6px 10px', fontSize: '0.72rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', width: '120px' }}
+                  className="form-input"
+                  style={{ 
+                    width: '100%', 
+                    height: '44px',
+                    paddingLeft: '40px', 
+                    paddingRight: orderSearchQuery ? '40px' : '16px',
+                    borderRadius: '10px',
+                    fontSize: '0.88rem'
+                  }}
                 />
+                {orderSearchQuery && (
+                  <button
+                    onClick={() => { setOrderSearchQuery(''); setOrderCurrentPage(1); }}
+                    style={{
+                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', color: 'hsl(var(--text-muted))',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px'
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              {/* Dropdowns on the Right */}
+              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                <select
+                  value={orderPaymentFilter}
+                  onChange={(e) => { setOrderPaymentFilter(e.target.value); setOrderCurrentPage(1); }}
+                  className="form-select-sm"
+                  style={{ flex: 1 }}
+                >
+                  <option value="all">💳 All Payments</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Unpaid">Unpaid</option>
+                </select>
+                <select
+                  value={orderDispatchFilter}
+                  onChange={(e) => { setOrderDispatchFilter(e.target.value); setOrderCurrentPage(1); }}
+                  className="form-select-sm"
+                  style={{ flex: 1 }}
+                >
+                  <option value="all">📦 All Shipping</option>
+                  <option value="Pending">Pending Dispatch</option>
+                  <option value="Dispatched">Dispatched</option>
+                  <option value="Transit">Transit</option>
+                  <option value="Delivered">Delivered</option>
+                </select>
               </div>
             </div>
             {filteredOrders.length === 0 ? (
@@ -1723,9 +1825,9 @@ export default function ProSalesSubscreen({ lang, profile }) {
                             </filter>
                           </defs>
                           {/* Grid Lines */}
-                          <line x1="40" y1="30" x2="380" y2="30" stroke="hsl(var(--border-color) / 30%)" strokeDasharray="3,3" />
-                          <line x1="40" y1="90" x2="380" y2="90" stroke="hsl(var(--border-color) / 30%)" strokeDasharray="3,3" />
-                          <line x1="40" y1="150" x2="380" y2="150" stroke="hsl(var(--border-color) / 30%)" strokeDasharray="3,3" />
+                          <line x1="40" y1="30" x2="380" y2="30" stroke="hsl(var(--border-color) / 18%)" strokeDasharray="3,3" />
+                          <line x1="40" y1="90" x2="380" y2="90" stroke="hsl(var(--border-color) / 18%)" strokeDasharray="3,3" />
+                          <line x1="40" y1="150" x2="380" y2="150" stroke="hsl(var(--border-color) / 18%)" strokeDasharray="3,3" />
                           
                           {/* Axis */}
                           <line x1="40" y1="180" x2="380" y2="180" stroke="hsl(var(--border-color))" strokeWidth="1.5" />
@@ -1766,10 +1868,22 @@ export default function ProSalesSubscreen({ lang, profile }) {
                                   onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
                                   onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
                                 />
+                                
+                                {/* Circle dot marker at peak */}
+                                <circle
+                                  cx={x + barWidth / 2}
+                                  cy={y}
+                                  r="3.5"
+                                  fill="hsl(var(--primary))"
+                                  stroke="hsl(var(--bg-card))"
+                                  strokeWidth="1.5"
+                                  style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
+                                />
+
                                 {!showForecasting && (
                                   <text
                                     x={x + barWidth / 2}
-                                    y={y - 8}
+                                    y={y - 10}
                                     textAnchor="middle"
                                     fill="hsl(var(--text-primary))"
                                     fontSize="10"
@@ -1852,8 +1966,10 @@ export default function ProSalesSubscreen({ lang, profile }) {
             </div>
 
             {/* Unpaid invoices collections ledger */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <h3 style={{ fontSize: '0.88rem', fontWeight: '800', fontFamily: 'Outfit' }}>⚠️ Outstanding Invoice Ledger</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: '800', fontFamily: 'Outfit', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Landmark size={15} style={{ color: '#f59e0b' }} /> Outstanding Invoice Ledger
+              </h3>
               {unpaidList.length === 0 ? (
                 <EmptyStateCard 
                   icon={Landmark} 
@@ -1868,21 +1984,43 @@ export default function ProSalesSubscreen({ lang, profile }) {
                   const outstanding = totalInvoice - (o.amountPaid || 0);
 
                   return (
-                    <div key={o.id} style={{ display: 'flex', justifyBetween: 'space-between', alignItems: 'center', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', padding: '10px 14px', borderRadius: '12px' }}>
+                    <div key={o.id} className="glass-card animate-fade-in" style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      border: '1px solid hsl(var(--border-color))', 
+                      padding: '12px 16px', 
+                      borderRadius: '12px',
+                      borderLeft: '4px solid #f59e0b',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.01)'
+                    }}>
                       <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: '0.55rem', color: 'hsl(var(--text-dim))' }}>Invoice #DPC-{o.id} • Due: {new Date(o.dueDate).toLocaleDateString()}</span>
-                        <h4 style={{ fontSize: '0.78rem', fontWeight: 'bold', margin: '2px 0 0' }}>{client.name}</h4>
+                        <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Invoice #DPC-{o.id} • Due: {new Date(o.dueDate).toLocaleDateString('en-IN')}</span>
+                        <h4 style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'hsl(var(--text-primary))', margin: '4px 0 0', fontFamily: 'Outfit' }}>{client.name}</h4>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'hsl(var(--color-hyper))', display: 'block' }}>₹{outstanding.toLocaleString('en-IN')}</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: '800', color: 'hsl(var(--color-hyper))', display: 'block', fontFamily: 'Outfit' }}>₹{outstanding.toLocaleString('en-IN')}</span>
                         <button
                           onClick={() => {
                             setPaymentOrder(o);
                             setCollectAmount(outstanding);
                           }}
-                          style={{ border: 'none', background: 'none', color: 'hsl(var(--primary))', fontSize: '0.62rem', fontWeight: 'bold', cursor: 'pointer' }}
+                          style={{ 
+                            border: 'none', 
+                            background: 'none', 
+                            color: 'hsl(var(--primary))', 
+                            fontSize: '0.68rem', 
+                            fontWeight: 'bold', 
+                            cursor: 'pointer', 
+                            fontFamily: 'Outfit', 
+                            padding: '4px 0 0',
+                            textDecoration: 'underline',
+                            transition: 'color 0.2s' 
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'hsl(var(--secondary))'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'hsl(var(--primary))'; }}
                         >
-                          Collect
+                          Collect Payment
                         </button>
                       </div>
                     </div>

@@ -13,22 +13,41 @@ import ProProfileSettingsSubscreen from './components/ProProfileSettingsSubscree
 import AiAssistant from './components/AiAssistant';
 import LoginScreen from './components/LoginScreen';
 import AdminPanel from './components/AdminPanel';
+import DashboardScreen from './components/DashboardScreen';
+import ProductCatalog from './components/ProductCatalog';
+import DoctorOrders from './components/DoctorOrders';
+import OrderManagement from './components/OrderManagement';
+import ProductManagement from './components/ProductManagement';
 import { t } from './utils/i18n';
-import { ShoppingBag, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck } from 'lucide-react';
+import { ShoppingBag, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('sales');
+  const [activeTab, setActiveTab] = useState('catalog'); // updated after login
   const [isDbReady, setIsDbReady] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lang, setLang] = useState(() => localStorage.getItem('dentalLang') || 'en');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authUser, setAuthUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [cart, setCart] = useState({});
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const [activeAlarm, setActiveAlarm] = useState(null);
   const [activeAlarmClient, setActiveAlarmClient] = useState(null);
   const [isAiOpen, setIsAiOpen] = useState(false);
+
+  // Custom global confirm modal setup
+  const [confirmModal, setConfirmModal] = useState(null);
+
+  useEffect(() => {
+    window.confirm = (message) => {
+      return new Promise((resolve) => {
+        setConfirmModal({ message, resolve });
+      });
+    };
+  }, []);
 
   // Set platform classes
   useEffect(() => {
@@ -45,13 +64,18 @@ export default function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        supabase.from('profiles').select('role, name').eq('id', session.user.id).single()
+        supabase.from('profiles').select('role, name, approved').eq('id', session.user.id).single()
           .then(({ data }) => {
             if (data?.role === 'admin' || data?.approved) {
-              setAuthUser({ role: data.role, name: data.name, user: session.user });
+              const role = data.role;
+              setAuthUser({ role, name: data.name, user: session.user });
               setIsLoggedIn(true);
+              setActiveTab(role === 'admin' ? 'dashboard' : 'catalog');
             }
+            setAuthChecked(true);
           });
+      } else {
+        setAuthChecked(true);
       }
     });
   }, []);
@@ -248,10 +272,20 @@ export default function App() {
 
   const isAdmin = authUser?.role === 'admin';
 
+  const cartCount = Object.values(cart).reduce((s, i) => s + i.qty, 0);
+
   const renderContent = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return <DashboardScreen authUser={authUser} onNavigate={setActiveTab} />;
+      case 'catalog':
+        return <ProductCatalog authUser={authUser} cart={cart} onCartChange={setCart} onOrderPlaced={() => setActiveTab('sales')} onLoginRequired={() => setShowLoginModal(true)} />;
+      case 'orders':
+        return <OrderManagement />;
+      case 'products':
+        return <ProductManagement />;
       case 'sales':
-        return <ProSalesSubscreen lang={lang} profile={profile} />;
+        return isAdmin ? <ProSalesSubscreen lang={lang} profile={profile} /> : <DoctorOrders authUser={authUser} onGoToCatalog={() => setActiveTab('catalog')} />;
       case 'implants':
         return <ProImplantsSubscreen lang={lang} profile={profile} />;
       case 'inventory':
@@ -267,21 +301,27 @@ export default function App() {
       case 'admin':
         return <AdminPanel />;
       default:
-        return <ProSalesSubscreen lang={lang} profile={profile} />;
+        return isAdmin ? <DashboardScreen authUser={authUser} onNavigate={setActiveTab} /> : <ProductCatalog authUser={authUser} cart={cart} onCartChange={setCart} onLoginRequired={() => setShowLoginModal(true)} />;
     }
   };
 
-  if (!isDbReady) {
-    return (
-      <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'hsl(var(--text-muted))' }}>
-        Loading Pro Dental Database...
+  const splashLoader = (
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: 'linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 50%, #f0fdf4 100%)' }}>
+      <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 32px rgba(14,165,233,0.35)' }}>
+        <span style={{ fontSize: '2rem' }}>🦷</span>
       </div>
-    );
-  }
+      <div style={{ width: 32, height: 3, borderRadius: 2, background: 'rgba(14,165,233,0.2)', overflow: 'hidden', position: 'relative' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', background: '#0ea5e9', borderRadius: 2, animation: 'slide 1s ease-in-out infinite' }} />
+      </div>
+      <style>{`@keyframes slide { 0% { left: -40%; } 100% { left: 100%; } }`}</style>
+    </div>
+  );
 
-  if (!isLoggedIn) {
-    return <LoginScreen lang={lang} onLogin={(user) => { setAuthUser(user); setIsLoggedIn(true); }} />;
-  }
+  if (!isDbReady) return splashLoader;
+
+  if (!authChecked) return splashLoader;
+
+
 
   return (
     <>
@@ -289,8 +329,8 @@ export default function App() {
       <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)} />
 
       {/* Sidebar Drawer */}
-      <div className={`sidebar-drawer ${isSidebarOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid hsl(var(--border-color))' }}>
+      <div className={`sidebar-drawer ${isSidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-header">
           <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: '#0ea5e9' }}>
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(14, 165, 233, 0.15)"/>
@@ -303,181 +343,204 @@ export default function App() {
           </button>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '20px' }}>
-          <div className="glass-card" style={{
-            background: 'hsla(0, 0%, 100%, 0.65)',
-            border: '1px solid hsla(205, 85%, 50%, 0.08)',
-            borderRadius: '16px',
-            padding: '12px 14px',
-            boxShadow: '0 8px 32px rgba(15, 23, 42, 0.04)',
-            backdropFilter: 'blur(10px)',
-            cursor: 'pointer',
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-          onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'hsl(var(--primary) / 25%)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'hsla(205, 85%, 50%, 0.08)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-          >
-            <span style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: 'hsl(var(--text-dim))', fontWeight: '800', letterSpacing: '0.08em', display: 'block', marginBottom: '8px' }}>
-              👤 {t('userConsole', lang)}
-            </span>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <div style={{ position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Compact user card */}
+          {isLoggedIn ? (
+            <div
+              onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                marginTop: '14px', padding: '10px 12px', flexShrink: 0,
+                background: 'hsla(0,0%,100%,0.6)', borderRadius: '14px',
+                border: '1px solid hsla(205,85%,50%,0.1)',
+                boxShadow: '0 2px 12px rgba(15,23,42,0.05)',
+                backdropFilter: 'blur(10px)', cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'hsl(var(--primary) / 30%)'; e.currentTarget.style.background = 'hsla(0,0%,100%,0.85)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'hsla(205,85%,50%,0.1)'; e.currentTarget.style.background = 'hsla(0,0%,100%,0.6)'; }}
+            >
+              <div style={{ position: 'relative', flexShrink: 0 }}>
                 {activeProfileImage ? (
-                  <img 
-                    src={activeProfileImage} 
-                    alt="Avatar" 
-                    style={{ width: '42px', height: '42px', borderRadius: '12px', objectFit: 'cover', border: '2px solid hsl(var(--primary))' }} 
-                  />
+                  <img src={activeProfileImage} alt="Avatar" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover', border: '2px solid hsl(var(--primary))' }} />
                 ) : (
-                  <div style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '12px',
-                    background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: '800',
-                    fontSize: '1rem',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                    boxShadow: '0 4px 12px rgba(14, 165, 233, 0.2)'
-                  }}>
-                    {(profile?.userName || 'C').charAt(0).toUpperCase()}
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.9rem', boxShadow: '0 3px 10px rgba(14,165,233,0.3)' }}>
+                    {(authUser?.name || profile?.userName || 'U').charAt(0).toUpperCase()}
                   </div>
                 )}
-                {/* Active Sync Status Indicator Dot */}
-                <span style={{
-                  position: 'absolute', bottom: '-2px', right: '-2px',
-                  width: '10px', height: '10px', background: '#22c55e',
-                  border: '2px solid #fff', borderRadius: '50%', display: 'block'
-                }} title="Active B2B Session" />
+                <span style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '9px', height: '9px', background: '#22c55e', border: '2px solid #fff', borderRadius: '50%' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                  {profile?.userName || 'Chandra'}
-                </h4>
-                <p style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', margin: '2px 0 0 0', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.02em', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                  {profile?.role || t('representative', lang)}
-                </p>
+                <div style={{ fontSize: '0.82rem', fontWeight: '800', color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {authUser?.name || profile?.userName || 'User'}
+                </div>
+                <div style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '1px' }}>
+                  {authUser?.role === 'admin' ? 'Administrator' : profile?.role || t('representative', lang)}
+                </div>
               </div>
+              <ChevronRight size={14} color="hsl(var(--text-dim))" style={{ flexShrink: 0 }} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid hsla(205, 85%, 50%, 0.05)' }}>
-              <span style={{
-                fontSize: '0.55rem', fontWeight: '800', background: 'rgba(34,197,94,0.08)',
-                color: '#22c55e', padding: '3px 8px', borderRadius: '6px',
-                display: 'inline-flex', alignItems: 'center', gap: '4px'
-              }}>
-                ● System Ready
-              </span>
-              <span style={{ fontSize: '0.55rem', color: 'hsl(var(--text-dim))', fontWeight: 'bold' }}>
-                ID: REP-902
-              </span>
-            </div>
-          </div>
-
-          <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: '16px', flex: 1, overflowY: 'auto' }}>
-            <div className="sidebar-menu-list">
-              <button 
-                className={`sidebar-link ${activeTab === 'sales' ? 'active' : ''}`} 
-                onClick={() => { setActiveTab('sales'); setIsSidebarOpen(false); }}
-              >
-                <ShoppingBag size={16} />
-                <span>{isDoctorMode ? 'My Orders & Invoices' : t('navSales', lang)}</span>
-              </button>
-              <button 
-                className={`sidebar-link ${activeTab === 'implants' ? 'active' : ''}`} 
-                onClick={() => { setActiveTab('implants'); setIsSidebarOpen(false); }}
-              >
-                <Activity size={16} />
-                <span>{isDoctorMode ? 'My Implant Timeline' : t('navImplants', lang)}</span>
-              </button>
-              {!isDoctorMode && (
-                <button 
-                  className={`sidebar-link ${activeTab === 'inventory' ? 'active' : ''}`} 
-                  onClick={() => { setActiveTab('inventory'); setIsSidebarOpen(false); }}
-                >
-                  <Package size={16} />
-                  <span>{t('navInventory', lang)}</span>
-                </button>
-              )}
-              {!isDoctorMode && (
-                <button 
-                  className={`sidebar-link ${activeTab === 'reminders' ? 'active' : ''}`} 
-                  onClick={() => { setActiveTab('reminders'); setIsSidebarOpen(false); }}
-                >
-                  <Bell size={16} />
-                  <span>{t('navAlerts', lang)}</span>
-                </button>
-              )}
-              <button 
-                className={`sidebar-link ${activeTab === 'guides' ? 'active' : ''}`} 
-                onClick={() => { setActiveTab('guides'); setIsSidebarOpen(false); }}
-              >
-                <Film size={16} />
-                <span>{isDoctorMode ? 'Training Guides' : t('navGuides', lang)}</span>
-              </button>
-              {!isDoctorMode && (
-                <button 
-                  className={`sidebar-link ${activeTab === 'master' ? 'active' : ''}`} 
-                  onClick={() => { setActiveTab('master'); setIsSidebarOpen(false); }}
-                >
-                  <Settings size={16} />
-                  <span>{t('navMaster', lang)}</span>
-                </button>
-              )}
-              <button
-                className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}
-              >
-                <User size={16} />
-                <span>Profile & Settings</span>
-              </button>
-              {isAdmin && (
-                <button
-                  className={`sidebar-link ${activeTab === 'admin' ? 'active' : ''}`}
-                  onClick={() => { setActiveTab('admin'); setIsSidebarOpen(false); }}
-                >
-                  <ShieldCheck size={16} />
-                  <span>Admin Panel</span>
-                </button>
-              )}
-            </div>
-
-          </div>
-
-          <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <button 
-              onClick={async () => {
-                await supabase.auth.signOut();
-                setIsLoggedIn(false);
-                setAuthUser(null);
-                setIsSidebarOpen(false);
-              }} 
+          ) : (
+            <div
+              onClick={() => { setShowLoginModal(true); setIsSidebarOpen(false); }}
               style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px',
-                background: 'transparent', border: '1px solid transparent', color: 'hsl(var(--text-muted))',
-                fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', borderRadius: '10px',
-                transition: 'all 0.2s', fontFamily: 'Outfit'
+                display: 'flex', alignItems: 'center', gap: '10px',
+                marginTop: '14px', padding: '10px 12px', flexShrink: 0,
+                background: 'hsla(0,0%,100%,0.6)', borderRadius: '14px',
+                border: '1px solid hsla(205,85%,50%,0.1)',
+                boxShadow: '0 2px 12px rgba(15,23,42,0.05)',
+                backdropFilter: 'blur(10px)', cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)'
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'hsla(0,0%,0%,0.03)'; e.currentTarget.style.color = 'hsl(var(--text-primary))'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'hsl(var(--text-muted))'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'hsl(var(--primary) / 30%)'; e.currentTarget.style.background = 'hsla(0,0%,100%,0.85)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'hsla(205,85%,50%,0.1)'; e.currentTarget.style.background = 'hsla(0,0%,100%,0.6)'; }}
             >
-              <X size={15} /> Log Out / Switch Portal
-            </button>
-            <button 
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'hsl(var(--border-color))', color: 'hsl(var(--text-muted))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
+                👤
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: '800', color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>
+                  Guest User
+                </div>
+                <div style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '1px' }}>
+                  Click to Log In
+                </div>
+              </div>
+              <ChevronRight size={14} color="hsl(var(--text-dim))" style={{ flexShrink: 0 }} />
+            </div>
+          )}
+
+          <div style={{ borderTop: '1px solid hsl(var(--border-color))', marginTop: '16px', paddingTop: '16px', flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+            <div className="sidebar-menu-list">
+              {!isLoggedIn ? (
+                /* ── GUEST NAV ── */
+                <>
+                  <button className={`sidebar-link ${activeTab === 'catalog' ? 'active' : ''}`} onClick={() => { setActiveTab('catalog'); setIsSidebarOpen(false); }}>
+                    <Store size={16} />
+                    <span>Product Catalog</span>
+                    {cartCount > 0 && <span style={{ marginLeft: 'auto', background: '#0ea5e9', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: 10, minWidth: 18, textAlign: 'center' }}>{cartCount}</span>}
+                  </button>
+                  <button className="sidebar-link" onClick={() => { setShowLoginModal(true); setIsSidebarOpen(false); }} style={{ color: 'hsl(var(--primary))' }}>
+                    <LogIn size={16} /><span>Log In / Register</span>
+                  </button>
+                </>
+              ) : isAdmin ? (
+                /* ── ADMIN NAV ── */
+                <>
+                  <button className={`sidebar-link ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}>
+                    <LayoutDashboard size={16} /><span>Dashboard</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => { setActiveTab('orders'); setIsSidebarOpen(false); }}>
+                    <ClipboardList size={16} /><span>Orders</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'products' ? 'active' : ''}`} onClick={() => { setActiveTab('products'); setIsSidebarOpen(false); }}>
+                    <Store size={16} /><span>Products</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => { setActiveTab('sales'); setIsSidebarOpen(false); }}>
+                    <ShoppingBag size={16} /><span>{t('navSales', lang)}</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'implants' ? 'active' : ''}`} onClick={() => { setActiveTab('implants'); setIsSidebarOpen(false); }}>
+                    <Activity size={16} /><span>{t('navImplants', lang)}</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => { setActiveTab('inventory'); setIsSidebarOpen(false); }}>
+                    <Package size={16} /><span>{t('navInventory', lang)}</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => { setActiveTab('reminders'); setIsSidebarOpen(false); }}>
+                    <Bell size={16} /><span>{t('navAlerts', lang)}</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => { setActiveTab('guides'); setIsSidebarOpen(false); }}>
+                    <Film size={16} /><span>{t('navGuides', lang)}</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'master' ? 'active' : ''}`} onClick={() => { setActiveTab('master'); setIsSidebarOpen(false); }}>
+                    <Settings size={16} /><span>{t('navMaster', lang)}</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}>
+                    <User size={16} /><span>Profile & Settings</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => { setActiveTab('admin'); setIsSidebarOpen(false); }}>
+                    <ShieldCheck size={16} /><span>Admin Panel</span>
+                  </button>
+                </>
+              ) : (
+                /* ── DOCTOR NAV ── */
+                <>
+                  <button className={`sidebar-link ${activeTab === 'catalog' ? 'active' : ''}`} onClick={() => { setActiveTab('catalog'); setIsSidebarOpen(false); }}>
+                    <Store size={16} />
+                    <span>Product Catalog</span>
+                    {cartCount > 0 && <span style={{ marginLeft: 'auto', background: '#0ea5e9', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: 10, minWidth: 18, textAlign: 'center' }}>{cartCount}</span>}
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => { setActiveTab('sales'); setIsSidebarOpen(false); }}>
+                    <ClipboardList size={16} /><span>My Orders</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'implants' ? 'active' : ''}`} onClick={() => { setActiveTab('implants'); setIsSidebarOpen(false); }}>
+                    <Activity size={16} /><span>My Cases</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => { setActiveTab('guides'); setIsSidebarOpen(false); }}>
+                    <Film size={16} /><span>Guides & Videos</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}>
+                    <User size={16} /><span>Profile & Settings</span>
+                  </button>
+                </>
+              )}
+            </div>
+
+          </div>
+
+          {/* Compact footer actions */}
+          <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: '10px', paddingBottom: '2px', display: 'flex', gap: '8px', flexShrink: 0 }}>
+            {isLoggedIn ? (
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setIsLoggedIn(false);
+                  setAuthUser(null);
+                  setIsSidebarOpen(false);
+                }}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  padding: '9px 8px', borderRadius: '10px',
+                  border: '1px solid hsl(var(--border-color))',
+                  background: 'transparent', color: 'hsl(var(--text-muted))',
+                  fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', fontFamily: 'Outfit',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'hsl(var(--bg-dark))'; e.currentTarget.style.color = 'hsl(var(--text-primary))'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'hsl(var(--text-muted))'; }}
+                title="Log Out / Switch Portal"
+              >
+                <LogOut size={13} /> Log Out
+              </button>
+            ) : (
+              <button
+                onClick={() => { setShowLoginModal(true); setIsSidebarOpen(false); }}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  padding: '9px 8px', borderRadius: '10px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff',
+                  fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', fontFamily: 'Outfit',
+                  boxShadow: '0 4px 10px rgba(14,165,233,0.2)'
+                }}
+              >
+                <LogIn size={13} /> Log In
+              </button>
+            )}
+            <button
               onClick={handleReset}
               style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px',
-                background: 'transparent', border: '1px solid transparent', color: 'hsl(var(--color-hyper))',
-                fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', borderRadius: '10px',
-                transition: 'all 0.2s', fontFamily: 'Outfit'
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                padding: '9px 14px', borderRadius: '10px',
+                border: '1px solid rgba(239,68,68,0.2)',
+                background: 'rgba(239,68,68,0.04)', color: '#ef4444',
+                fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', fontFamily: 'Outfit',
+                transition: 'all 0.2s'
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.06)'; e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.1)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.04)'; }}
+              title={t('resetDb', lang)}
             >
-              <Trash2 size={15} /> {t('resetDb', lang)}
+              <Trash2 size={13} />
             </button>
           </div>
         </div>
@@ -557,42 +620,53 @@ export default function App() {
       </main>
 
       {/* Bottom Premium Nav Bar */}
-      <div className="bottom-nav" style={{ gridTemplateColumns: isAdmin ? 'repeat(4, 1fr)' : isDoctorMode ? 'repeat(4, 1fr)' : 'repeat(5, 1fr)' }}>
-        <button className={`nav-item ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => setActiveTab('sales')}>
-          <ShoppingBag />
-          <span>{isDoctorMode ? 'My Orders' : t('navSales', lang)}</span>
-        </button>
-        <button className={`nav-item ${activeTab === 'implants' ? 'active' : ''}`} onClick={() => setActiveTab('implants')}>
-          <Activity />
-          <span>{isDoctorMode ? 'My Cases' : t('navImplants', lang)}</span>
-        </button>
-        {!isDoctorMode && (
-          <button className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}>
-            <Package />
-            <span>{t('navInventory', lang)}</span>
-          </button>
-        )}
-        {!isDoctorMode && (
-          <button className={`nav-item ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => setActiveTab('reminders')}>
-            <Bell />
-            <span>{t('navAlerts', lang)}</span>
-          </button>
-        )}
-        <button className={`nav-item ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => setActiveTab('guides')}>
-          <Film />
-          <span>{isDoctorMode ? 'Videos' : t('navGuides', lang)}</span>
-        </button>
-        {isDoctorMode && (
-          <button className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
-            <User />
-            <span>Profile</span>
-          </button>
-        )}
-        {isAdmin && (
-          <button className={`nav-item ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>
-            <ShieldCheck />
-            <span>Admin</span>
-          </button>
+      <div className="bottom-nav" style={{ gridTemplateColumns: `repeat(${!isLoggedIn ? 2 : (isAdmin ? 5 : 4)}, 1fr)` }}>
+        {!isLoggedIn ? (
+          <>
+            <button className={`nav-item ${activeTab === 'catalog' ? 'active' : ''}`} onClick={() => setActiveTab('catalog')} style={{ position: 'relative' }}>
+              <Store />
+              {cartCount > 0 && <span style={{ position: 'absolute', top: 4, right: '50%', transform: 'translateX(10px)', background: '#ef4444', color: '#fff', fontSize: '0.5rem', fontWeight: 800, padding: '1px 4px', borderRadius: 8, minWidth: 14, textAlign: 'center' }}>{cartCount}</span>}
+              <span>Catalog</span>
+            </button>
+            <button className="nav-item" onClick={() => setShowLoginModal(true)}>
+              <User /><span>Log In</span>
+            </button>
+          </>
+        ) : isAdmin ? (
+          <>
+            <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+              <LayoutDashboard /><span>Dashboard</span>
+            </button>
+            <button className={`nav-item ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>
+              <ClipboardList /><span>Orders</span>
+            </button>
+            <button className={`nav-item ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}>
+              <Store /><span>Products</span>
+            </button>
+            <button className={`nav-item ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => setActiveTab('sales')}>
+              <ShoppingBag /><span>{t('navSales', lang)}</span>
+            </button>
+            <button className={`nav-item ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>
+              <ShieldCheck /><span>Admin</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button className={`nav-item ${activeTab === 'catalog' ? 'active' : ''}`} onClick={() => setActiveTab('catalog')} style={{ position: 'relative' }}>
+              <Store />
+              {cartCount > 0 && <span style={{ position: 'absolute', top: 4, right: '50%', transform: 'translateX(10px)', background: '#ef4444', color: '#fff', fontSize: '0.5rem', fontWeight: 800, padding: '1px 4px', borderRadius: 8, minWidth: 14, textAlign: 'center' }}>{cartCount}</span>}
+              <span>Catalog</span>
+            </button>
+            <button className={`nav-item ${activeTab === 'sales' || activeTab === 'my-orders' ? 'active' : ''}`} onClick={() => setActiveTab('sales')}>
+              <ClipboardList /><span>My Orders</span>
+            </button>
+            <button className={`nav-item ${activeTab === 'implants' ? 'active' : ''}`} onClick={() => setActiveTab('implants')}>
+              <Activity /><span>My Cases</span>
+            </button>
+            <button className={`nav-item ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => setActiveTab('guides')}>
+              <Film /><span>Videos</span>
+            </button>
+          </>
         )}
       </div>
 
@@ -711,10 +785,108 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {showLoginModal && (
+        <div className="modal-overlay-container animate-fade-in" style={{ zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+          <div onClick={() => setShowLoginModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }} />
+          <div className="confirm-dialog-card" style={{ 
+            background: '#ffffff', 
+            border: '1px solid hsl(var(--border-color))', 
+            padding: '28px 24px', 
+            maxWidth: 420, 
+            width: 'calc(100% - 32px)', 
+            borderRadius: 24, 
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', 
+            maxHeight: '90vh', 
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: -10, zIndex: 10 }}>
+              <button 
+                onClick={() => setShowLoginModal(false)} 
+                style={{ 
+                  background: 'hsl(var(--bg-dark))', 
+                  border: '1px solid hsl(var(--border-color))', 
+                  borderRadius: 10, 
+                  padding: 6, 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  color: 'hsl(var(--text-muted))',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <LoginScreen 
+              lang={lang} 
+              isModal={true}
+              onLogin={(user) => { 
+                setAuthUser(user); 
+                setIsLoggedIn(true); 
+                setShowLoginModal(false); 
+                setActiveTab(user.role === 'admin' ? 'dashboard' : 'catalog'); 
+              }} 
+            />
+          </div>
+        </div>
+      )}
+
+      {confirmModal && (
+        <div className="modal-overlay-container animate-fade-in" style={{ zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.25)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }} />
+          <div className="confirm-dialog-card">
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <div style={{ padding: 12, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', boxShadow: '0 0 15px rgba(239, 68, 68, 0.1)' }}>
+                <AlertTriangle size={28} />
+              </div>
+            </div>
+            <h4 style={{ fontFamily: 'Outfit', fontSize: '1.05rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginBottom: 10 }}>Confirm Action</h4>
+            <p style={{ fontSize: '0.82rem', color: 'hsl(var(--text-muted))', lineHeight: 1.4, marginBottom: 20 }}>{confirmModal.message}</p>
+            <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+              <button
+                onClick={() => {
+                  confirmModal.resolve(false);
+                  setConfirmModal(null);
+                }}
+                style={{ flex: 1, padding: '11px', fontSize: '0.78rem', fontWeight: 700, fontFamily: 'Outfit', background: 'rgba(0, 0, 0, 0.04)', border: '1px solid hsl(var(--border-color))', cursor: 'pointer', color: 'hsl(var(--text-primary))', borderRadius: '10px' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  confirmModal.resolve(true);
+                  setConfirmModal(null);
+                }}
+                style={{ flex: 1, padding: '11px', fontSize: '0.78rem', fontWeight: 700, fontFamily: 'Outfit', background: 'linear-gradient(135deg, #ef4444, #ec4899)', border: 'none', color: '#ffffff', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)', borderRadius: '10px' }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes alarmPulse {
           0%, 100% { transform: scale(1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
           50% { transform: scale(1.02); box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.2); }
+        }
+        .confirm-dialog-card {
+          width: calc(100% - 32px);
+          max-width: 350px;
+          background: #ffffff !important;
+          border: 1px solid hsl(var(--border-color)) !important;
+          border-radius: 20px !important;
+          padding: 26px 22px !important;
+          box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12) !important;
+          text-align: center;
+          position: relative;
+          z-index: 100001;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
         }
       `}</style>
       </div>

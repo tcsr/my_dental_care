@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, clearAllData } from '../utils/db';
+import { supabase } from '../utils/supabase';
 import { 
   User, Mail, Phone, Briefcase, Building, RefreshCw, 
   Download, Upload, Check, Camera, Shield, Database, Trash2, MapPin 
@@ -122,25 +123,269 @@ export default function ProProfileSettingsSubscreen() {
     }
   };
 
-  // Sync Handler (Simulating cloud sync with spin effect)
-  const handleSync = () => {
+  // Sync Handler (Real Cloud Sync Workflow)
+  const handleSync = async () => {
     setSyncStatus('syncing');
-    
-    // Simulate cloud sync timeout
-    setTimeout(async () => {
+    try {
+      // 0. Sync Warehouses between Supabase and local Dexie
       try {
-        const timeNow = new Date().toLocaleString();
-        localStorage.setItem('lastSyncedTime', timeNow);
-        setLastSynced(timeNow);
-        setSyncStatus('success');
-        
-        // Return to idle after delay
-        setTimeout(() => setSyncStatus('idle'), 3000);
-      } catch {
-        setSyncStatus('error');
-        setTimeout(() => setSyncStatus('idle'), 3000);
+        const { data: remoteWhs } = await supabase.from('warehouses').select('*');
+        const localWhs = await db.b2bWarehouses.toArray();
+        for (const rw of (remoteWhs || [])) {
+          if (!localWhs.some(lw => lw.name.toLowerCase() === rw.name.toLowerCase())) {
+            await db.b2bWarehouses.add({ name: rw.name, address: rw.address || '' });
+          }
+        }
+        for (const lw of localWhs) {
+          if (!remoteWhs.some(rw => rw.name.toLowerCase() === lw.name.toLowerCase())) {
+            await supabase.from('warehouses').insert({ name: lw.name, address: lw.address || '' });
+          }
+        }
+      } catch (e) {
+        console.warn('Warehouse sync failed:', e);
       }
-    }, 2000);
+
+      // 1. Fetch Approved Doctors from Supabase
+      const { data: remoteDoctors, error: docErr } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'doctor')
+        .eq('approved', true);
+      
+      if (docErr) throw docErr;
+
+      // Sync Doctors to B2B Clients
+      for (const doc of (remoteDoctors || [])) {
+        let localClient = await db.b2bClients.where('email').equals(doc.auth_email || doc.id).first();
+        if (!localClient) {
+          localClient = await db.b2bClients.where('name').equals(doc.clinic_name || doc.name).first();
+        }
+        if (!localClient) {
+          await db.b2bClients.add({
+            name: doc.clinic_name || doc.name,
+            type: 'Doctor',
+            contactPerson: doc.name,
+            email: doc.auth_email || doc.id,
+            phone: doc.phone || '',
+            address: doc.address || '',
+            discountTier: 'Standard',
+            state: 'Telangana',
+            creditLimit: 200000,
+            supabase_id: doc.id
+          });
+        } else if (!localClient.supabase_id) {
+          await db.b2bClients.update(localClient.id, { supabase_id: doc.id });
+        }
+      }
+
+      // 2. Fetch Products from Supabase
+      const { data: remoteProducts, error: prodErr } = await supabase
+        .from('products')
+        .select('*');
+      
+      if (prodErr) throw prodErr;
+
+      // Sync Products bidirectionally
+      const localProducts = await db.b2bProducts.toArray();
+      for (const rp of (remoteProducts || [])) {
+        const matchingLocal = localProducts.find(lp => lp.name.toLowerCase() === rp.name.toLowerCase());
+        if (!matchingLocal) {
+          await db.b2bProducts.add({
+            name: rp.name,
+            category: rp.category || 'Materials',
+            sku: rp.sku || rp.name.substring(0, 7).toUpperCase().replace(/\s/g, '-'),
+            price: rp.price || 0,
+            stock: rp.stock_qty || 0,
+            minStock: 5,
+            isSerialized: rp.is_serialized || false,
+            purchaseCost: rp.purchase_cost || null,
+            batches: [
+              { batchNo: 'SYNC-BATCH', expiryDate: Date.now() + 365 * 24 * 60 * 60 * 1000, stock: rp.stock_qty || 0, location: 'Main Warehouse' }
+            ],
+            supabase_id: rp.id
+          });
+        } else {
+          // If remote stock (B2C catalog) changed, align local stock and deduct from batches
+          const diff = matchingLocal.stock - (rp.stock_qty || 0);
+          let updatedBatches = matchingLocal.batches || [];
+          
+          if (diff > 0 && updatedBatches.length > 0) {
+            // Deduct sold stock from local batches
+            let remainingToDeduct = diff;
+            updatedBatches = updatedBatches.map(b => {
+              if (remainingToDeduct <= 0) return b;
+              const deduct = Math.min(b.stock || 0, remainingToDeduct);
+              remainingToDeduct -= deduct;
+              return { ...b, stock: Math.max(0, (b.stock || 0) - deduct) };
+            });
+          } else if (diff < 0 && updatedBatches.length > 0) {
+            // Remote stock increased, add difference to the first batch
+            const addition = Math.abs(diff);
+            updatedBatches = [...updatedBatches];
+            updatedBatches[0].stock = (updatedBatches[0].stock || 0) + addition;
+          } else if (updatedBatches.length === 0) {
+            updatedBatches = [
+              { batchNo: 'SYNC-BATCH', expiryDate: Date.now() + 365 * 24 * 60 * 60 * 1000, stock: rp.stock_qty || 0, location: 'Main Warehouse' }
+            ];
+          }
+
+          // Update details to match
+          await db.b2bProducts.update(matchingLocal.id, { 
+            supabase_id: rp.id,
+            price: rp.price || matchingLocal.price,
+            stock: rp.stock_qty !== undefined ? rp.stock_qty : matchingLocal.stock,
+            batches: updatedBatches,
+            isSerialized: rp.is_serialized !== undefined ? rp.is_serialized : matchingLocal.isSerialized,
+            purchaseCost: rp.purchase_cost !== undefined ? rp.purchase_cost : matchingLocal.purchaseCost,
+            sku: rp.sku || matchingLocal.sku
+          });
+        }
+      }
+
+      // Sync local B2B products to Supabase if not present
+      for (const lp of localProducts) {
+        const matchingRemote = (remoteProducts || []).find(rp => rp.name.toLowerCase() === lp.name.toLowerCase());
+        if (!matchingRemote) {
+          try {
+            const { data: inserted } = await supabase.from('products').insert({
+              name: lp.name,
+              category: lp.category,
+              price: lp.price,
+              stock_qty: lp.stock,
+              description: lp.sku || 'B2B Product SKU',
+              sku: lp.sku,
+              purchase_cost: lp.purchaseCost || null,
+              is_serialized: lp.isSerialized || false,
+              active: true
+            }).select().single();
+            if (inserted) {
+              await db.b2bProducts.update(lp.id, { supabase_id: inserted.id });
+            }
+          } catch (e) {
+            console.error('Failed to upload product to Supabase:', e);
+          }
+        } else {
+          // If local has updated details (e.g. stock, cost, serials), sync back to Supabase
+          try {
+            await supabase.from('products').update({
+              price: lp.price,
+              stock_qty: lp.stock,
+              sku: lp.sku,
+              purchase_cost: lp.purchaseCost || null,
+              is_serialized: lp.isSerialized || false
+            }).eq('id', matchingRemote.id);
+          } catch (e) {
+            console.error('Failed to sync product updates back to Supabase:', e);
+          }
+        }
+      }
+
+      // 3. Fetch Orders from Supabase
+      const { data: remoteOrders, error: orderErr } = await supabase
+        .from('orders')
+        .select('*, order_items(*, products(*))');
+      
+      if (orderErr) throw orderErr;
+
+      const localOrders = await db.b2bOrders.toArray();
+      const updatedLocalClients = await db.b2bClients.toArray();
+      const updatedLocalProducts = await db.b2bProducts.toArray();
+
+      // Get a default doctor UUID from profiles to satisfy foreign keys
+      const { data: defaultDoctor } = await supabase.from('profiles').select('id').eq('role', 'doctor').limit(1).single();
+      const defaultDoctorId = defaultDoctor?.id || '00000000-0000-0000-0000-000000000000';
+
+      for (const ro of (remoteOrders || [])) {
+        const matchingLocal = localOrders.find(lo => lo.supabase_order_id === ro.id);
+        const client = updatedLocalClients.find(c => c.supabase_id === ro.doctor_id);
+        
+        // Map products
+        const productIds = [];
+        let totalQty = 0;
+        for (const item of (ro.order_items || [])) {
+          const lp = updatedLocalProducts.find(p => p.supabase_id === item.product_id || p.name.toLowerCase() === item.product?.name?.toLowerCase());
+          if (lp) {
+            productIds.push(lp.id);
+            totalQty += item.qty || 1;
+          }
+        }
+
+        if (productIds.length === 0) continue;
+
+        if (!matchingLocal) {
+          await db.b2bOrders.add({
+            clientId: client ? client.id : 1, 
+            productIds: productIds,
+            qty: totalQty,
+            discountAmount: 0,
+            finalAmount: ro.total || 0,
+            status: ro.status === 'pending' ? 'In Production' : ro.status === 'completed' ? 'Delivered' : ro.status,
+            paymentStatus: ro.status === 'completed' ? 'Paid' : 'Unpaid',
+            orderDate: new Date(ro.created_at).getTime(),
+            dueDate: new Date(ro.created_at).getTime() + 7 * 24 * 60 * 60 * 1000,
+            supabase_order_id: ro.id
+          });
+        } else {
+          // Sync status updates back and forth
+          if (matchingLocal.status !== ro.status) {
+            const resolvedStatus = matchingLocal.status === 'Delivered' ? 'completed' : ro.status;
+            if (resolvedStatus !== ro.status) {
+              await supabase.from('orders').update({ status: resolvedStatus }).eq('id', ro.id);
+            }
+            await db.b2bOrders.update(matchingLocal.id, {
+              status: ro.status === 'pending' ? 'In Production' : ro.status === 'completed' ? 'Delivered' : ro.status
+            });
+          }
+        }
+      }
+
+      // Sync direct Sales Rep B2B Orders to Supabase
+      for (const lo of localOrders) {
+        if (!lo.supabase_order_id) {
+          const client = updatedLocalClients.find(c => c.id === lo.clientId);
+          const firstProd = updatedLocalProducts.find(p => p.id === lo.productIds[0]);
+          
+          if (!client || !firstProd) continue;
+          
+          const remoteProdId = firstProd.supabase_id || (remoteProducts && remoteProducts[0] ? remoteProducts[0].id : null);
+          if (!remoteProdId) continue;
+
+          // Insert order to Supabase
+          const { data: insertedOrder } = await supabase
+            .from('orders')
+            .insert({
+              doctor_id: client.supabase_id || defaultDoctorId,
+              status: lo.status === 'Delivered' ? 'completed' : 'pending',
+              total: lo.finalAmount
+            })
+            .select()
+            .single();
+
+          if (insertedOrder) {
+            await db.b2bOrders.update(lo.id, { supabase_order_id: insertedOrder.id });
+            
+            // Insert order items
+            await supabase.from('order_items').insert({
+              order_id: insertedOrder.id,
+              product_id: remoteProdId,
+              qty: lo.qty,
+              unit_price: lo.finalAmount / lo.qty
+            });
+          }
+        }
+      }
+
+      const timeNow = new Date().toLocaleString();
+      localStorage.setItem('lastSyncedTime', timeNow);
+      setLastSynced(timeNow);
+      setSyncStatus('success');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+      window.location.reload();
+    } catch (err) {
+      console.error('Cloud Sync failed:', err);
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
   };
 
   // Auto-sync Toggle Handler
@@ -194,7 +439,7 @@ export default function ProProfileSettingsSubscreen() {
     reader.onload = async (event) => {
       try {
         const data = JSON.parse(event.target.result);
-        if (confirm('Import backup? This will replace all current database records!')) {
+        if (await confirm('Import backup? This will replace all current database records!')) {
           await clearAllData();
           
           if (data.userProfile) await db.userProfile.bulkPut(data.userProfile);
@@ -224,7 +469,7 @@ export default function ProProfileSettingsSubscreen() {
   };
 
   const handleReset = async () => {
-    if (confirm('Clear all logs and reset database? This cannot be undone.')) {
+    if (await confirm('Clear all logs and reset database? This cannot be undone.')) {
       await clearAllData();
       alert('Database cleared.');
       window.location.reload();

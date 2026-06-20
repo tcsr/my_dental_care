@@ -92,7 +92,7 @@ export default function ProGuidesSubscreen({ lang }) {
   };
 
   const handleDeleteVideo = async (id) => {
-    if (confirm('Delete this training video guide permanently?')) {
+    if (await confirm('Delete this training video guide permanently?')) {
       await db.customGuides.delete(id);
     }
   };
