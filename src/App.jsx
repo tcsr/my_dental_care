@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedDemoData, clearAllData } from './utils/db';
+import { supabase } from './utils/supabase';
 import ProSalesSubscreen from './components/ProSalesSubscreen';
 import ProImplantsSubscreen from './components/ProImplantsSubscreen';
 import ProInventorySubscreen from './components/ProInventorySubscreen';
@@ -21,7 +22,8 @@ export default function App() {
   const [isDbReady, setIsDbReady] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lang, setLang] = useState(() => localStorage.getItem('dentalLang') || 'en');
-  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('dentalIsLoggedIn') === 'true');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authUser, setAuthUser] = useState(null);
 
   const [activeAlarm, setActiveAlarm] = useState(null);
   const [activeAlarmClient, setActiveAlarmClient] = useState(null);
@@ -36,6 +38,21 @@ export default function App() {
       document.body.classList.add('is-browser');
       document.body.classList.remove('is-native-app');
     }
+  }, []);
+
+  // Supabase session — check on mount only; LoginScreen handles sign-in
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        supabase.from('profiles').select('role, name').eq('id', session.user.id).single()
+          .then(({ data }) => {
+            if (data?.role === 'admin' || data?.approved) {
+              setAuthUser({ role: data.role, name: data.name, user: session.user });
+              setIsLoggedIn(true);
+            }
+          });
+      }
+    });
   }, []);
 
   // Initialize DB and Seeder
@@ -258,7 +275,7 @@ export default function App() {
   }
 
   if (!isLoggedIn) {
-    return <LoginScreen lang={lang} onLogin={() => setIsLoggedIn(true)} />;
+    return <LoginScreen lang={lang} onLogin={(user) => { setAuthUser(user); setIsLoggedIn(true); }} />;
   }
 
   return (
@@ -418,9 +435,10 @@ export default function App() {
 
           <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <button 
-              onClick={() => {
-                localStorage.removeItem('dentalIsLoggedIn');
+              onClick={async () => {
+                await supabase.auth.signOut();
                 setIsLoggedIn(false);
+                setAuthUser(null);
                 setIsSidebarOpen(false);
               }} 
               style={{
