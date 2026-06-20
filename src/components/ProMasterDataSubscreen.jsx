@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../utils/db';
-import { Trash2, Edit3, X, MapPin, Warehouse, Settings } from 'lucide-react';
+import { Trash2, Edit3, X, MapPin, Warehouse, Settings, Download, Upload } from 'lucide-react';
 import PremiumSelect from './ui/PremiumSelect';
 import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
@@ -157,16 +157,65 @@ export default function ProMasterDataSubscreen({ lang }) {
     }
   };
 
+  const handleExport = () => {
+    const data = { states, warehouses, gstRates, defaultGstRate };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'lal_dental_master_settings.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        if (data.states) {
+          await db.b2bStates.clear();
+          await db.b2bStates.bulkAdd(data.states.map(s => ({ name: s.name })));
+        }
+        if (data.warehouses) {
+          await db.b2bWarehouses.clear();
+          await db.b2bWarehouses.bulkAdd(data.warehouses.map(w => ({ name: w.name, address: w.address })));
+        }
+        if (data.gstRates) await db.userProfile.put({ key: 'gstRates', value: data.gstRates });
+        if (data.defaultGstRate) await db.userProfile.put({ key: 'defaultGstRate', value: data.defaultGstRate });
+        loadData();
+        alert('Settings imported successfully!');
+      } catch (err) {
+        alert('Invalid backup file');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{ padding: '8px', borderRadius: '10px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
-          <Settings size={18} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ padding: '8px', borderRadius: '10px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
+            <Settings size={18} />
+          </div>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'hsl(var(--primary))', fontFamily: 'Outfit', margin: 0 }}>
+            {t('navMaster', lang)}
+          </h2>
         </div>
-        <h2 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'hsl(var(--primary))', fontFamily: 'Outfit', margin: 0 }}>
-          {t('navMaster', lang)}
-        </h2>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.75rem', borderRadius: '8px', fontFamily: 'Outfit', fontWeight: 'bold', background: 'transparent', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-primary))', cursor: 'pointer' }}>
+            <Download size={14} /> Backup Settings
+          </button>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.75rem', borderRadius: '8px', fontFamily: 'Outfit', fontWeight: 'bold', background: 'transparent', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-primary))', cursor: 'pointer', margin: 0 }}>
+            <Upload size={14} /> Restore Settings
+            <input type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
+          </label>
+        </div>
       </div>
 
       {loading ? (
@@ -174,9 +223,9 @@ export default function ProMasterDataSubscreen({ lang }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', gap: '20px', alignItems: 'stretch', width: '100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '20px', alignItems: 'stretch', width: '100%' }}>
             
-            <div style={{ flex: '1', width: '50%', minWidth: 0, boxSizing: 'border-box' }}>
+            <div style={{ flex: '1 1 280px', minWidth: '280px', boxSizing: 'border-box' }}>
               <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))', height: '100%' }}>
                 <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontFamily: 'Outfit', fontWeight: '800' }}>
                 <MapPin size={16} /> {t('stateList', lang)}
@@ -229,7 +278,7 @@ export default function ProMasterDataSubscreen({ lang }) {
             </div>
             </div>
 
-            <div style={{ flex: '1', width: '50%', minWidth: 0, boxSizing: 'border-box' }}>
+            <div style={{ flex: '1 1 280px', minWidth: '280px', boxSizing: 'border-box' }}>
               <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))', height: '100%' }}>
                 <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontFamily: 'Outfit', fontWeight: '800' }}>
                 <span style={{ fontSize: '1.1rem', marginRight: '2px' }}>%</span> GST Rate Manager

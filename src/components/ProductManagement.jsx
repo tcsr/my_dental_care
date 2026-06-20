@@ -154,10 +154,31 @@ export default function ProductManagement() {
   };
 
   const fetchProducts = async () => {
-    setLoading(true);
-    const { data } = await supabase.from('products').select('*').order('name');
-    setProducts(data || []);
-    setLoading(false);
+    try {
+      const cached = sessionStorage.getItem('pm_products_cache');
+      if (cached && cached !== 'undefined') {
+        try {
+          setProducts(JSON.parse(cached));
+          setLoading(false);
+        } catch (e) {
+          console.warn('Cache parse error:', e);
+          setLoading(true);
+        }
+      } else {
+        setLoading(true);
+      }
+      
+      const { data, error } = await supabase.from('products').select('*').order('name');
+      if (error) throw error;
+      if (data) {
+        setProducts(data);
+        sessionStorage.setItem('pm_products_cache', JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {

@@ -86,10 +86,31 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
   };
 
   const fetchProducts = async () => {
-    setLoading(true);
-    const { data } = await supabase.from('products').select('*').or('active.eq.true,active.is.null').order('name');
-    setProducts(data || []);
-    setLoading(false);
+    try {
+      const cached = sessionStorage.getItem('pc_products_cache');
+      if (cached && cached !== 'undefined') {
+        try {
+          setProducts(JSON.parse(cached));
+          setLoading(false);
+        } catch (e) {
+          console.warn('Cache parse error:', e);
+          setLoading(true);
+        }
+      } else {
+        setLoading(true);
+      }
+
+      const { data, error } = await supabase.from('products').select('*').or('active.eq.true,active.is.null').order('name');
+      if (error) throw error;
+      if (data) {
+        setProducts(data);
+        sessionStorage.setItem('pc_products_cache', JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { 
@@ -146,9 +167,10 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
       return;
     }
     setPlacing(true);
+    const finalTotal = Math.round(cartTotal * 1.12);
     const { data: order, error } = await supabase
       .from('orders')
-      .insert({ doctor_id: authUser.user.id, status: 'pending', total: cartTotal })
+      .insert({ doctor_id: authUser.user.id, status: 'pending', total: finalTotal })
       .select().single();
 
     if (error || !order) {
@@ -392,9 +414,17 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
             </div>
 
             <div style={{ padding: '16px 20px 24px', borderTop: '1px solid hsl(var(--border-color))' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>Subtotal</span>
+                <span style={{ fontFamily: 'Outfit', fontWeight: 700, fontSize: '1rem', color: 'hsl(var(--text-primary))' }}>₹{cartTotal.toLocaleString('en-IN')}</span>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>Order Total</span>
-                <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.35rem', color: 'hsl(var(--text-primary))' }}>₹{cartTotal.toLocaleString('en-IN')}</span>
+                <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', fontWeight: 500 }}>GST (12%)</span>
+                <span style={{ fontFamily: 'Outfit', fontWeight: 600, fontSize: '0.9rem', color: 'hsl(var(--text-muted))' }}>₹{(cartTotal * 0.12).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, paddingTop: 10, borderTop: '1px dashed hsl(var(--border-color))' }}>
+                <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-primary))', fontWeight: 800 }}>Order Total</span>
+                <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.35rem', color: '#0ea5e9' }}>₹{(cartTotal * 1.12).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
               </div>
               <button
                 onClick={placeOrder} disabled={placing}

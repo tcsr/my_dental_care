@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { supabase } from '../utils/supabase';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import { TrendingUp, Package, CreditCard, ShoppingBag, Users, Calendar } from 'lucide-react';
@@ -184,10 +185,32 @@ function ChartCard({ title, icon, children }) {
 /* ═══════════════════════════════════════════════════════════
    MAIN COMPONENT
 ═══════════════════════════════════════════════════════════ */
-export default function SalesAnalytics() {
+export default function SalesAnalytics({ setActiveSubTab }) {
   const [rangeDays, setRangeDays] = useState(30);
 
-  const orders = useLiveQuery(() => db.b2bOrders.toArray()) || [];
+  const [cloudOrders, setCloudOrders] = useState([]);
+
+  useEffect(() => {
+    const fetchCloudOrders = async () => {
+      const { data } = await supabase.from('orders').select('*');
+      if (data) {
+        const mapped = data.map(o => ({
+          id: `cloud-${o.id}`,
+          orderDate: new Date(o.created_at).getTime(),
+          finalAmount: o.total || 0,
+          paymentMethod: 'Cloud Order',
+          status: o.status,
+          isCloud: true
+        }));
+        setCloudOrders(mapped);
+      }
+    };
+    fetchCloudOrders();
+  }, []);
+
+  const localOrders = useLiveQuery(() => db.b2bOrders.toArray()) || [];
+  const orders = useMemo(() => [...localOrders, ...cloudOrders], [localOrders, cloudOrders]);
+
   const products = useLiveQuery(() => db.b2bProducts.toArray()) || [];
   const clients = useLiveQuery(() => db.b2bClients.toArray()) || [];
 
@@ -317,15 +340,22 @@ export default function SalesAnalytics() {
       {/* KPI Summary Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
         {[
-          { label: 'Total Revenue', value: fmt(totalRevenue), color: '#6366f1', icon: <TrendingUp size={14} /> },
-          { label: 'Total Orders', value: totalOrders, color: '#0ea5e9', icon: <ShoppingBag size={14} /> },
-          { label: 'Avg Order Value', value: fmt(avgOrderValue), color: '#10b981', icon: <CreditCard size={14} /> },
-          { label: 'Delivered Revenue', value: fmt(deliveredRevenue), color: '#f59e0b', icon: <Package size={14} /> },
+          { label: 'Total Revenue', value: fmt(totalRevenue), color: '#6366f1', icon: <TrendingUp size={14} />, tab: 'sales' },
+          { label: 'Total Orders', value: totalOrders, color: '#0ea5e9', icon: <ShoppingBag size={14} />, tab: 'sales' },
+          { label: 'Avg Order Value', value: fmt(avgOrderValue), color: '#10b981', icon: <CreditCard size={14} />, tab: 'sales' },
+          { label: 'Delivered Revenue', value: fmt(deliveredRevenue), color: '#f59e0b', icon: <Package size={14} />, tab: 'sales' },
         ].map((kpi, i) => (
-          <div key={i} className="glass-card" style={{
-            margin: 0, padding: '14px 16px', borderLeft: `4px solid ${kpi.color}`,
-            background: `linear-gradient(135deg, hsl(var(--bg-card)) 0%, ${kpi.color}06 100%)`,
-          }}>
+          <div key={i} className="glass-card kpi-card-hover" 
+            onClick={() => { if (setActiveSubTab && kpi.tab) setActiveSubTab(kpi.tab); }}
+            style={{
+              margin: 0, padding: '14px 16px', borderLeft: `4px solid ${kpi.color}`,
+              background: `linear-gradient(135deg, hsl(var(--bg-card)) 0%, ${kpi.color}06 100%)`,
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.05)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+          >
             <div style={{ color: kpi.color, display: 'flex', background: `${kpi.color}14`, width: 26, height: 26, borderRadius: 7, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
               {kpi.icon}
             </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
+import { db } from '../utils/db';
 import { 
   RefreshCw, 
   Package, 
@@ -55,27 +56,84 @@ export default function OrderManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
 
-  const fetchOrders = async () => {
-    setLoading(true);
-    const { data: ordersData } = await supabase
-      .from('orders')
-      .select('*, order_items(qty, unit_price, product:products(name, category))')
-      .order('created_at', { ascending: false });
+  const fetchOrders = async (forceRefresh = false) => {
+    try {
+      if (forceRefresh) setLoading(true);
 
-    const allOrders = ordersData || [];
+      const cachedOrders = sessionStorage.getItem('om_orders_cache');
+      const cachedProfiles = sessionStorage.getItem('om_profiles_cache');
+      
+      if (!forceRefresh && cachedOrders && cachedProfiles && cachedOrders !== 'undefined' && cachedProfiles !== 'undefined') {
+        try {
+          setOrders(JSON.parse(cachedOrders));
+          setProfiles(JSON.parse(cachedProfiles));
+          setLoading(false);
+        } catch (e) {
+          console.warn('Cache parse error:', e);
+          setLoading(true);
+        }
+      } else if (!forceRefresh) {
+        setLoading(true);
+      }
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('*, order_items(qty, unit_price, product:products(name, category))')
+        .order('created_at', { ascending: false });
+        
+      if (ordersError) throw ordersError;
 
-    const doctorIds = [...new Set(allOrders.map(o => o.doctor_id).filter(Boolean))];
-    if (doctorIds.length) {
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, name, clinic_name, phone')
-        .in('id', doctorIds);
-      const map = Object.fromEntries((profilesData || []).map(p => [p.id, p]));
+      const cloudOrders = ordersData || [];
+
+      const localOrdersRaw = await db.b2bOrders.toArray();
+      const localClients = await db.b2bClients.toArray();
+      const localProducts = await db.b2bProducts.toArray();
+
+      const localOrders = localOrdersRaw.map(lo => {
+        const client = localClients.find(c => c.id === lo.clientId) || {};
+        const product = localProducts.find(p => p.id === lo.productIds?.[0]) || {};
+        return {
+          id: `local-${lo.id}`,
+          doctor_id: `local_client_${lo.clientId}`,
+          status: lo.status?.toLowerCase() || 'pending',
+          total: lo.finalAmount,
+          created_at: new Date(lo.orderDate).toISOString(),
+          order_items: [{
+            qty: lo.qty || 1,
+            unit_price: lo.finalAmount / (lo.qty || 1),
+            product: { name: product.name || 'Local Product', category: product.category || 'General' }
+          }],
+          _localClient: client
+        };
+      });
+
+      const allOrders = [...cloudOrders, ...localOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      const doctorIds = [...new Set(cloudOrders.map(o => o.doctor_id).filter(Boolean))];
+      const map = {};
+      if (doctorIds.length) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, name, clinic_name, phone')
+          .in('id', doctorIds);
+        (profilesData || []).forEach(p => { map[p.id] = p; });
+      }
+      localOrders.forEach(lo => {
+        map[lo.doctor_id] = {
+          name: lo._localClient.name,
+          clinic_name: lo._localClient.clinicName || lo._localClient.name,
+          phone: lo._localClient.phone || 'N/A'
+        };
+      });
+
       setProfiles(map);
+      setOrders(allOrders);
+      sessionStorage.setItem('om_orders_cache', JSON.stringify(allOrders));
+      sessionStorage.setItem('om_profiles_cache', JSON.stringify(map));
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
     }
-
-    setOrders(allOrders);
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -85,7 +143,12 @@ export default function OrderManagement() {
 
   const updateStatus = async (orderId, newStatus) => {
     setUpdating(orderId);
-    await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+    if (String(orderId).startsWith('local-')) {
+      const idStr = String(orderId).replace('local-', '');
+      await db.b2bOrders.update(parseInt(idStr), { status: newStatus.charAt(0).toUpperCase() + newStatus.slice(1) });
+    } else {
+      await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+    }
     await fetchOrders();
     setUpdating(null);
   };
@@ -158,7 +221,7 @@ export default function OrderManagement() {
           </p>
         </div>
         <button 
-          onClick={fetchOrders} 
+          onClick={() => fetchOrders(true)} 
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -288,7 +351,7 @@ export default function OrderManagement() {
       </div>
 
       {/* Modern Filter Chips */}
-      <div className="om-chips" style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', marginBottom: 18, paddingBottom: 6 }}>
+      <div className="om-chips" style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
         <style>{`.om-chips::-webkit-scrollbar{display:none}`}</style>
         {filterOptions.map(({ key, label, color, count }) => {
           const active = tab === key;
@@ -792,18 +855,23 @@ export default function OrderManagement() {
               
               <button 
                 onClick={async () => {
-                  const courier = document.getElementById('courier-input')?.value?.trim();
-                  const tracking = document.getElementById('tracking-input')?.value?.trim();
-                  if (!courier || !tracking) {
+                  const courierName = document.getElementById('courier-input')?.value?.trim();
+                  const trackingNumber = document.getElementById('tracking-input')?.value?.trim();
+                  if (!courierName || !trackingNumber) {
                     alert('Please enter both Courier Name and Tracking ID.');
                     return;
                   }
-                  const trackingStr = `[TRACKING] Courier: ${courier} | Tracking: ${tracking}`;
-                  const finalNotes = dispatchModal.notes ? `${trackingStr}\n${dispatchModal.notes}` : trackingStr;
-                  
+                  const finalNotes = `[TRACKING] Courier: ${courierName} | Tracking: ${trackingNumber}`;
                   setUpdating(dispatchModal.orderId);
+                  
+                  if (String(dispatchModal.orderId).startsWith('local-')) {
+                    const idStr = String(dispatchModal.orderId).replace('local-', '');
+                    await db.b2bOrders.update(parseInt(idStr), { status: 'Dispatched', notes: finalNotes });
+                  } else {
+                    await supabase.from('orders').update({ status: 'dispatched', notes: finalNotes }).eq('id', dispatchModal.orderId);
+                  }
+                  
                   setDispatchModal(null);
-                  await supabase.from('orders').update({ status: 'dispatched', notes: finalNotes }).eq('id', dispatchModal.orderId);
                   await fetchOrders();
                   setUpdating(null);
                 }} 

@@ -802,7 +802,7 @@ export default function App() {
       {showLoginModal && (
         <div className="modal-overlay-container animate-fade-in" style={{ zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
           <div onClick={() => setShowLoginModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }} />
-          <div className="confirm-dialog-card" style={{ 
+          <div style={{ 
             background: '#ffffff', 
             border: '1px solid hsl(var(--border-color))', 
             padding: '28px 24px', 
@@ -813,9 +813,10 @@ export default function App() {
             maxHeight: '90vh', 
             overflowY: 'auto',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            position: 'relative'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: -10, zIndex: 10 }}>
+            <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
               <button 
                 onClick={() => setShowLoginModal(false)} 
                 style={{ 

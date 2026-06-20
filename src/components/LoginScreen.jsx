@@ -327,7 +327,7 @@ function Wrapper({ children, isModal }) {
 function PremiumInput({ icon, label, required, type = 'text', placeholder, value, onChange, suffix }) {
   const [focused, setFocused] = useState(false);
   return (
-    <div>
+    <div style={{ textAlign: 'left' }}>
       <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6, letterSpacing: '0.02em' }}>
         {label}{required && <span style={{ color: '#0ea5e9', marginLeft: 2 }}>*</span>}
       </label>

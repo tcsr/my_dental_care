@@ -187,26 +187,25 @@ export default function ProSalesSubscreen({ lang, profile }) {
   useEffect(() => {
     const fetchLookups = async () => {
       try {
-        const { data, error } = await supabase.from('gst_rates').select('*').order('rate');
-        if (error) throw error;
-        if (data && data.length > 0) {
-          const rates = data.map(r => r.rate);
-          setGstRates(rates);
-          const def = data.find(r => r.is_default);
-          if (def) {
-            setSelectedGstRate(def.rate);
-            setQuoteGstRate(def.rate);
-          }
+        const profileData = await db.userProfile.toArray();
+        const gstRatesSetting = profileData.find(p => p.key === 'gstRates');
+        const defaultGstRateSetting = profileData.find(p => p.key === 'defaultGstRate');
+        
+        if (gstRatesSetting && gstRatesSetting.value) {
+          setGstRates(gstRatesSetting.value);
+        }
+        if (defaultGstRateSetting && defaultGstRateSetting.value !== undefined) {
+          setSelectedGstRate(defaultGstRateSetting.value);
+          setQuoteGstRate(defaultGstRateSetting.value);
         }
       } catch (e) {
         console.warn('Fallback to local GST rates:', e);
       }
 
       try {
-        const { data, error } = await supabase.from('states').select('*').eq('active', true).order('name');
-        if (error) throw error;
-        if (data && data.length > 0) {
-          setDynamicStatesList(data.map(s => s.name));
+        const statesData = await db.b2bStates.toArray();
+        if (statesData && statesData.length > 0) {
+          setDynamicStatesList(statesData.map(s => s.name).sort());
         }
       } catch (e) {
         console.warn('Fallback to local states:', e);
@@ -2334,7 +2333,7 @@ export default function ProSalesSubscreen({ lang, profile }) {
 
       {/* 5. Analytics Tab */}
       {activeSubTab === 'analytics' && (
-        <SalesAnalytics />
+        <SalesAnalytics setActiveSubTab={setActiveSubTab} />
       )}
 
       {/* Printable Tax Invoice Modal */}

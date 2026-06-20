@@ -456,9 +456,9 @@ export default function ProImplantsSubscreen({ lang, profile }) {
             Select implant parts and perform size matching validation to test engineering clearances. Simulate component threading and fitting with live SVG rendering.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
             {/* Control Panel */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* Clinical Integration: Link to Patient Case */}
               <div>
                 <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px', color: 'hsl(var(--text-dim))' }}>
@@ -562,6 +562,13 @@ export default function ProImplantsSubscreen({ lang, profile }) {
                     type="button"
                     onClick={() => {
                       setAssemblyState('assembling');
+                      // Scroll simulator into view on mobile
+                      setTimeout(() => {
+                        const simView = document.getElementById('simulator-engine-view');
+                        if (simView) {
+                          simView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                      }, 50);
                       setTimeout(() => {
                         setAssemblyState('assembled');
                         if (navigator.vibrate) {
@@ -665,7 +672,8 @@ export default function ProImplantsSubscreen({ lang, profile }) {
             </div>
 
             {/* SVG Visualizer */}
-            <div style={{
+            <div id="simulator-engine-view" style={{
+              flex: '1 1 300px',
               background: 'radial-gradient(circle at center, #1e293b 0%, #0b0f19 100%)',
               border: '2px solid #334155',
               borderRadius: '24px',
