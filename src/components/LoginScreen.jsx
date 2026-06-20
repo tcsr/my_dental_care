@@ -43,7 +43,7 @@ export default function LoginScreen({ onLogin }) {
         onLogin({ role: profile.role, name: profile.name, user: data.user });
       }
     } catch (err) {
-      setError(err?.message || 'Login failed. Check credentials.');
+      setError(err?.message || err?.error_description || String(err) || 'Login failed.');
     } finally {
       setLoading(false);
     }
@@ -63,9 +63,13 @@ export default function LoginScreen({ onLogin }) {
       });
       if (authErr) throw authErr;
 
+      // Wait for trigger to create profile row
+      await new Promise(r => setTimeout(r, 1000));
+
       const { error: profileErr } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: data.user.id,
           name: regForm.name,
           clinic_name: regForm.clinic_name,
           phone: regForm.phone,
@@ -73,14 +77,13 @@ export default function LoginScreen({ onLogin }) {
           gst_number: regForm.gst_number,
           role: 'doctor',
           approved: false,
-        })
-        .eq('id', data.user.id);
+        });
 
       if (profileErr) throw profileErr;
       await supabase.auth.signOut();
       setScreen('pending');
     } catch (err) {
-      setError(err?.message || 'Registration failed. Try again.');
+      setError(err?.message || err?.error_description || String(err) || 'Registration failed.');
     } finally {
       setLoading(false);
     }
