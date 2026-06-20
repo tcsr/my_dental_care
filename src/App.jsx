@@ -12,8 +12,9 @@ import ProMasterDataSubscreen from './components/ProMasterDataSubscreen';
 import ProProfileSettingsSubscreen from './components/ProProfileSettingsSubscreen';
 import AiAssistant from './components/AiAssistant';
 import LoginScreen from './components/LoginScreen';
+import AdminPanel from './components/AdminPanel';
 import { t } from './utils/i18n';
-import { ShoppingBag, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare } from 'lucide-react';
+import { ShoppingBag, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -245,6 +246,8 @@ export default function App() {
     localStorage.setItem('dentalLang', newLang);
   };
 
+  const isAdmin = authUser?.role === 'admin';
+
   const renderContent = () => {
     switch (activeTab) {
       case 'sales':
@@ -261,6 +264,8 @@ export default function App() {
         return <ProMasterDataSubscreen lang={lang} profile={profile} />;
       case 'profile':
         return <ProProfileSettingsSubscreen lang={lang} profile={profile} />;
+      case 'admin':
+        return <AdminPanel />;
       default:
         return <ProSalesSubscreen lang={lang} profile={profile} />;
     }
@@ -422,13 +427,22 @@ export default function App() {
                   <span>{t('navMaster', lang)}</span>
                 </button>
               )}
-              <button 
-                className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`} 
+              <button
+                className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`}
                 onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}
               >
                 <User size={16} />
                 <span>Profile & Settings</span>
               </button>
+              {isAdmin && (
+                <button
+                  className={`sidebar-link ${activeTab === 'admin' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('admin'); setIsSidebarOpen(false); }}
+                >
+                  <ShieldCheck size={16} />
+                  <span>Admin Panel</span>
+                </button>
+              )}
             </div>
 
           </div>
@@ -543,7 +557,7 @@ export default function App() {
       </main>
 
       {/* Bottom Premium Nav Bar */}
-      <div className="bottom-nav" style={{ gridTemplateColumns: isDoctorMode ? 'repeat(4, 1fr)' : 'repeat(5, 1fr)' }}>
+      <div className="bottom-nav" style={{ gridTemplateColumns: isAdmin ? 'repeat(4, 1fr)' : isDoctorMode ? 'repeat(4, 1fr)' : 'repeat(5, 1fr)' }}>
         <button className={`nav-item ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => setActiveTab('sales')}>
           <ShoppingBag />
           <span>{isDoctorMode ? 'My Orders' : t('navSales', lang)}</span>
@@ -572,6 +586,12 @@ export default function App() {
           <button className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
             <User />
             <span>Profile</span>
+          </button>
+        )}
+        {isAdmin && (
+          <button className={`nav-item ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>
+            <ShieldCheck />
+            <span>Admin</span>
           </button>
         )}
       </div>
