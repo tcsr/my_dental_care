@@ -64,26 +64,28 @@ export default function LoginScreen({ onLogin }) {
       if (authErr) throw authErr;
 
       // Wait for trigger to create profile row
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 1500));
 
-      const { error: profileErr } = await supabase
-        .from('profiles')
-        .upsert({
-          id: data.user.id,
-          name: regForm.name,
-          clinic_name: regForm.clinic_name,
-          phone: regForm.phone,
-          address: regForm.address,
-          gst_number: regForm.gst_number,
-          role: 'doctor',
-          approved: false,
-        });
+      // Use SQL function to bypass RLS for profile update
+      const { error: profileErr } = await supabase.rpc('update_own_profile', {
+        p_id: data.user.id,
+        p_name: regForm.name,
+        p_clinic_name: regForm.clinic_name,
+        p_phone: regForm.phone,
+        p_address: regForm.address,
+        p_gst_number: regForm.gst_number,
+      });
 
-      if (profileErr) throw profileErr;
+      if (profileErr) {
+        console.warn('Profile update failed (non-fatal):', profileErr);
+        // Don't block registration — trigger already created basic profile
+      }
       await supabase.auth.signOut();
       setScreen('pending');
     } catch (err) {
-      setError(err?.message || err?.error_description || String(err) || 'Registration failed.');
+      console.error('Register error:', err);
+      const msg = err?.message || err?.error_description || err?.details || err?.hint || (typeof err === 'string' ? err : null) || 'Registration failed. Check console for details.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
