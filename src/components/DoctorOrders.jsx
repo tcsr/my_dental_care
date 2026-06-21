@@ -10,7 +10,8 @@ import {
   Calendar,
   TrendingUp,
   CreditCard,
-  Check
+  Check,
+  XCircle
 } from 'lucide-react';
 import EmptyStateCard from './EmptyStateCard';
 import PremiumLoader from './ui/PremiumLoader';
@@ -82,9 +83,10 @@ function StatCard({ title, value, icon, color }) {
 }
 
 // ── SUB-COMPONENT: ORDER CARD ──
-function OrderCard({ order, formatCurrency }) {
+function OrderCard({ order, formatCurrency, onCancel }) {
   const [hovered, setHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const cfg = STATUS_CFG[order.status] || STATUS_CFG.pending;
   const tracking = parseTracking(order.notes);
@@ -335,6 +337,52 @@ function OrderCard({ order, formatCurrency }) {
           </span>
         </div>
 
+        {/* Cancel button — only on pending orders */}
+        {order.status === 'pending' && (
+          <button
+            onClick={async () => {
+              if (!window.confirm('Cancel this order? This cannot be undone.')) return;
+              setCancelling(true);
+              try {
+                await supabase.from('orders').update({ status: 'cancelled' }).eq('id', order.id);
+                // Clear stale cache so refreshed view shows correct status
+                sessionStorage.removeItem('doctor_orders_cache');
+                if (onCancel) onCancel();
+              } catch (e) {
+                console.error('Cancel failed:', e);
+                alert('Failed to cancel order. Please try again.');
+              } finally {
+                setCancelling(false);
+              }
+            }}
+            disabled={cancelling}
+            style={{
+              marginTop: 12,
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              padding: '9px 14px',
+              borderRadius: 12,
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              background: 'rgba(239, 68, 68, 0.04)',
+              color: '#ef4444',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              cursor: cancelling ? 'not-allowed' : 'pointer',
+              fontFamily: 'Outfit',
+              opacity: cancelling ? 0.7 : 1,
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => { if (!cancelling) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.09)'; }}
+            onMouseLeave={(e) => { if (!cancelling) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.04)'; }}
+          >
+            <XCircle size={14} />
+            {cancelling ? 'Cancelling...' : 'Cancel Order'}
+          </button>
+        )}
+
         {displayNotes && (
           <div style={{ 
             marginTop: 10, 
@@ -511,7 +559,8 @@ export default function DoctorOrders({ authUser, onGoToCatalog }) {
             <OrderCard 
               key={order.id} 
               order={order} 
-              formatCurrency={formatCurrency} 
+              formatCurrency={formatCurrency}
+              onCancel={fetchOrders}
             />
           ))}
         </div>

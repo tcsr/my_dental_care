@@ -168,6 +168,9 @@ export default function OrderManagement() {
     } else {
       await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
     }
+    // Clear stale session cache so doctors see updated status immediately
+    sessionStorage.removeItem('om_orders_cache');
+    sessionStorage.removeItem('om_profiles_cache');
     await fetchOrders();
     setUpdating(null);
   };
@@ -744,34 +747,39 @@ export default function OrderManagement() {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {/* Delete Order Button */}
-                      <button
-                        onClick={() => deleteOrder(order.id)}
-                        disabled={isUpdating}
-                        style={{
-                          padding: '9px 14px',
-                          borderRadius: 12,
-                          border: '1px solid rgba(239, 68, 68, 0.2)',
-                          background: 'rgba(239, 68, 68, 0.04)',
-                          color: '#ef4444',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          cursor: isUpdating ? 'not-allowed' : 'pointer',
-                          fontFamily: 'Outfit',
-                          opacity: isUpdating ? 0.7 : 1,
-                          transition: 'all 0.2s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 4
-                        }}
-                        title="Delete Order"
-                        onMouseEnter={(e) => { if (!isUpdating) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'; }}
-                        onMouseLeave={(e) => { if (!isUpdating) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.04)'; }}
-                      >
-                        <Trash2 size={12} />
-                        Delete
-                      </button>
+                      {/* Cancel Order Button — only for pending/confirmed orders */}
+                      {['pending', 'confirmed'].includes((order.status || '').toLowerCase()) && (
+                        <button
+                          onClick={async () => {
+                            if (!(await confirm('Cancel this order? The status will be set to Cancelled.'))) return;
+                            updateStatus(order.id, 'cancelled');
+                          }}
+                          disabled={isUpdating}
+                          style={{
+                            padding: '9px 14px',
+                            borderRadius: 12,
+                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                            background: 'rgba(239, 68, 68, 0.04)',
+                            color: '#ef4444',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            cursor: isUpdating ? 'not-allowed' : 'pointer',
+                            fontFamily: 'Outfit',
+                            opacity: isUpdating ? 0.7 : 1,
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 4
+                          }}
+                          title="Cancel Order"
+                          onMouseEnter={(e) => { if (!isUpdating) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'; }}
+                          onMouseLeave={(e) => { if (!isUpdating) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.04)'; }}
+                        >
+                          <Trash2 size={12} />
+                          Cancel
+                        </button>
+                      )}
 
                       {cfg.next && (
                         <button

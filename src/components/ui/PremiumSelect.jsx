@@ -8,7 +8,8 @@ export default function PremiumSelect({
   placeholder = 'Select...',
   icon = null,
   style = {},
-  children
+  children,
+  disabled = false
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -50,17 +51,18 @@ export default function PremiumSelect({
   const { border, padding, background, borderRadius, fontSize, color, outline, ...wrapperStyle } = style;
 
   return (
-    <div ref={containerRef} style={{ boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'stretch', position: 'relative', width: '100%', flex: 1, fontFamily: 'Inter', ...wrapperStyle }}>
+    <div ref={containerRef} style={{ boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'stretch', position: 'relative', width: '100%', flex: 1, fontFamily: 'Inter', opacity: disabled ? 0.6 : 1, pointerEvents: disabled ? 'none' : 'auto', ...wrapperStyle }}>
       <button
         type="button"
         className="premium-select-btn"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
         style={{
           boxSizing: 'border-box',
           width: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '10px 14px', background: isOpen ? 'hsl(var(--bg-dark))' : 'hsl(var(--bg-card))',
           border: `1.5px solid ${isOpen ? 'hsl(var(--primary))' : 'hsl(var(--border-color))'}`,
-          borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          borderRadius: '10px', cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: isOpen ? '0 0 0 3px rgba(14, 165, 233, 0.15)' : 'none',
           color: value ? 'hsl(var(--text-primary))' : 'hsl(var(--text-muted))',
           fontSize: '0.82rem', fontWeight: 600, outline: 'none'

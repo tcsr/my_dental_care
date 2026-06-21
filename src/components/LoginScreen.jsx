@@ -3,11 +3,13 @@ import { supabase } from '../utils/supabase';
 import { Eye, EyeOff, Mail, Lock, User, Building2, Phone, MapPin, FileText, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
 
 export default function LoginScreen({ onLogin, isModal = false }) {
-  const [screen, setScreen] = useState('login'); // 'login' | 'register' | 'pending'
+  const [screen, setScreen] = useState('login'); // 'login' | 'register' | 'pending' | 'forgot'
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(1); // registration step 1 or 2
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
 
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [regForm, setRegForm] = useState({
@@ -45,7 +47,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
           approved: profile.approved
         });
       } else if (!profile.approved) {
-        setError('Your profile is inactive. Please contact admin for approval.');
+        setError('Your account is pending approval from Lal Dental Care admin. Please wait or contact support.');
         await supabase.auth.signOut();
       } else {
         onLogin({ 
@@ -66,6 +68,20 @@ export default function LoginScreen({ onLogin, isModal = false }) {
     }
   };
 
+  const validateStep1 = () => {
+    if (!regForm.name.trim()) { setError('Full name is required.'); return false; }
+    if (!regForm.clinic_name.trim()) { setError('Clinic name is required.'); return false; }
+    if (regForm.phone && !/^[6-9]\d{9}$/.test(regForm.phone.replace(/\s/g, ''))) {
+      setError('Enter a valid 10-digit Indian mobile number (starts with 6-9).');
+      return false;
+    }
+    if (regForm.gst_number && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(regForm.gst_number.toUpperCase())) {
+      setError('Enter a valid 15-character GSTIN (e.g. 22AAAAA0000A1Z5).');
+      return false;
+    }
+    return true;
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
@@ -83,7 +99,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
       // Wait for trigger to create profile row
       await new Promise(r => setTimeout(r, 1500));
 
-      // Use SQL function to bypass RLS for profile update
+      // Update profile details — approved stays false until admin approves
       const { error: profileErr } = await supabase.rpc('update_own_profile', {
         p_id: data.user.id,
         p_name: regForm.name,
@@ -95,53 +111,14 @@ export default function LoginScreen({ onLogin, isModal = false }) {
 
       if (profileErr) {
         console.warn('Profile update failed (non-fatal):', profileErr);
-        // Don't block registration — trigger already created basic profile
       }
 
-      if (data.session) {
-        onLogin({
-          role: 'doctor',
-          name: regForm.name,
-          user: data.user,
-          clinicName: regForm.clinic_name,
-          phone: regForm.phone,
-          address: regForm.address,
-          gstNumber: regForm.gst_number,
-          approved: true
-        });
-      } else {
-        // Fallback: Try auto-signing in with credentials
-        try {
-          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-            email: regForm.email,
-            password: regForm.password,
-          });
-          if (signInErr) throw signInErr;
+      // Always sign out after registration — admin must approve before first login
+      await supabase.auth.signOut();
 
-          const { data: profile, error: profileErr } = await supabase
-            .from('profiles')
-            .select('role, approved, name, clinic_name, phone, address, gst_number')
-            .eq('id', signInData.user.id)
-            .single();
+      // Show pending approval screen
+      setScreen('pending');
 
-          if (profileErr) throw profileErr;
-
-          onLogin({
-            role: profile.role,
-            name: profile.name,
-            user: signInData.user,
-            clinicName: profile.clinic_name,
-            phone: profile.phone,
-            address: profile.address,
-            gstNumber: profile.gst_number,
-            approved: true
-          });
-        } catch (e) {
-          setScreen('login');
-          setLoginForm({ email: regForm.email, password: regForm.password });
-          setError('Registration successful! Please sign in.');
-        }
-      }
     } catch (err) {
       console.error('Register error:', err);
       const msg = err?.message
@@ -149,6 +126,24 @@ export default function LoginScreen({ onLogin, isModal = false }) {
         || (err && JSON.stringify(err, Object.getOwnPropertyNames(err)))
         || 'Registration failed.';
       setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!forgotEmail.trim()) { setError('Please enter your email address.'); return; }
+    setLoading(true);
+    try {
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+        redirectTo: window.location.origin,
+      });
+      if (resetErr) throw resetErr;
+      setForgotSent(true);
+    } catch (err) {
+      setError(err?.message || 'Failed to send reset email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -170,13 +165,59 @@ export default function LoginScreen({ onLogin, isModal = false }) {
           <h3 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1.3rem', color: '#0f172a', margin: '0 0 10px' }}>
             Registration Submitted!
           </h3>
-          <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.7, maxWidth: '300px', margin: '0 auto 28px' }}>
-            Your clinic account is pending approval from Lal Dental Care. You'll be able to login once approved.
+          <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.7, maxWidth: '300px', margin: '0 auto 8px' }}>
+            Your clinic account is pending approval from Lal Dental Care.
+          </p>
+          <p style={{ fontSize: '0.78rem', color: '#0ea5e9', fontWeight: 700, margin: '0 auto 28px' }}>
+            You'll receive access once an admin approves your account.
           </p>
           <button onClick={() => { setScreen('login'); setStep(1); }} style={btnPrimary}>
             Back to Login
           </button>
         </div>
+      </Wrapper>
+    );
+  }
+
+  // ── FORGOT PASSWORD ───────────────────────────────────────────────────────────
+  if (screen === 'forgot') {
+    return (
+      <Wrapper isModal={isModal}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+          <button onClick={() => { setScreen('login'); setError(''); setForgotSent(false); setForgotEmail(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex' }}>
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h2 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1.3rem', color: '#0f172a', margin: 0 }}>Reset Password</h2>
+            <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '2px 0 0' }}>We'll send a reset link to your email</p>
+          </div>
+        </div>
+
+        {error && <ErrorBox msg={error} />}
+
+        {forgotSent ? (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', margin: '0 auto 16px', background: 'rgba(16,185,129,0.1)', border: '2px solid rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CheckCircle size={24} color="#10b981" />
+            </div>
+            <p style={{ fontSize: '0.85rem', color: '#0f172a', fontWeight: 700, margin: '0 0 6px' }}>Email Sent!</p>
+            <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.6, margin: '0 0 24px' }}>
+              Check your inbox at <strong>{forgotEmail}</strong> for the password reset link.
+            </p>
+            <button onClick={() => { setScreen('login'); setForgotSent(false); setForgotEmail(''); }} style={btnPrimary}>
+              Back to Login
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <PremiumInput icon={<Mail size={15} />} label="Email Address" required type="email"
+              placeholder="Enter your registered email"
+              value={forgotEmail} onChange={v => setForgotEmail(v)} />
+            <button type="submit" disabled={loading} style={{ ...btnPrimary, marginTop: 4, opacity: loading ? 0.75 : 1 }}>
+              {loading ? 'Sending...' : <> Send Reset Link <ArrowRight size={15} /> </>}
+            </button>
+          </form>
+        )}
       </Wrapper>
     );
   }
@@ -217,7 +258,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
 
         {error && <ErrorBox msg={error} />}
 
-        <form onSubmit={step === 1 ? (e) => { e.preventDefault(); setError(''); setStep(2); } : handleRegister}
+        <form onSubmit={step === 1 ? (e) => { e.preventDefault(); setError(''); if (validateStep1()) setStep(2); } : handleRegister}
           style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           {step === 1 ? (
@@ -228,8 +269,8 @@ export default function LoginScreen({ onLogin, isModal = false }) {
               <PremiumInput icon={<Building2 size={15} />} label="Clinic / Hospital Name" required
                 placeholder="Bright Smiles Clinic" value={regForm.clinic_name}
                 onChange={v => setRegForm(p => ({ ...p, clinic_name: v }))} />
-              <PremiumInput icon={<Phone size={15} />} label="Phone Number"
-                placeholder="+91 98765 43210" value={regForm.phone}
+              <PremiumInput icon={<Phone size={15} />} label="Phone Number (10-digit)"
+                placeholder="9876543210" value={regForm.phone}
                 onChange={v => setRegForm(p => ({ ...p, phone: v }))} />
               <PremiumInput icon={<MapPin size={15} />} label="City / Address"
                 placeholder="Hyderabad, Telangana" value={regForm.address}
@@ -306,7 +347,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
 
       <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <PremiumInput icon={<Mail size={15} />} label="Email Address" required type="email"
-          placeholder="Enter your email address"
+          placeholder="Enter your email"
           value={loginForm.email} onChange={v => setLoginForm(p => ({ ...p, email: v }))} />
 
         <PremiumInput icon={<Lock size={15} />} label="Password" required
@@ -319,11 +360,21 @@ export default function LoginScreen({ onLogin, isModal = false }) {
           } />
 
         <button type="submit" disabled={loading} style={{ ...btnPrimary, marginTop: 4, opacity: loading ? 0.75 : 1 }}>
-          {loading ? 'Signing in...' : <>Sign In <ArrowRight size={15} /></>}
+          {loading ? 'Signing in...' : <> Sign In <ArrowRight size={15} /> </>}
         </button>
       </form>
 
-      <div style={{ marginTop: 20, padding: '16px', background: 'rgba(14,165,233,0.04)', borderRadius: 12, border: '1px solid rgba(14,165,233,0.1)', textAlign: 'center' }}>
+      {/* Forgot Password */}
+      <div style={{ textAlign: 'center', marginTop: 12 }}>
+        <button
+          onClick={() => { setScreen('forgot'); setError(''); }}
+          style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600 }}
+        >
+          Forgot your password?
+        </button>
+      </div>
+
+      <div style={{ marginTop: 16, padding: '16px', background: 'rgba(14,165,233,0.04)', borderRadius: 12, border: '1px solid rgba(14,165,233,0.1)', textAlign: 'center' }}>
         <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 10px', fontWeight: 500 }}>
           New to Lal Dental Care?
         </p>

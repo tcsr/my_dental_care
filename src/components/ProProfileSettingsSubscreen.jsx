@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import PremiumSelect from './ui/PremiumSelect';
 
-export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUser }) {
+export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUser, isAdmin = false }) {
   // Local Form States
   const [userName, setUserName] = useState('');
   const [role, setRole] = useState('');
@@ -522,13 +522,13 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
           <User size={18} />
         </div>
         <h2 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'hsl(var(--primary))', fontFamily: 'Outfit', margin: 0 }}>
-          Profile & Settings
+          {isAdmin ? 'System Settings' : 'Profile & Settings'}
         </h2>
       </div>
 
-      {/* Main Profile Editor Card */}
-      <div className="glass-card" style={{ padding: '20px', border: '1px solid hsl(var(--border-color))' }}>
-        <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Profile Settings Card */}
+      <div className="glass-card" style={{ padding: '24px 28px', border: '1px solid hsl(var(--border-color))', maxWidth: '900px', width: '100%' }}>
+        <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* Avatar Section */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', paddingBottom: '16px', borderBottom: '1px solid hsl(var(--border-color))' }}>
@@ -577,13 +577,14 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
           </div>
 
           {/* Form Fields Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
             <div>
               <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
                 Access Role (RBAC Settings)
               </label>
               <PremiumSelect 
                 value={activeRole} 
+                disabled={!isAdmin}
                 onChange={(e) => {
                   setActiveRole(e.target.value);
                   if (e.target.value === 'rep') {
@@ -645,25 +646,23 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <div>
-                <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                  <Mail size={12} /> Email
-                </label>
-                <input 
-                  type="email" required value={userEmail} onChange={(e) => setUserEmail(e.target.value)}
-                  style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', outline: 'none' }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                  <Phone size={12} /> Phone
-                </label>
-                <input 
-                  type="text" required value={userPhone} onChange={(e) => setUserPhone(e.target.value)}
-                  style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', outline: 'none' }}
-                />
-              </div>
+            <div>
+              <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                <Mail size={12} /> Email
+              </label>
+              <input 
+                type="email" required value={userEmail} onChange={(e) => setUserEmail(e.target.value)}
+                style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', outline: 'none' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                <Phone size={12} /> Phone
+              </label>
+              <input 
+                type="text" required value={userPhone} onChange={(e) => setUserPhone(e.target.value)}
+                style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', outline: 'none' }}
+              />
             </div>
 
             <div>
@@ -676,7 +675,7 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
               />
             </div>
 
-            <div>
+            <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
                 <MapPin size={12} /> Clinic / Distributor Address
               </label>
@@ -704,6 +703,7 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
       </div>
 
       {/* Sync Control Center */}
+      {isAdmin && (
       <div className="glass-card" style={{ padding: '20px', border: '1px solid hsl(var(--border-color))' }}>
         <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', fontFamily: 'Outfit', fontWeight: '800' }}>
           🔄 Sync & Cloud Connection
@@ -823,8 +823,10 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
           </label>
         </div>
       </div>
+      )}
 
       {/* Database Diagnostics */}
+      {isAdmin && (
       <div className="glass-card" style={{ padding: '20px', border: '1px solid hsl(var(--border-color))' }}>
         <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', fontFamily: 'Outfit', fontWeight: '800' }}>
           <Database size={16} /> Local Storage Analytics
@@ -861,6 +863,7 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
           <Trash2 size={14} /> Wipe Database & Reset Console
         </button>
       </div>
+      )}
 
     </div>
   );

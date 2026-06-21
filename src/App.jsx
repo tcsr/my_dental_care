@@ -251,8 +251,8 @@ export default function App() {
           setIsAiOpen(false);
         } else if (isSidebarOpen) {
           setIsSidebarOpen(false);
-        } else if (activeTab !== 'sales') {
-          setActiveTab('sales');
+        } else if (activeTab !== (isAdmin ? 'dashboard' : 'catalog')) {
+          setActiveTab(isAdmin ? 'dashboard' : 'catalog');
         } else {
           console.log('Back button exit blocked.');
         }
@@ -451,7 +451,7 @@ export default function App() {
   const handleLangChange = (e) => {
     const newLang = e && e.target ? e.target.value : e;
     setLang(newLang);
-    localStorage.setItem('dental_lang', newLang);
+    localStorage.setItem('dentalLang', newLang); // consistent key with initial read
   };
 
   const isAdmin = authUser?.role === 'admin';
@@ -759,7 +759,8 @@ export default function App() {
             <MessageSquare size={15} />
           </button>
 
-          {/* Cart Navigation Button */}
+          {/* Cart Navigation Button — hidden for admin */}
+          {!isAdmin && (
           <button 
             onClick={() => {
               setActiveTab('catalog');
@@ -797,6 +798,7 @@ export default function App() {
               </span>
             )}
           </button>
+          )}
 
           <div className="header-select-wrapper" style={{ width: 140 }}>
             <PremiumSelect 
@@ -892,7 +894,7 @@ export default function App() {
               <Route path="/reminders" element={<ProRemindersSubscreen lang={lang} profile={profile} />} />
               <Route path="/guides" element={<ProGuidesSubscreen lang={lang} profile={profile} />} />
               <Route path="/master" element={<ProMasterDataSubscreen lang={lang} profile={profile} authUser={authUser} />} />
-              <Route path="/profile" element={<ProProfileSettingsSubscreen lang={lang} profile={profile} authUser={authUser} />} />
+              <Route path="/profile" element={<ProProfileSettingsSubscreen lang={lang} profile={profile} authUser={authUser} isAdmin={isAdmin} />} />
               <Route path="/admin" element={<AdminPanel />} />
               <Route path="*" element={
                 <Navigate to={isAdmin ? "/dashboard" : "/catalog"} replace />

@@ -193,7 +193,10 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
     );
 
     for (const { product, qty } of cartItems) {
-      await supabase.from('products').update({ stock_qty: Math.max(0, (product.stock_qty || 0) - qty) }).eq('id', product.id);
+      // Skip stock update for untracked products (null stock_qty)
+      if (product.stock_qty === null || product.stock_qty === undefined) continue;
+      // Atomic safe decrement — only update if current DB stock >= qty
+      await supabase.rpc('decrement_stock', { p_product_id: product.id, p_qty: qty });
     }
 
     clearCart();

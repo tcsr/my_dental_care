@@ -50,19 +50,32 @@ export default function AdminPanel() {
   };
 
   const handleReject = async (id) => {
-    if (!(await confirm('Reject and delete this registration?'))) return;
+    if (!(await confirm('Reject and delete this registration? The user will be removed from the system and their email will be freed.'))) return;
     setActionLoading(id + '_reject');
-    const { error } = await supabase.from('profiles').delete().eq('id', id);
-    if (!error) {
-      if (window.__triggerToast) {
-        window.__triggerToast('Registration rejected and deleted.', 'warning');
+    try {
+      // 1. Delete auth user via Edge Function (removes from auth.users & frees the email)
+      const { error: edgeFnErr } = await supabase.functions.invoke('delete-user', {
+        body: { userId: id }
+      });
+      if (edgeFnErr) {
+        console.warn('Edge function delete-user failed (non-fatal):', edgeFnErr);
       }
-    } else {
-      if (window.__triggerToast) {
-        window.__triggerToast('Failed to reject: ' + error.message, 'error');
+
+      // 2. Delete profile row (cascade deletes orders if any)
+      const { error } = await supabase.from('profiles').delete().eq('id', id);
+      if (!error) {
+        if (window.__triggerToast) {
+          window.__triggerToast('Registration rejected and user removed.', 'warning');
+        }
+      } else {
+        if (window.__triggerToast) {
+          window.__triggerToast('Failed to reject: ' + error.message, 'error');
+        }
       }
+    } catch (e) {
+      console.error('Reject failed:', e);
+      if (window.__triggerToast) window.__triggerToast('Failed to reject registration.', 'error');
     }
-    // Also delete auth user via admin API not possible from client — just remove profile
     await fetchDoctors();
     setActionLoading(null);
   };
