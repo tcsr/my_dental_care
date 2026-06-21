@@ -139,7 +139,7 @@ main::-webkit-scrollbar-thumb:hover {
   justify-content: space-between;
   align-items: center;
   padding: env(safe-area-inset-top, 0px) 20px 0;
-  background: hsla(0, 0%, 100%, 0.85);
+  background: hsl(var(--bg-card) / 85%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid hsl(var(--border-color));
@@ -1133,7 +1133,7 @@ button {
     height: 65px !important;
     padding: 0 32px !important;
     box-sizing: border-box !important;
-    background: hsla(0, 0%, 100%, 0.75) !important;
+    background: hsl(var(--bg-card) / 75%) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
   }
@@ -1701,4 +1701,87 @@ body.is-browser main button.carousel-nav-btn {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 16px;
   }
+}
+
+/* Premium Header Navigation Buttons */
+.header-btn {
+  background: hsl(var(--bg-dark));
+  border: 1.5px solid hsl(var(--border-color)) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 6px !important;
+  border-radius: 10px !important;
+  width: 32px !important;
+  height: 32px !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  color: hsl(var(--text-muted)) !important;
+  position: relative !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.01) !important;
+}
+
+.header-btn:hover {
+  transform: translateY(-1.5px) !important;
+  border-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary)) !important;
+  background: hsl(var(--primary) / 6%) !important;
+  box-shadow: 0 6px 16px hsl(var(--primary) / 14%) !important;
+}
+
+.header-btn:active {
+  transform: translateY(0px) scale(0.95) !important;
+}
+
+.header-btn svg {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Wobble/rotate for AI chat icon */
+.header-btn-ai:hover svg {
+  transform: scale(1.15) rotate(-8deg) !important;
+}
+
+/* Bounce for Shopping Cart icon */
+.header-btn-cart:hover svg {
+  transform: scale(1.15) translateY(-1px) !important;
+}
+
+/* Zoom/rotate for profile icon/image */
+.header-btn-profile:hover img, 
+.header-btn-profile:hover svg {
+  transform: scale(1.18) !important;
+  box-shadow: 0 0 10px hsl(var(--primary) / 30%) !important;
+}
+
+.header-btn-profile img {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Slide and change colors for Logout button */
+.header-btn-logout {
+  color: hsl(348, 83%, 47%) !important;
+  border-color: hsla(348, 83%, 47%, 0.15) !important;
+  background: hsla(348, 83%, 47%, 0.02) !important;
+}
+
+.header-btn-logout:hover {
+  border-color: hsl(348, 83%, 47%) !important;
+  color: #ffffff !important;
+  background: hsl(348, 83%, 47%) !important;
+  box-shadow: 0 6px 16px rgba(225, 29, 72, 0.25) !important;
+}
+
+.header-btn-logout:hover svg {
+  transform: translateX(2px) !important;
+}
+
+/* Premium Select Wrapper in Header */
+.header-select-wrapper {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.header-select-wrapper:hover {
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.06) !important;
 }

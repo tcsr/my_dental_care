@@ -28,3 +28,14 @@ dist-ssr
 
 # Supabase
 supabase/.temp/
+
+# Android build artifacts & local machine config
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+android/capacitor-cordova-android-plugins/
+
+# APK files (build outputs - don't commit)
+*.apk
+*.aab

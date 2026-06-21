@@ -515,7 +515,7 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
             background: 'hsl(var(--bg-card))', 
             borderRadius: '24px', 
             width: '100%',
-            maxWidth: '460px', 
+            maxWidth: '620px', 
             maxHeight: '85vh', 
             display: 'flex', 
             flexDirection: 'column', 

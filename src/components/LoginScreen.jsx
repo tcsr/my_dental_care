@@ -4,7 +4,6 @@ import { Eye, EyeOff, Mail, Lock, User, Building2, Phone, MapPin, FileText, Arro
 
 export default function LoginScreen({ onLogin, isModal = false }) {
   const [screen, setScreen] = useState('login'); // 'login' | 'register' | 'pending'
-  const [portal, setPortal] = useState('admin');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -303,26 +302,11 @@ export default function LoginScreen({ onLogin, isModal = false }) {
         </p>
       </div>
 
-      {/* Portal toggle */}
-      <div style={{ display: 'flex', background: 'rgba(0,0,0,0.04)', padding: 4, borderRadius: 12, marginBottom: 24, border: '1px solid rgba(0,0,0,0.06)' }}>
-        {[['admin', '🏢 Sales Portal'], ['doctor', '🦷 Clinic Portal']].map(([key, label]) => (
-          <button key={key} type="button" onClick={() => { setPortal(key); setError(''); }} style={{
-            flex: 1, padding: '10px 8px', border: 'none', borderRadius: 9, fontSize: '0.73rem',
-            fontWeight: 700, fontFamily: 'Outfit', cursor: 'pointer', transition: 'all 0.25s',
-            background: portal === key ? '#fff' : 'transparent',
-            color: portal === key ? '#0ea5e9' : '#94a3b8',
-            boxShadow: portal === key ? '0 2px 12px rgba(0,0,0,0.08)' : 'none',
-          }}>
-            {label}
-          </button>
-        ))}
-      </div>
-
       {error && <ErrorBox msg={error} />}
 
       <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <PremiumInput icon={<Mail size={15} />} label="Email Address" required type="email"
-          placeholder={portal === 'admin' ? 'admin@laldentalcare.com' : 'doctor@yourclinic.com'}
+          placeholder="Enter your email address"
           value={loginForm.email} onChange={v => setLoginForm(p => ({ ...p, email: v }))} />
 
         <PremiumInput icon={<Lock size={15} />} label="Password" required
@@ -339,16 +323,14 @@ export default function LoginScreen({ onLogin, isModal = false }) {
         </button>
       </form>
 
-      {portal === 'doctor' && (
-        <div style={{ marginTop: 20, padding: '16px', background: 'rgba(14,165,233,0.04)', borderRadius: 12, border: '1px solid rgba(14,165,233,0.1)', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 10px', fontWeight: 500 }}>
-            New to Lal Dental Care?
-          </p>
-          <button onClick={() => { setScreen('register'); setError(''); }} style={btnOutline}>
-            Register your Clinic
-          </button>
-        </div>
-      )}
+      <div style={{ marginTop: 20, padding: '16px', background: 'rgba(14,165,233,0.04)', borderRadius: 12, border: '1px solid rgba(14,165,233,0.1)', textAlign: 'center' }}>
+        <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 10px', fontWeight: 500 }}>
+          New to Lal Dental Care?
+        </p>
+        <button onClick={() => { setScreen('register'); setError(''); }} style={btnOutline}>
+          Register your Clinic
+        </button>
+      </div>
 
       <p style={{ textAlign: 'center', fontSize: '0.65rem', color: '#cbd5e1', marginTop: 24 }}>
         🔒 Secured with end-to-end encryption

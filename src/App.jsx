@@ -685,22 +685,24 @@ export default function App() {
                 <LogIn size={13} /> Log In
               </button>
             )}
-            <button
-              onClick={handleReset}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                padding: '9px 14px', borderRadius: '10px',
-                border: '1px solid rgba(239,68,68,0.2)',
-                background: 'rgba(239,68,68,0.04)', color: '#ef4444',
-                fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', fontFamily: 'Outfit',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.04)'; }}
-              title={t('resetDb', lang)}
-            >
-              <Trash2 size={13} />
-            </button>
+            {isAdmin && (
+              <button
+                onClick={handleReset}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                  padding: '9px 14px', borderRadius: '10px',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  background: 'rgba(239,68,68,0.04)', color: '#ef4444',
+                  fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', fontFamily: 'Outfit',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.04)'; }}
+                title={t('resetDb', lang)}
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -718,23 +720,14 @@ export default function App() {
                 } catch (e) {}
                 return next;
               })} 
+              className="header-btn"
               style={{ 
-                background: 'hsl(var(--bg-dark))', 
-                border: isSidebarOpen ? '1.5px solid hsl(var(--primary))' : '1px solid hsl(var(--border-color))', 
-                cursor: 'pointer', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                padding: '6px', 
-                borderRadius: '8px', 
-                width: '28px', 
-                height: '28px', 
-                transition: 'all 0.2s',
-                color: 'hsl(var(--text-primary))'
+                border: isSidebarOpen ? '1.5px solid hsl(var(--primary))' : '1.5px solid hsl(var(--border-color))',
+                color: isSidebarOpen ? 'hsl(var(--primary))' : 'hsl(var(--text-primary))'
               }}
               title="Toggle Menu"
             >
-              <Menu size={14} />
+              <Menu size={15} />
             </button>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -760,15 +753,10 @@ export default function App() {
           {/* AI Support Chat Button */}
           <button 
             onClick={() => setIsAiOpen(true)}
-            style={{ 
-              background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', 
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s',
-              color: 'hsl(var(--primary))'
-            }}
+            className="header-btn header-btn-ai"
             title="AI Assistant"
           >
-            <MessageSquare size={14} />
+            <MessageSquare size={15} />
           </button>
 
           {/* Cart Navigation Button */}
@@ -777,17 +765,14 @@ export default function App() {
               setActiveTab('catalog');
               setIsCartOpen(true);
             }}
+            className="header-btn header-btn-cart"
             style={{ 
-              background: 'hsl(var(--bg-dark))', 
-              border: isCartOpen ? '1.5px solid hsl(var(--primary))' : '1px solid hsl(var(--border-color))', 
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s',
-              color: 'hsl(var(--primary))',
-              position: 'relative'
+              border: isCartOpen ? '1.5px solid hsl(var(--primary))' : '1.5px solid hsl(var(--border-color))', 
+              color: isCartOpen ? 'hsl(var(--primary))' : 'hsl(var(--text-muted))'
             }}
             title="View Cart"
           >
-            <ShoppingCart size={14} />
+            <ShoppingCart size={15} />
             {cartCount > 0 && (
               <span style={{
                 position: 'absolute',
@@ -813,7 +798,7 @@ export default function App() {
             )}
           </button>
 
-          <div style={{ width: 140 }}>
+          <div className="header-select-wrapper" style={{ width: 140 }}>
             <PremiumSelect 
               value={lang} 
               onChange={handleLangChange}
@@ -832,30 +817,24 @@ export default function App() {
             <>
               <button 
                 onClick={() => setActiveTab('profile')} 
+                className="header-btn header-btn-profile"
                 style={{ 
-                  background: 'hsl(var(--bg-dark))', border: activeTab === 'profile' ? '1.5px solid hsl(var(--primary))' : '1px solid hsl(var(--border-color))', 
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s'
+                  border: activeTab === 'profile' ? '1.5px solid hsl(var(--primary))' : '1.5px solid hsl(var(--border-color))'
                 }}
                 title="Profile & Settings"
               >
                 {activeProfileImage ? (
                   <img src={activeProfileImage} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
                 ) : (
-                  <User size={14} color="hsl(var(--text-primary))" />
+                  <User size={15} color="hsl(var(--text-primary))" />
                 )}
               </button>
               <button
                 onClick={handleLogout}
-                style={{
-                  background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', 
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s',
-                  color: 'hsl(348, 83%, 47%)'
-                }}
+                className="header-btn header-btn-logout"
                 title="Log Out"
               >
-                <LogOut size={14} />
+                <LogOut size={15} />
               </button>
             </>
           ) : (
