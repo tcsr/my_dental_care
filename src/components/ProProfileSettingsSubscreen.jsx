@@ -31,7 +31,11 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
   const handleSoundFxToggle = () => {
     const nextVal = !soundFx;
     setSoundFx(nextVal);
-    localStorage.setItem('dentalSoundFx', String(nextVal));
+    try {
+      localStorage.setItem('dentalSoundFx', String(nextVal));
+    } catch (e) {
+      console.warn('Could not save soundFx preference:', e);
+    }
   };
 
   // Stats for local database
@@ -403,7 +407,11 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
       }
 
       const timeNow = new Date().toLocaleString();
-      localStorage.setItem('lastSyncedTime', timeNow);
+      try {
+        localStorage.setItem('lastSyncedTime', timeNow);
+      } catch (e) {
+        console.warn('Could not save lastSyncedTime preference:', e);
+      }
       setLastSynced(timeNow);
       setSyncStatus('success');
       setTimeout(() => setSyncStatus('idle'), 3000);
@@ -418,7 +426,11 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
   const handleAutoSyncToggle = (e) => {
     const checked = e.target.checked;
     setAutoSync(checked);
-    localStorage.setItem('autoSyncEnabled', checked ? 'true' : 'false');
+    try {
+      localStorage.setItem('autoSyncEnabled', checked ? 'true' : 'false');
+    } catch (err) {
+      console.warn('Could not save autoSyncEnabled preference:', err);
+    }
   };
 
   // Export database as JSON backup file

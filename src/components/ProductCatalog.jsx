@@ -54,14 +54,13 @@ const getProductImages = (product) => {
   return []; // No uploaded image — return empty, show placeholder
 };
 
-export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPlaced, onLoginRequired }) {
+export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPlaced, onLoginRequired, cartOpen, setCartOpen }) {
   const [products, setProducts] = useState([]);
   const [categoriesList, setCategoriesList] = useState(CATEGORIES);
   const [catConfig, setCatConfig] = useState(CAT);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
-  const [cartOpen, setCartOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [orderDone, setOrderDone] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -104,7 +103,11 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
       if (error) throw error;
       if (data) {
         setProducts(data);
-        sessionStorage.setItem('pc_products_cache', JSON.stringify(data));
+        try {
+          sessionStorage.setItem('pc_products_cache', JSON.stringify(data));
+        } catch (e) {
+          console.warn('Could not cache products to sessionStorage:', e);
+        }
       }
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -126,27 +129,34 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
     return matchCat && matchSearch;
   }), [products, search, category]);
 
-  const cartItems = Object.values(cart);
-  const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
-  const cartTotal = cartItems.reduce((s, i) => s + i.qty * i.product.price, 0);
+  const cartItems = Object.values(cart || {});
+  const cartCount = cartItems.reduce((s, i) => s + (i?.qty || 0), 0);
+  const cartTotal = cartItems.reduce((s, i) => s + (i?.qty || 0) * (i?.product?.price || 0), 0);
 
   const addToCart = (product) => {
-    const currentQty = cart[product.id]?.qty || 0;
+    if (!product) return;
+    const safeCart = cart || {};
+    const currentQty = safeCart[product.id]?.qty || 0;
     if (product.stock_qty !== null && product.stock_qty !== undefined && currentQty >= product.stock_qty) {
       alert(`Cannot add more. Only ${product.stock_qty} items in stock.`);
       return;
     }
-    onCartChange(prev => ({
-      ...prev,
-      [product.id]: prev[product.id]
-        ? { ...prev[product.id], qty: prev[product.id].qty + 1 }
-        : { product, qty: 1 },
-    }));
+    onCartChange(prev => {
+      const safePrev = prev && typeof prev === 'object' ? prev : {};
+      return {
+        ...safePrev,
+        [product.id]: safePrev[product.id]
+          ? { ...safePrev[product.id], qty: safePrev[product.id].qty + 1 }
+          : { product, qty: 1 },
+      };
+    });
   };
 
   const removeFromCart = (productId) => {
+    if (!productId) return;
     onCartChange(prev => {
-      const next = { ...prev };
+      const safePrev = prev && typeof prev === 'object' ? prev : {};
+      const next = { ...safePrev };
       if (!next[productId]) return next;
       if (next[productId].qty <= 1) delete next[productId];
       else next[productId] = { ...next[productId], qty: next[productId].qty - 1 };
@@ -156,13 +166,20 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
 
   const clearCart = () => onCartChange({});
 
-  const placeOrderWithUser = async (user) => {
-    if (!cartItems.length || placing) return;
+  const placeOrderWithUser = async (user, paymentId) => {
+    if (!cartItems.length) return;
     setPlacing(true);
     const finalTotal = Math.round(cartTotal * 1.12);
+    const notesStr = paymentId ? `Paid via Razorpay. Transaction ID: ${paymentId}` : 'Payment pending / manual';
+    
     const { data: order, error } = await supabase
       .from('orders')
-      .insert({ doctor_id: user.user.id, status: 'pending', total: finalTotal })
+      .insert({ 
+        doctor_id: user.user.id, 
+        status: 'pending', 
+        total: finalTotal,
+        notes: notesStr
+      })
       .select().single();
 
     if (error || !order) {
@@ -187,20 +204,131 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
     setTimeout(() => { setOrderDone(false); }, 5000);
   };
 
+  const triggerRazorpayPayment = async (user) => {
+    setPlacing(true);
+    if (!window.Razorpay) {
+      // Fallback: try loading dynamically if static script failed
+      const scriptLoaded = await new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+      if (!scriptLoaded || !window.Razorpay) {
+        setPlacing(false);
+        alert('Failed to load Razorpay payment gateway. Please check connection and try again.');
+        return;
+      }
+    }
+
+    const finalTotal = Math.round(cartTotal * 1.12);
+    const rzpKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_LalDentalPlaceholder';
+
+    try {
+      // 1. Create order on backend (Supabase Edge Function)
+      const { data: orderData, error: orderError } = await supabase.functions.invoke('create-order', {
+        body: {
+          amount: finalTotal * 100,
+          currency: 'INR'
+        }
+      });
+
+      if (orderError || (orderData && orderData.error)) {
+        const errMsg = orderError?.message || orderData?.error || 'Order creation failed';
+        console.error('Create order function error:', orderError, orderData);
+        alert('Payment error: ' + errMsg);
+        setPlacing(false);
+        return;
+      }
+
+      if (!orderData || !orderData.order_id) {
+        alert('Failed to create payment order.');
+        setPlacing(false);
+        return;
+      }
+
+      const options = {
+        key: rzpKey,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'Lal Dental Care',
+        description: 'Clinic Case Order Payment',
+        image: 'https://cdn-icons-png.flaticon.com/512/3482/3482200.png',
+        order_id: orderData.order_id,
+        handler: async function (response) {
+          try {
+            // 2. Verify payment signature on backend (Supabase Edge Function)
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-payment', {
+              body: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              }
+            });
+
+            if (verifyError || (verifyData && verifyData.error) || !verifyData || !verifyData.verified) {
+              const errMsg = verifyError?.message || verifyData?.error || 'Signature verification failed';
+              console.error('Verify payment function error:', verifyError, verifyData);
+              alert('Payment verification failed: ' + errMsg);
+              setPlacing(false);
+              return;
+            }
+
+            // 3. Signature verified successfully! Complete order DB insertion
+            await placeOrderWithUser(user, response.razorpay_payment_id);
+          } catch (verErr) {
+            console.error('Payment verification exception:', verErr);
+            alert('Failed to verify payment: ' + verErr.message);
+            setPlacing(false);
+          }
+        },
+        prefill: {
+          name: user.name || '',
+          email: user.user?.email || '',
+          contact: user.phone || ''
+        },
+        notes: {
+          address: user.address || ''
+        },
+        theme: {
+          color: '#0ea5e9'
+        },
+        modal: {
+          ondismiss: function () {
+            setPlacing(false);
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (resp) {
+        console.error('Payment failed:', resp.error);
+        alert('Payment failed: ' + (resp.error.description || 'Unknown error'));
+        setPlacing(false);
+      });
+      rzp.open();
+
+    } catch (e) {
+      console.error('Razorpay initialization error:', e);
+      alert('Failed to initiate payment: ' + e.message);
+      setPlacing(false);
+    }
+  };
+
   const placeOrder = async () => {
     if (!cartItems.length || placing) return;
     if (!authUser) {
       if (onLoginRequired) {
-        // Pass placeOrder as the action to run after login completes
         onLoginRequired((loggedInUser) => {
-          if (loggedInUser) placeOrderWithUser(loggedInUser);
+          if (loggedInUser) triggerRazorpayPayment(loggedInUser);
         });
       } else {
         alert('Please log in to place an order.');
       }
       return;
     }
-    await placeOrderWithUser(authUser);
+    await triggerRazorpayPayment(authUser);
   };
 
   if (loading) return (
@@ -239,10 +367,10 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
       </div>
 
       {/* Category chips */}
-      <div style={{ display: 'flex', gap: 7, overflowX: 'auto', marginBottom: 20, paddingBottom: 4, scrollbarWidth: 'none' }}>
+      <div className="cat-scroll" style={{ display: 'flex', gap: 7, overflowX: 'auto', marginBottom: 20, paddingBottom: 4, scrollbarWidth: 'none' }}>
         <style>{`.cat-scroll::-webkit-scrollbar{display:none}`}</style>
         {categoriesList.map(cat => (
-          <button key={cat} onClick={() => setCategory(cat)} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, fontFamily: 'Outfit', border: '1.5px solid', cursor: 'pointer', transition: 'all 0.2s', background: category === cat ? '#0ea5e9' : 'transparent', borderColor: category === cat ? '#0ea5e9' : 'hsl(var(--border-color))', color: category === cat ? '#fff' : 'hsl(var(--text-muted))' }}>
+          <button key={cat} className="cat-chip" onClick={() => setCategory(cat)} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, fontFamily: 'Outfit', border: '1.5px solid', cursor: 'pointer', transition: 'all 0.2s', background: category === cat ? '#0ea5e9' : 'transparent', borderColor: category === cat ? '#0ea5e9' : 'hsl(var(--border-color))', color: category === cat ? '#fff' : 'hsl(var(--text-muted))' }}>
             {cat}
           </button>
         ))}
@@ -256,10 +384,10 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
           message="Try a different search or category to find what you're looking for." 
         />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="product-catalog-grid">
           {filtered.map(p => {
             const cs = catConfig[p.category] || DEFAULT_CAT;
-            const inCart = cart[p.id];
+            const inCart = (cart || {})[p.id];
             const outOfStock = p.stock_qty === null || p.stock_qty === undefined || p.stock_qty <= 0;
             const lowStock = !outOfStock && p.stock_qty <= 5;
             const images = getProductImages(p);
@@ -369,82 +497,126 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
 
       {/* Cart drawer */}
       {cartOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 3000 }}>
-          <div onClick={() => setCartOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(6px)' }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'hsl(var(--bg-card))', borderRadius: '24px 24px 0 0', maxHeight: '82vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -24px 64px rgba(15,23,42,0.25)' }}>
-            <div style={{ padding: '12px 20px 0' }}>
-              <div style={{ width: 40, height: 4, borderRadius: 2, background: 'hsl(var(--border-color))', margin: '0 auto 18px' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+          <style>{`
+            @keyframes cartFadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes cartSlideDown {
+              from { transform: translateY(-20px); opacity: 0; }
+              to { transform: translateY(0); opacity: 1; }
+            }
+          `}</style>
+          <div onClick={() => setCartOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', animation: 'cartFadeIn 0.2s ease-out' }} />
+          <div style={{ 
+            position: 'relative', 
+            marginTop: '5vh', 
+            background: 'hsl(var(--bg-card))', 
+            borderRadius: '24px', 
+            width: '100%',
+            maxWidth: '460px', 
+            maxHeight: '85vh', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            boxShadow: '0 24px 64px rgba(15,23,42,0.25)', 
+            border: '1px solid hsl(var(--border-color))',
+            animation: 'cartSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '20px 20px 12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h3 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.1rem', color: 'hsl(var(--text-primary))', margin: 0 }}>Your Cart</h3>
-                  <p style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', margin: '2px 0 0' }}>{cartCount} item{cartCount !== 1 ? 's' : ''} · ₹{cartTotal.toLocaleString('en-IN')}</p>
+                  <h3 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.2rem', color: 'hsl(var(--text-primary))', margin: 0 }}>Your Cart</h3>
+                  <p style={{ fontSize: '0.72rem', color: 'hsl(var(--text-muted))', margin: '2px 0 0' }}>{cartCount} item{cartCount !== 1 ? 's' : ''}</p>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={clearCart} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', color: '#ef4444', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit' }}>Clear</button>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {cartItems.length > 0 && (
+                    <button onClick={clearCart} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', color: '#ef4444', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit', transition: 'all 0.2s' }}>Clear All</button>
+                  )}
                   <button 
-                    className="modal-close-btn light-bg" 
                     onClick={() => setCartOpen(false)} 
+                    style={{ background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s' }}
                   >
-                    <X size={15} strokeWidth={2.5} />
+                    <X size={15} strokeWidth={2.5} color="hsl(var(--text-primary))" />
                   </button>
                 </div>
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {cartItems.map(({ product: p, qty }) => {
-                const cs = catConfig[p.category] || DEFAULT_CAT;
-                return (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'hsl(var(--bg-dark))', borderRadius: 14, border: '1px solid hsl(var(--border-color))' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: cs.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>{cs.icon}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'hsl(var(--text-primary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                      <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', marginTop: 1 }}>₹{p.price?.toLocaleString('en-IN')} each</div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: '16px' }}>
+              {cartItems.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '220px', gap: '12px', color: 'hsl(var(--text-muted))', textAlign: 'center' }}>
+                  <ShoppingCart size={40} strokeWidth={1.5} color="hsl(var(--text-dim))" />
+                  <p style={{ fontSize: '0.85rem', fontWeight: 600, margin: 0, fontFamily: 'Outfit', color: 'hsl(var(--text-primary))' }}>Your cart is empty</p>
+                  <p style={{ fontSize: '0.72rem', margin: 0, maxWidth: '220px', lineHeight: 1.5 }}>Please add some products from the catalog first.</p>
+                </div>
+              ) : (
+                cartItems.map(({ product: p, qty }) => {
+                  const cs = catConfig[p.category] || DEFAULT_CAT;
+                  return (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'hsl(var(--bg-dark))', borderRadius: 14, border: '1px solid hsl(var(--border-color))' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: cs.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>{cs.icon}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'hsl(var(--text-primary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                        <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', marginTop: 1 }}>₹{p.price?.toLocaleString('en-IN')}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <button 
+                          className="qty-btn"
+                          onClick={() => removeFromCart(p.id)} 
+                        >
+                          <Minus size={11} strokeWidth={2.5} />
+                        </button>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 800, minWidth: 16, textAlign: 'center', fontFamily: 'Outfit' }}>{qty}</span>
+                        <button 
+                          className="qty-btn"
+                          onClick={() => addToCart(p)} 
+                          disabled={p.stock_qty !== null && p.stock_qty !== undefined && qty >= p.stock_qty}
+                        >
+                          <Plus size={11} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--primary))', minWidth: 60, textAlign: 'right', fontFamily: 'Outfit' }}>
+                        ₹{(qty * p.price).toLocaleString('en-IN')}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      <button 
-                        className="qty-btn"
-                        onClick={() => removeFromCart(p.id)} 
-                      >
-                        <Minus size={12} strokeWidth={2.5} />
-                      </button>
-                      <span style={{ fontSize: '0.88rem', fontWeight: 800, minWidth: 18, textAlign: 'center', fontFamily: 'Outfit' }}>{qty}</span>
-                      <button 
-                        className="qty-btn"
-                        onClick={() => addToCart(p)} 
-                        disabled={p.stock_qty !== null && p.stock_qty !== undefined && qty >= p.stock_qty}
-                      >
-                        <Plus size={12} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0ea5e9', minWidth: 64, textAlign: 'right', fontFamily: 'Outfit' }}>
-                      ₹{(qty * p.price).toLocaleString('en-IN')}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
 
-            <div style={{ padding: '16px 20px 24px', borderTop: '1px solid hsl(var(--border-color))' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>Subtotal</span>
-                <span style={{ fontFamily: 'Outfit', fontWeight: 700, fontSize: '1rem', color: 'hsl(var(--text-primary))' }}>₹{cartTotal.toLocaleString('en-IN')}</span>
+            {cartItems.length > 0 && (
+              <div style={{ padding: '16px 20px 20px', borderTop: '1px solid hsl(var(--border-color))', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', background: 'hsl(var(--bg-dark))' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Amount</span>
+                  <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.3rem', color: 'hsl(var(--primary))' }}>₹{(cartTotal * 1.12).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))' }}>Incl. 12% GST</span>
+                </div>
+                <button
+                  onClick={placeOrder} disabled={placing}
+                  style={{ 
+                    padding: '12px 22px', 
+                    borderRadius: 12, 
+                    border: 'none', 
+                    background: placing ? 'hsl(var(--border-color))' : 'linear-gradient(135deg, hsl(var(--primary)), #6366f1)', 
+                    color: '#fff', 
+                    fontSize: '0.85rem', 
+                    fontWeight: 800, 
+                    cursor: placing ? 'not-allowed' : 'pointer', 
+                    fontFamily: 'Outfit', 
+                    boxShadow: placing ? 'none' : '0 6px 18px rgba(14,165,233,0.3)', 
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {placing ? 'Placing...' : 'Place Order'}
+                  <ChevronRight size={14} strokeWidth={2.5} />
+                </button>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', fontWeight: 500 }}>GST (12%)</span>
-                <span style={{ fontFamily: 'Outfit', fontWeight: 600, fontSize: '0.9rem', color: 'hsl(var(--text-muted))' }}>₹{(cartTotal * 0.12).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, paddingTop: 10, borderTop: '1px dashed hsl(var(--border-color))' }}>
-                <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-primary))', fontWeight: 800 }}>Order Total</span>
-                <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.35rem', color: '#0ea5e9' }}>₹{(cartTotal * 1.12).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-              </div>
-              <button
-                onClick={placeOrder} disabled={placing}
-                style={{ width: '100%', padding: '15px', borderRadius: 14, border: 'none', background: placing ? 'hsl(var(--border-color))' : 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.92rem', fontWeight: 800, cursor: placing ? 'not-allowed' : 'pointer', fontFamily: 'Outfit', boxShadow: placing ? 'none' : '0 8px 24px rgba(14,165,233,0.35)', transition: 'all 0.2s' }}
-              >
-                {placing ? 'Placing Order...' : '🛒 Place Order'}
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -452,7 +624,7 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
       {/* Product Detail Modal */}
       {selectedProduct && (() => {
         const images = getProductImages(selectedProduct);
-        const inCart = cart[selectedProduct.id];
+        const inCart = (cart || {})[selectedProduct.id];
         const outOfStock = selectedProduct.stock_qty === null || selectedProduct.stock_qty === undefined || selectedProduct.stock_qty <= 0;
         const lowStock = !outOfStock && selectedProduct.stock_qty <= 5;
         const cs = catConfig[selectedProduct.category] || DEFAULT_CAT;

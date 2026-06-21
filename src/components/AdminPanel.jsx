@@ -12,11 +12,16 @@ export default function AdminPanel() {
 
   const fetchDoctors = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*, auth_email:id')
       .neq('role', 'admin')
       .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching doctors from Supabase:', error);
+      alert('Error fetching profiles: ' + error.message);
+    }
 
     if (data) {
       setPending(data.filter(d => !d.approved));
@@ -30,7 +35,16 @@ export default function AdminPanel() {
 
   const handleApprove = async (id) => {
     setActionLoading(id + '_approve');
-    await supabase.from('profiles').update({ approved: true }).eq('id', id);
+    const { error } = await supabase.from('profiles').update({ approved: true }).eq('id', id);
+    if (!error) {
+      if (window.__triggerToast) {
+        window.__triggerToast('Doctor approved successfully!', 'success');
+      }
+    } else {
+      if (window.__triggerToast) {
+        window.__triggerToast('Failed to approve: ' + error.message, 'error');
+      }
+    }
     await fetchDoctors();
     setActionLoading(null);
   };
@@ -38,7 +52,16 @@ export default function AdminPanel() {
   const handleReject = async (id) => {
     if (!(await confirm('Reject and delete this registration?'))) return;
     setActionLoading(id + '_reject');
-    await supabase.from('profiles').delete().eq('id', id);
+    const { error } = await supabase.from('profiles').delete().eq('id', id);
+    if (!error) {
+      if (window.__triggerToast) {
+        window.__triggerToast('Registration rejected and deleted.', 'warning');
+      }
+    } else {
+      if (window.__triggerToast) {
+        window.__triggerToast('Failed to reject: ' + error.message, 'error');
+      }
+    }
     // Also delete auth user via admin API not possible from client — just remove profile
     await fetchDoctors();
     setActionLoading(null);

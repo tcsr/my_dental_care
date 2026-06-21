@@ -172,7 +172,11 @@ export default function ProductManagement() {
       if (error) throw error;
       if (data) {
         setProducts(data);
-        sessionStorage.setItem('pm_products_cache', JSON.stringify(data));
+        try {
+          sessionStorage.setItem('pm_products_cache', JSON.stringify(data));
+        } catch (e) {
+          console.warn('Could not cache products to sessionStorage:', e);
+        }
       }
     } catch (error) {
       console.error('Error fetching products:', error);

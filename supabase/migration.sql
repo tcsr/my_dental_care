@@ -168,3 +168,77 @@ insert into gst_rates (rate, is_default) values
   (18, false),
   (28, false)
 on conflict (rate) do nothing;
+
+-- ─── 5. FIX PROFILES RLS RECURSION ───
+create or replace function is_admin(user_id uuid)
+returns boolean security definer as $$
+begin
+  return exists (
+    select 1 from profiles where id = user_id and role = 'admin'
+  );
+end;
+$$ language plpgsql;
+
+drop policy if exists "admin reads all profiles" on profiles;
+create policy "admin reads all profiles"
+  on profiles for select to authenticated
+  using (is_admin(auth.uid()));
+
+drop policy if exists "admin updates all profiles" on profiles;
+create policy "admin updates all profiles"
+  on profiles for update to authenticated
+  using (is_admin(auth.uid()));
+
+-- ─── 6. AUTO-APPROVE NEW REGISTRATIONS ───
+alter table profiles alter column approved set default true;
+update profiles set approved = true where approved = false;
+
+-- Create update_own_profile function to handle clinic registration details
+create or replace function update_own_profile(
+  p_id uuid,
+  p_name text,
+  p_clinic_name text,
+  p_phone text,
+  p_address text,
+  p_gst_number text
+)
+returns void security definer as $$
+begin
+  update profiles
+  set 
+    name = p_name,
+    clinic_name = p_clinic_name,
+    phone = p_phone,
+    address = p_address,
+    gst_number = p_gst_number,
+    approved = true
+  where id = p_id;
+end;
+$$ language plpgsql;
+
+-- ─── 7. EMAIL AUTO-CONFIRMATION ON APPROVAL ───
+create or replace function confirm_user_email_on_approval()
+returns trigger language plpgsql security definer as $$
+begin
+  if new.approved = true then
+    update auth.users
+    set 
+      email_confirmed_at = coalesce(email_confirmed_at, now())
+    where id = new.id;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_profile_approved on public.profiles;
+create trigger on_profile_approved
+  after insert or update on public.profiles
+  for each row
+  execute procedure confirm_user_email_on_approval();
+
+-- One-time sync to confirm email for all currently approved users
+update auth.users u
+set 
+  email_confirmed_at = coalesce(u.email_confirmed_at, now())
+from public.profiles p
+where p.id = u.id and p.approved = true;

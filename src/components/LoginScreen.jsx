@@ -46,7 +46,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
           approved: profile.approved
         });
       } else if (!profile.approved) {
-        setScreen('pending');
+        setError('Your profile is inactive. Please contact admin for approval.');
         await supabase.auth.signOut();
       } else {
         onLogin({ 
@@ -98,8 +98,51 @@ export default function LoginScreen({ onLogin, isModal = false }) {
         console.warn('Profile update failed (non-fatal):', profileErr);
         // Don't block registration — trigger already created basic profile
       }
-      await supabase.auth.signOut();
-      setScreen('pending');
+
+      if (data.session) {
+        onLogin({
+          role: 'doctor',
+          name: regForm.name,
+          user: data.user,
+          clinicName: regForm.clinic_name,
+          phone: regForm.phone,
+          address: regForm.address,
+          gstNumber: regForm.gst_number,
+          approved: true
+        });
+      } else {
+        // Fallback: Try auto-signing in with credentials
+        try {
+          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+            email: regForm.email,
+            password: regForm.password,
+          });
+          if (signInErr) throw signInErr;
+
+          const { data: profile, error: profileErr } = await supabase
+            .from('profiles')
+            .select('role, approved, name, clinic_name, phone, address, gst_number')
+            .eq('id', signInData.user.id)
+            .single();
+
+          if (profileErr) throw profileErr;
+
+          onLogin({
+            role: profile.role,
+            name: profile.name,
+            user: signInData.user,
+            clinicName: profile.clinic_name,
+            phone: profile.phone,
+            address: profile.address,
+            gstNumber: profile.gst_number,
+            approved: true
+          });
+        } catch (e) {
+          setScreen('login');
+          setLoginForm({ email: regForm.email, password: regForm.password });
+          setError('Registration successful! Please sign in.');
+        }
+      }
     } catch (err) {
       console.error('Register error:', err);
       const msg = err?.message

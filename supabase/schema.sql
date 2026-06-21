@@ -7,7 +7,7 @@ create table profiles (
   phone       text,
   address     text,
   gst_number  text,
-  approved    boolean not null default false,
+  approved    boolean not null default true,
   created_at  timestamptz default now()
 );
 
@@ -21,17 +21,46 @@ create policy "user updates own profile"
   on profiles for update to authenticated
   using (auth.uid() = id);
 
+-- Helper function to check if a user is an admin without triggering RLS recursion
+create or replace function is_admin(user_id uuid)
+returns boolean security definer as $$
+begin
+  return exists (
+    select 1 from profiles where id = user_id and role = 'admin'
+  );
+end;
+$$ language plpgsql;
+
+-- Helper function to update profile details and approve doctor immediately
+create or replace function update_own_profile(
+  p_id uuid,
+  p_name text,
+  p_clinic_name text,
+  p_phone text,
+  p_address text,
+  p_gst_number text
+)
+returns void security definer as $$
+begin
+  update profiles
+  set 
+    name = p_name,
+    clinic_name = p_clinic_name,
+    phone = p_phone,
+    address = p_address,
+    gst_number = p_gst_number,
+    approved = true
+  where id = p_id;
+end;
+$$ language plpgsql;
+
 create policy "admin reads all profiles"
   on profiles for select to authenticated
-  using (exists (
-    select 1 from profiles p where p.id = auth.uid() and p.role = 'admin'
-  ));
+  using (is_admin(auth.uid()));
 
 create policy "admin updates all profiles"
   on profiles for update to authenticated
-  using (exists (
-    select 1 from profiles p where p.id = auth.uid() and p.role = 'admin'
-  ));
+  using (is_admin(auth.uid()));
 
 -- auto-create profile on signup
 create or replace function handle_new_user()
@@ -177,3 +206,23 @@ create policy "admin manages purchases"
   using (exists (
     select 1 from profiles where id = auth.uid() and role = 'admin'
   ));
+
+-- ─── EMAIL AUTO-CONFIRMATION TRIGGER ─────────────────────────────────────────
+create or replace function confirm_user_email_on_approval()
+returns trigger language plpgsql security definer as $$
+begin
+  if new.approved = true then
+    update auth.users
+    set 
+      email_confirmed_at = coalesce(email_confirmed_at, now())
+    where id = new.id;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_profile_approved on public.profiles;
+create trigger on_profile_approved
+  after insert or update on public.profiles
+  for each row
+  execute procedure confirm_user_email_on_approval();

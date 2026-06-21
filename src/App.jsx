@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
+import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedDemoData, clearAllData } from './utils/db';
@@ -21,7 +21,7 @@ import DoctorOrders from './components/DoctorOrders';
 import OrderManagement from './components/OrderManagement';
 import ProductManagement from './components/ProductManagement';
 import { t } from './utils/i18n';
-import { ShoppingBag, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -30,15 +30,139 @@ export default function App() {
   const location = useLocation();
   const activeTab = location.pathname.slice(1) || 'catalog';
   const setActiveTab = (tab) => navigate('/' + tab);
+  const handleNav = (tab) => {
+    setActiveTab(tab);
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  };
   const [isDbReady, setIsDbReady] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dental_sidebar_collapsed');
+      if (saved !== null) {
+        return saved === 'false';
+      }
+    } catch (e) {}
+    return false;
+  });
   const [lang, setLang] = useState(() => localStorage.getItem('dentalLang') || 'en');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authUser, setAuthUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [cart, setCart] = useState({});
+  const [cartUserId, setCartUserId] = useState(undefined); // undefined means not loaded yet
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [postLoginAction, setPostLoginAction] = useState(null); // callback to run after login
+
+  // Load/merge cart from Dexie IndexedDB based on auth user
+  useEffect(() => {
+    if (!isDbReady || !authChecked) return;
+
+    async function loadCart() {
+      try {
+        const targetUserId = authUser ? authUser.user.id : null;
+        const userKey = authUser ? `lal_dental_cart_${authUser.user.id}` : 'lal_dental_cart_guest';
+        
+        // 1. Get user cart
+        const userRow = await db.userProfile.get(userKey);
+        let currentCart = (userRow && userRow.value && typeof userRow.value === 'object') ? userRow.value : {};
+
+        // 2. If logged in as non-admin, transfer guest cart if guest cart has items
+        if (authUser && authUser.role !== 'admin') {
+          const guestRow = await db.userProfile.get('lal_dental_cart_guest');
+          const guestCart = (guestRow && guestRow.value && typeof guestRow.value === 'object') ? guestRow.value : {};
+          
+          if (Object.keys(guestCart).length > 0) {
+            // Merge guest cart into user cart
+            currentCart = { ...currentCart, ...guestCart };
+            // Clear guest cart from DB
+            await db.userProfile.delete('lal_dental_cart_guest');
+            try {
+              localStorage.removeItem('lal_dental_cart_guest');
+            } catch (e) {}
+          }
+        }
+        
+        setCart(currentCart);
+        setCartUserId(targetUserId);
+      } catch (e) {
+        console.error('Failed to load cart:', e);
+      }
+    }
+
+    loadCart();
+  }, [isDbReady, authChecked, authUser]);
+
+  // Save/clean up cart state in storage
+  useEffect(() => {
+    const targetUserId = authUser ? authUser.user.id : null;
+    // Only save if the loaded cart state corresponds to the current user
+    if (cartUserId !== targetUserId) return;
+
+    async function saveCart() {
+      try {
+        const userKey = authUser ? `lal_dental_cart_${authUser.user.id}` : 'lal_dental_cart_guest';
+
+        if (!cart || Object.keys(cart).length === 0) {
+          // If empty, delete from Dexie and localStorage
+          await db.userProfile.delete(userKey);
+          try {
+            localStorage.removeItem(userKey);
+          } catch (e) {}
+        } else {
+          // Otherwise save to Dexie and try localStorage (ignoring QuotaExceededError in localStorage)
+          await db.userProfile.put({ key: userKey, value: cart });
+          try {
+            localStorage.setItem(userKey, JSON.stringify(cart));
+          } catch (e) {
+            // Ignore quota errors silently as IndexedDB is our source of truth
+          }
+        }
+      } catch (e) {
+        console.warn('Could not update cart in storage:', e);
+      }
+    }
+    saveCart();
+  }, [cart, cartUserId, authUser]);
+
+  // Collapsible sidebar desktop default behavior
+  useEffect(() => {
+    if (isLoggedIn && !Capacitor.isNativePlatform()) {
+      try {
+        const saved = localStorage.getItem('dental_sidebar_collapsed');
+        if (saved !== null) {
+          setIsSidebarOpen(saved === 'false');
+          return;
+        }
+      } catch (e) {}
+      setIsSidebarOpen(true);
+    } else {
+      setIsSidebarOpen(false);
+    }
+  }, [isLoggedIn]);
+
+  const handleLogout = async () => {
+    if (await confirm('Are you sure you want to log out?')) {
+      // Clear user session cart state
+      setCart({});
+      setCartUserId(undefined);
+      
+      // Clear session storage caches
+      try {
+        sessionStorage.clear();
+      } catch (e) {
+        console.warn('Could not clear sessionStorage:', e);
+      }
+
+      await supabase.auth.signOut();
+      setIsLoggedIn(false);
+      setAuthUser(null);
+      setIsSidebarOpen(false);
+      setActiveTab('catalog');
+    }
+  };
 
   const [activeAlarm, setActiveAlarm] = useState(null);
   const [activeAlarmClient, setActiveAlarmClient] = useState(null);
@@ -72,7 +196,12 @@ export default function App() {
       if (session) {
         supabase.from('profiles').select('role, name, approved, clinic_name, phone, address, gst_number').eq('id', session.user.id).single()
           .then(({ data }) => {
-            if (data?.role === 'admin' || data?.approved) {
+            if (data) {
+              if (data.role !== 'admin' && !data.approved) {
+                supabase.auth.signOut();
+                setAuthChecked(true);
+                return;
+              }
               const role = data.role;
               setAuthUser({ 
                 role, 
@@ -312,7 +441,7 @@ export default function App() {
     : undefined;
 
   const handleReset = async () => {
-    if (confirm('Clear all logs and reset database? This cannot be undone.')) {
+    if (await confirm('Clear all logs and reset database? This cannot be undone.')) {
       await clearAllData();
       alert('Database cleared.');
       window.location.reload();
@@ -327,7 +456,7 @@ export default function App() {
 
   const isAdmin = authUser?.role === 'admin';
 
-  const cartCount = Object.values(cart).reduce((s, i) => s + i.qty, 0);
+  const cartCount = Object.values(cart || {}).reduce((s, i) => s + i.qty, 0);
 
 
   const splashLoader = (
@@ -440,7 +569,7 @@ export default function App() {
               {!isLoggedIn ? (
                 /* ── GUEST NAV ── */
                 <>
-                  <button className={`sidebar-link ${activeTab === 'catalog' ? 'active' : ''}`} onClick={() => { setActiveTab('catalog'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'catalog' ? 'active' : ''}`} onClick={() => handleNav('catalog')}>
                     <Store size={16} />
                     <span>Product Catalog</span>
                     {cartCount > 0 && <span style={{ marginLeft: 'auto', background: '#0ea5e9', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: 10, minWidth: 18, textAlign: 'center' }}>{cartCount}</span>}
@@ -452,58 +581,58 @@ export default function App() {
               ) : isAdmin ? (
                 /* ── ADMIN NAV ── */
                 <>
-                  <button className={`sidebar-link ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => handleNav('dashboard')}>
                     <LayoutDashboard size={16} /><span>Dashboard</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => { setActiveTab('orders'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => handleNav('orders')}>
                     <ClipboardList size={16} /><span>Orders</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'products' ? 'active' : ''}`} onClick={() => { setActiveTab('products'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'products' ? 'active' : ''}`} onClick={() => handleNav('products')}>
                     <Store size={16} /><span>Products</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => { setActiveTab('sales'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => handleNav('sales')}>
                     <ShoppingBag size={16} /><span>{t('navSales', lang)}</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'implants' ? 'active' : ''}`} onClick={() => { setActiveTab('implants'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'implants' ? 'active' : ''}`} onClick={() => handleNav('implants')}>
                     <Activity size={16} /><span>{t('navImplants', lang)}</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => { setActiveTab('inventory'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => handleNav('inventory')}>
                     <Package size={16} /><span>{t('navInventory', lang)}</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => { setActiveTab('reminders'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => handleNav('reminders')}>
                     <Bell size={16} /><span>{t('navAlerts', lang)}</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => { setActiveTab('guides'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => handleNav('guides')}>
                     <Film size={16} /><span>{t('navGuides', lang)}</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'master' ? 'active' : ''}`} onClick={() => { setActiveTab('master'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'master' ? 'active' : ''}`} onClick={() => handleNav('master')}>
                     <Settings size={16} /><span>{t('navMaster', lang)}</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => handleNav('profile')}>
                     <User size={16} /><span>Profile & Settings</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => { setActiveTab('admin'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => handleNav('admin')}>
                     <ShieldCheck size={16} /><span>Admin Panel</span>
                   </button>
                 </>
               ) : (
                 /* ── DOCTOR NAV ── */
                 <>
-                  <button className={`sidebar-link ${activeTab === 'catalog' ? 'active' : ''}`} onClick={() => { setActiveTab('catalog'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'catalog' ? 'active' : ''}`} onClick={() => handleNav('catalog')}>
                     <Store size={16} />
                     <span>Product Catalog</span>
                     {cartCount > 0 && <span style={{ marginLeft: 'auto', background: '#0ea5e9', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: 10, minWidth: 18, textAlign: 'center' }}>{cartCount}</span>}
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => { setActiveTab('sales'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => handleNav('sales')}>
                     <ClipboardList size={16} /><span>My Orders</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'implants' ? 'active' : ''}`} onClick={() => { setActiveTab('implants'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'implants' ? 'active' : ''}`} onClick={() => handleNav('implants')}>
                     <Activity size={16} /><span>My Cases</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => { setActiveTab('guides'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => handleNav('guides')}>
                     <Film size={16} /><span>Guides & Videos</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}>
+                  <button className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => handleNav('profile')}>
                     <User size={16} /><span>Profile & Settings</span>
                   </button>
                 </>
@@ -516,13 +645,7 @@ export default function App() {
           <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: '10px', paddingBottom: '2px', display: 'flex', gap: '8px', flexShrink: 0 }}>
             {isLoggedIn ? (
               <button
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  setIsLoggedIn(false);
-                  setAuthUser(null);
-                  setIsSidebarOpen(false);
-                  setActiveTab('catalog');
-                }}
+                onClick={handleLogout}
                 style={{
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                   padding: '10px 8px', borderRadius: '12px',
@@ -585,19 +708,51 @@ export default function App() {
       <div className="main-layout-container">
         {/* Main Premium Layout Wrapper */}
         <div className="app-header" style={{ borderBottom: '1px solid hsl(var(--border-color))' }}>
-        <button onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'hsl(var(--text-primary))' }}>
-          <Menu size={20} />
-        </button>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <span className="gradient-text app-title" style={{ fontFamily: 'Outfit', fontWeight: '800', fontSize: '1.05rem', letterSpacing: '-0.01em', lineHeight: 1.1 }}>
-            {t('portalTitle', lang)}
-          </span>
-          {isDoctorMode && (
-            <span style={{ fontSize: '0.55rem', background: 'hsl(var(--secondary) / 12%)', color: 'hsl(var(--secondary))', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', marginTop: '1px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Doctor Portal
-            </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {isLoggedIn && (
+            <button 
+              onClick={() => setIsSidebarOpen(prev => {
+                const next = !prev;
+                try {
+                  localStorage.setItem('dental_sidebar_collapsed', String(!next));
+                } catch (e) {}
+                return next;
+              })} 
+              style={{ 
+                background: 'hsl(var(--bg-dark))', 
+                border: isSidebarOpen ? '1.5px solid hsl(var(--primary))' : '1px solid hsl(var(--border-color))', 
+                cursor: 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                padding: '6px', 
+                borderRadius: '8px', 
+                width: '28px', 
+                height: '28px', 
+                transition: 'all 0.2s',
+                color: 'hsl(var(--text-primary))'
+              }}
+              title="Toggle Menu"
+            >
+              <Menu size={14} />
+            </button>
           )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'hsl(var(--primary))', flexShrink: 0 }}>
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="hsl(var(--primary) / 15%)"/>
+              <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" stroke="currentColor" fill="none"/>
+            </svg>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span className="gradient-text app-title" style={{ fontFamily: 'Outfit', fontWeight: '800', fontSize: '1.05rem', letterSpacing: '-0.01em', lineHeight: 1.1 }}>
+                {t('portalTitle', lang)}
+              </span>
+              {isDoctorMode && (
+                <span style={{ fontSize: '0.55rem', background: 'hsl(var(--secondary) / 12%)', color: 'hsl(var(--secondary))', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', marginTop: '1px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Doctor Portal
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Premium Globe i18n Dropdown & Profile Icon */}
@@ -616,6 +771,48 @@ export default function App() {
             <MessageSquare size={14} />
           </button>
 
+          {/* Cart Navigation Button */}
+          <button 
+            onClick={() => {
+              setActiveTab('catalog');
+              setIsCartOpen(true);
+            }}
+            style={{ 
+              background: 'hsl(var(--bg-dark))', 
+              border: isCartOpen ? '1.5px solid hsl(var(--primary))' : '1px solid hsl(var(--border-color))', 
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s',
+              color: 'hsl(var(--primary))',
+              position: 'relative'
+            }}
+            title="View Cart"
+          >
+            <ShoppingCart size={14} />
+            {cartCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-5px',
+                right: '-5px',
+                background: 'linear-gradient(135deg, hsl(var(--primary)), #6366f1)',
+                color: '#fff',
+                fontSize: '0.55rem',
+                fontWeight: '800',
+                borderRadius: '50%',
+                minWidth: '13px',
+                height: '13px',
+                padding: '0 3px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 6px rgba(14,165,233,0.3)',
+                border: '1px solid hsl(var(--bg-dark))',
+                fontFamily: 'Outfit'
+              }}>
+                {cartCount}
+              </span>
+            )}
+          </button>
+
           <div style={{ width: 140 }}>
             <PremiumSelect 
               value={lang} 
@@ -631,21 +828,59 @@ export default function App() {
             />
           </div>
 
-          {isLoggedIn && (
+          {isLoggedIn ? (
+            <>
+              <button 
+                onClick={() => setActiveTab('profile')} 
+                style={{ 
+                  background: 'hsl(var(--bg-dark))', border: activeTab === 'profile' ? '1.5px solid hsl(var(--primary))' : '1px solid hsl(var(--border-color))', 
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s'
+                }}
+                title="Profile & Settings"
+              >
+                {activeProfileImage ? (
+                  <img src={activeProfileImage} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                ) : (
+                  <User size={14} color="hsl(var(--text-primary))" />
+                )}
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{
+                  background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', 
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s',
+                  color: 'hsl(348, 83%, 47%)'
+                }}
+                title="Log Out"
+              >
+                <LogOut size={14} />
+              </button>
+            </>
+          ) : (
             <button 
-              onClick={() => setActiveTab('profile')} 
-              style={{ 
-                background: 'hsl(var(--bg-dark))', border: activeTab === 'profile' ? '1.5px solid hsl(var(--primary))' : '1px solid hsl(var(--border-color))', 
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s'
+              onClick={() => setShowLoginModal(true)}
+              style={{
+                background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                height: '28px',
+                fontSize: '0.72rem',
+                fontWeight: '800',
+                fontFamily: 'Outfit',
+                transition: 'all 0.2s',
+                boxShadow: '0 4px 10px rgba(14,165,233,0.2)'
               }}
-              title="Profile & Settings"
+              title="Log In"
             >
-              {activeProfileImage ? (
-                <img src={activeProfileImage} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-              ) : (
-                <User size={14} color="hsl(var(--text-primary))" />
-              )}
+              <LogIn size={13} /> Log In
             </button>
           )}
         </div>
@@ -653,33 +888,56 @@ export default function App() {
 
       <main>
         <Routes>
-          <Route path="/dashboard" element={<DashboardScreen authUser={authUser} onNavigate={setActiveTab} />} />
-          <Route path="/catalog" element={
-            <ProductCatalog
-              authUser={authUser}
-              cart={cart}
-              onCartChange={setCart}
-              onOrderPlaced={() => setActiveTab('sales')}
-              onLoginRequired={(afterLoginFn) => {
-                if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
-                setShowLoginModal(true);
-              }}
-            />
-          } />
-          <Route path="/orders" element={<OrderManagement />} />
-          <Route path="/products" element={<ProductManagement />} />
-          <Route path="/sales" element={isAdmin ? <ProSalesSubscreen lang={lang} profile={profile} onNavigate={setActiveTab} /> : <DoctorOrders authUser={authUser} onGoToCatalog={() => setActiveTab('catalog')} />} />
-          <Route path="/implants" element={<ProImplantsSubscreen lang={lang} profile={profile} />} />
-          <Route path="/inventory" element={<ProInventorySubscreen lang={lang} profile={profile} />} />
-          <Route path="/reminders" element={<ProRemindersSubscreen lang={lang} profile={profile} />} />
-          <Route path="/guides" element={<ProGuidesSubscreen lang={lang} profile={profile} />} />
-          <Route path="/master" element={<ProMasterDataSubscreen lang={lang} profile={profile} authUser={authUser} />} />
-          <Route path="/profile" element={<ProProfileSettingsSubscreen lang={lang} profile={profile} authUser={authUser} />} />
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="*" element={isAdmin
-            ? <DashboardScreen authUser={authUser} onNavigate={setActiveTab} />
-            : <ProductCatalog authUser={authUser} cart={cart} onCartChange={setCart} onLoginRequired={() => setShowLoginModal(true)} />
-          } />
+          {isLoggedIn ? (
+            <>
+              <Route path="/dashboard" element={<DashboardScreen authUser={authUser} onNavigate={setActiveTab} />} />
+              <Route path="/catalog" element={
+                <ProductCatalog
+                  authUser={authUser}
+                  cart={cart}
+                  onCartChange={setCart}
+                  cartOpen={isCartOpen}
+                  setCartOpen={setIsCartOpen}
+                  onOrderPlaced={() => setActiveTab('sales')}
+                  onLoginRequired={(afterLoginFn) => {
+                    if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
+                    setShowLoginModal(true);
+                  }}
+                />
+              } />
+              <Route path="/orders" element={<OrderManagement />} />
+              <Route path="/products" element={<ProductManagement />} />
+              <Route path="/sales" element={isAdmin ? <ProSalesSubscreen lang={lang} profile={profile} onNavigate={setActiveTab} /> : <DoctorOrders authUser={authUser} onGoToCatalog={() => setActiveTab('catalog')} />} />
+              <Route path="/implants" element={<ProImplantsSubscreen lang={lang} profile={profile} />} />
+              <Route path="/inventory" element={<ProInventorySubscreen lang={lang} profile={profile} />} />
+              <Route path="/reminders" element={<ProRemindersSubscreen lang={lang} profile={profile} />} />
+              <Route path="/guides" element={<ProGuidesSubscreen lang={lang} profile={profile} />} />
+              <Route path="/master" element={<ProMasterDataSubscreen lang={lang} profile={profile} authUser={authUser} />} />
+              <Route path="/profile" element={<ProProfileSettingsSubscreen lang={lang} profile={profile} authUser={authUser} />} />
+              <Route path="/admin" element={<AdminPanel />} />
+              <Route path="*" element={
+                <Navigate to={isAdmin ? "/dashboard" : "/catalog"} replace />
+              } />
+            </>
+          ) : (
+            <>
+              <Route path="/catalog" element={
+                <ProductCatalog
+                  authUser={authUser}
+                  cart={cart}
+                  onCartChange={setCart}
+                  cartOpen={isCartOpen}
+                  setCartOpen={setIsCartOpen}
+                  onOrderPlaced={() => setActiveTab('sales')}
+                  onLoginRequired={(afterLoginFn) => {
+                    if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
+                    setShowLoginModal(true);
+                  }}
+                />
+              } />
+              <Route path="*" element={<Navigate to="/catalog" replace />} />
+            </>
+          )}
         </Routes>
       </main>
 
@@ -906,6 +1164,9 @@ export default function App() {
                 setIsLoggedIn(true); 
                 setShowLoginModal(false);
                 setActiveTab(user.role === 'admin' ? 'dashboard' : 'catalog');
+                if (Object.keys(cart).length > 0 && user.role !== 'admin') {
+                  setIsCartOpen(true);
+                }
                 // Execute any pending action (e.g., place order after login)
                 if (postLoginAction) {
                   setTimeout(() => { postLoginAction(user); setPostLoginAction(null); }, 400);

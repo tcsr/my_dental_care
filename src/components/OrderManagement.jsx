@@ -12,7 +12,8 @@ import {
   MapPin,
   TrendingUp,
   ChevronRight,
-  Phone
+  Phone,
+  Trash2
 } from 'lucide-react';
 import PremiumLoader from './ui/PremiumLoader';
 import EmptyStateCard from './EmptyStateCard';
@@ -139,8 +140,12 @@ export default function OrderManagement() {
 
       setProfiles(map);
       setOrders(allOrders);
-      sessionStorage.setItem('om_orders_cache', JSON.stringify(allOrders));
-      sessionStorage.setItem('om_profiles_cache', JSON.stringify(map));
+      try {
+        sessionStorage.setItem('om_orders_cache', JSON.stringify(allOrders));
+        sessionStorage.setItem('om_profiles_cache', JSON.stringify(map));
+      } catch (e) {
+        console.warn('Could not cache orders to sessionStorage:', e);
+      }
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -165,6 +170,27 @@ export default function OrderManagement() {
     }
     await fetchOrders();
     setUpdating(null);
+  };
+
+  const deleteOrder = async (orderId) => {
+    if (!(await confirm('Are you sure you want to delete this order? This cannot be undone.'))) return;
+    setUpdating(orderId);
+    try {
+      if (String(orderId).startsWith('local-')) {
+        const idStr = String(orderId).replace('local-', '');
+        await db.b2bOrders.delete(parseInt(idStr));
+      } else {
+        const { error } = await supabase.from('orders').delete().eq('id', orderId);
+        if (error) throw error;
+      }
+      sessionStorage.removeItem('om_orders_cache');
+      await fetchOrders();
+    } catch (e) {
+      console.error('Error deleting order:', e);
+      alert('Failed to delete order: ' + e.message);
+    } finally {
+      setUpdating(null);
+    }
   };
 
   // Calculations for dashboard
@@ -547,7 +573,7 @@ export default function OrderManagement() {
                           return (
                             <div 
                               key={step} 
-                              onClick={() => {
+                              onClick={async () => {
                                 if (isUpdating) return;
                                 if (idx === currentIdx + 1) {
                                   // Trigger next step
@@ -558,7 +584,7 @@ export default function OrderManagement() {
                                   }
                                 } else if (idx < currentIdx && idx >= 0) {
                                   // Allow moving backward (Admin power override)
-                                  if (window.confirm(`Move order status back to "${STEP_LABELS[step]}"?`)) {
+                                  if (await confirm(`Move order status back to "${STEP_LABELS[step]}"?`)) {
                                     updateStatus(order.id, step);
                                   }
                                 }
@@ -717,40 +743,71 @@ export default function OrderManagement() {
                       </span>
                     </div>
 
-                    {cfg.next && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {/* Delete Order Button */}
                       <button
-                        onClick={() => {
-                          if (cfg.next === 'dispatched') {
-                            setDispatchModal({ orderId: order.id, notes: order.notes || '' });
-                          } else {
-                            updateStatus(order.id, cfg.next);
-                          }
-                        }}
+                        onClick={() => deleteOrder(order.id)}
                         disabled={isUpdating}
-                        style={{ 
-                          padding: '9px 18px', 
-                          borderRadius: 12, 
-                          border: 'none', 
-                          background: cfg.gradient || '#0ea5e9', 
-                          color: '#fff', 
-                          fontSize: '0.74rem', 
-                          fontWeight: 700, 
-                          cursor: isUpdating ? 'not-allowed' : 'pointer', 
-                          fontFamily: 'Outfit', 
-                          opacity: isUpdating ? 0.7 : 1, 
-                          boxShadow: `0 4px 12px ${cfg.color}35`, 
+                        style={{
+                          padding: '9px 14px',
+                          borderRadius: 12,
+                          border: '1px solid rgba(239, 68, 68, 0.2)',
+                          background: 'rgba(239, 68, 68, 0.04)',
+                          color: '#ef4444',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: isUpdating ? 'not-allowed' : 'pointer',
+                          fontFamily: 'Outfit',
+                          opacity: isUpdating ? 0.7 : 1,
                           transition: 'all 0.2s ease',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 6
+                          justifyContent: 'center',
+                          gap: 4
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1.5px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        title="Delete Order"
+                        onMouseEnter={(e) => { if (!isUpdating) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'; }}
+                        onMouseLeave={(e) => { if (!isUpdating) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.04)'; }}
                       >
-                        {isUpdating ? 'Updating...' : cfg.action}
-                        <ChevronRight size={13} />
+                        <Trash2 size={12} />
+                        Delete
                       </button>
-                    )}
+
+                      {cfg.next && (
+                        <button
+                          onClick={() => {
+                            if (cfg.next === 'dispatched') {
+                              setDispatchModal({ orderId: order.id, notes: order.notes || '' });
+                            } else {
+                              updateStatus(order.id, cfg.next);
+                            }
+                          }}
+                          disabled={isUpdating}
+                          style={{ 
+                            padding: '9px 18px', 
+                            borderRadius: 12, 
+                            border: 'none', 
+                            background: cfg.gradient || '#0ea5e9', 
+                            color: '#fff', 
+                            fontSize: '0.74rem', 
+                            fontWeight: 700, 
+                            cursor: isUpdating ? 'not-allowed' : 'pointer', 
+                            fontFamily: 'Outfit', 
+                            opacity: isUpdating ? 0.7 : 1, 
+                            boxShadow: `0 4px 12px ${cfg.color}35`, 
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1.5px)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                          {isUpdating ? 'Updating...' : cfg.action}
+                          <ChevronRight size={13} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                 </div>

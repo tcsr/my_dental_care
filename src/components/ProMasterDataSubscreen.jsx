@@ -90,7 +90,7 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
   };
 
   const handleDeleteGstRate = async (rateToDelete) => {
-    if (window.confirm(`Delete GST Rate ${rateToDelete}% permanently?`)) {
+    if (await confirm(`Delete GST Rate ${rateToDelete}% permanently?`)) {
       const updated = gstRates.filter(r => r !== rateToDelete);
       const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
       await db.userProfile.put({ key: `${prefix}gstRates`, value: updated });
@@ -129,7 +129,7 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
   };
 
   const handleDeleteState = async (id, name) => {
-    if (window.confirm(`Delete State "${name}" permanently?`)) {
+    if (await confirm(`Delete State "${name}" permanently?`)) {
       await db.b2bStates.delete(id);
       loadData();
     }
@@ -154,7 +154,7 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
   };
 
   const handleDeleteWarehouse = async (id, name) => {
-    if (window.confirm(`Delete Warehouse "${name}" permanently?`)) {
+    if (await confirm(`Delete Warehouse "${name}" permanently?`)) {
       await db.b2bWarehouses.delete(id);
       loadData();
     }
