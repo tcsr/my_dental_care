@@ -11,11 +11,11 @@ const ALL_INDIAN_STATES_AND_UTS = [
   'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
 ];
 
-export default function ProMasterDataSubscreen({ lang }) {
+export default function ProMasterDataSubscreen({ lang, profile = {}, authUser }) {
   const [states, setStates] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
-  const [gstRates, setGstRates] = useState([5, 12, 18, 28]);
-  const [defaultGstRate, setDefaultGstRate] = useState(12);
+  const [gstRates, setGstRates] = useState(profile.gstRates || [5, 12, 18, 28]);
+  const [defaultGstRate, setDefaultGstRate] = useState(profile.defaultGstRate || 12);
   const [loading, setLoading] = useState(true);
 
   // Form State - States
@@ -41,8 +41,7 @@ export default function ProMasterDataSubscreen({ lang }) {
     setStates(dexieStates || []);
     const dexieWarehouses = await db.b2bWarehouses.toArray();
     setWarehouses(dexieWarehouses || []);
-    const dexieProfile = await db.userProfile.toArray();
-    const profile = dexieProfile.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
+    
     setGstRates(profile.gstRates || [5, 12, 18, 28]);
     setDefaultGstRate(profile.defaultGstRate || 12);
     setLoading(false);
@@ -50,7 +49,7 @@ export default function ProMasterDataSubscreen({ lang }) {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [profile]);
 
   const addedStateNames = states.map(s => s.name.toLowerCase());
   const availableStates = ALL_INDIAN_STATES_AND_UTS.filter(st => !addedStateNames.includes(st.toLowerCase()));
@@ -68,7 +67,8 @@ export default function ProMasterDataSubscreen({ lang }) {
     if (isNaN(rate) || rate < 0 || rate > 100) return alert('Invalid rate');
     if (gstRates.includes(rate)) return alert('Exists');
     const updated = [...gstRates, rate].sort((a, b) => a - b);
-    await db.userProfile.put({ key: 'gstRates', value: updated });
+    const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
+    await db.userProfile.put({ key: `${prefix}gstRates`, value: updated });
     setNewGstRate('');
     loadData();
   };
@@ -80,9 +80,10 @@ export default function ProMasterDataSubscreen({ lang }) {
     if (isNaN(newRate) || newRate < 0 || newRate > 100) return alert('Invalid');
     if (gstRates.includes(newRate) && newRate !== oldRate) return alert('Exists');
     const updated = gstRates.map(r => r === oldRate ? newRate : r).sort((a, b) => a - b);
-    await db.userProfile.put({ key: 'gstRates', value: updated });
+    const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
+    await db.userProfile.put({ key: `${prefix}gstRates`, value: updated });
     if (defaultGstRate === oldRate) {
-      await db.userProfile.put({ key: 'defaultGstRate', value: newRate });
+      await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: newRate });
     }
     setEditingGstRate(null);
     loadData();
@@ -91,9 +92,10 @@ export default function ProMasterDataSubscreen({ lang }) {
   const handleDeleteGstRate = async (rateToDelete) => {
     if (window.confirm(`Delete GST Rate ${rateToDelete}% permanently?`)) {
       const updated = gstRates.filter(r => r !== rateToDelete);
-      await db.userProfile.put({ key: 'gstRates', value: updated });
+      const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
+      await db.userProfile.put({ key: `${prefix}gstRates`, value: updated });
       if (defaultGstRate === rateToDelete && updated.length > 0) {
-        await db.userProfile.put({ key: 'defaultGstRate', value: updated[0] });
+        await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: updated[0] });
       }
       loadData();
     }
@@ -101,7 +103,8 @@ export default function ProMasterDataSubscreen({ lang }) {
 
   const handleSetDefaultGstRate = async (rate) => {
     const rateInt = parseInt(rate);
-    await db.userProfile.put({ key: 'defaultGstRate', value: rateInt });
+    const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
+    await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: rateInt });
     loadData();
   };
 
@@ -183,8 +186,9 @@ export default function ProMasterDataSubscreen({ lang }) {
           await db.b2bWarehouses.clear();
           await db.b2bWarehouses.bulkAdd(data.warehouses.map(w => ({ name: w.name, address: w.address })));
         }
-        if (data.gstRates) await db.userProfile.put({ key: 'gstRates', value: data.gstRates });
-        if (data.defaultGstRate) await db.userProfile.put({ key: 'defaultGstRate', value: data.defaultGstRate });
+        const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
+        if (data.gstRates) await db.userProfile.put({ key: `${prefix}gstRates`, value: data.gstRates });
+        if (data.defaultGstRate) await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: data.defaultGstRate });
         loadData();
         alert('Settings imported successfully!');
       } catch (err) {

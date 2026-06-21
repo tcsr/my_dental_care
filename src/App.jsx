@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedDemoData, clearAllData } from './utils/db';
@@ -25,7 +26,10 @@ import { ShoppingBag, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Set
 import { Capacitor } from '@capacitor/core';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('catalog'); // updated after login
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = location.pathname.slice(1) || 'catalog';
+  const setActiveTab = (tab) => navigate('/' + tab);
   const [isDbReady, setIsDbReady] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lang, setLang] = useState(() => localStorage.getItem('dentalLang') || 'en');
@@ -66,13 +70,25 @@ export default function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        supabase.from('profiles').select('role, name, approved').eq('id', session.user.id).single()
+        supabase.from('profiles').select('role, name, approved, clinic_name, phone, address, gst_number').eq('id', session.user.id).single()
           .then(({ data }) => {
             if (data?.role === 'admin' || data?.approved) {
               const role = data.role;
-              setAuthUser({ role, name: data.name, user: session.user });
+              setAuthUser({ 
+                role, 
+                name: data.name, 
+                user: session.user,
+                clinicName: data.clinic_name,
+                phone: data.phone,
+                address: data.address,
+                gstNumber: data.gst_number,
+                approved: data.approved
+              });
               setIsLoggedIn(true);
-              setActiveTab(role === 'admin' ? 'dashboard' : 'catalog');
+              const currentPath = window.location.pathname;
+              if (currentPath === '/' || currentPath === '/login' || currentPath === '') {
+                setActiveTab(role === 'admin' ? 'dashboard' : 'catalog');
+              }
             }
             setAuthChecked(true);
           });
@@ -250,8 +266,44 @@ export default function App() {
   const profile = useLiveQuery(async () => {
     if (!db || !db.userProfile) return {};
     const arr = await db.userProfile.toArray();
-    return arr.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
-  });
+    const rawProfile = arr.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
+    
+    if (authUser?.user?.id) {
+      const prefix = `${authUser.user.id}_`;
+      const userProfile = {};
+      
+      for (const key in rawProfile) {
+        if (key.startsWith(prefix)) {
+          const cleanKey = key.slice(prefix.length);
+          userProfile[cleanKey] = rawProfile[key];
+        }
+      }
+      
+      if (Object.keys(userProfile).length === 0 || !userProfile.userName) {
+        userProfile.userName = authUser.name || '';
+        userProfile.role = authUser.role === 'admin' ? 'Administrator' : 'Clinic Doctor / Manager';
+        userProfile.userEmail = authUser.user.email || '';
+        userProfile.userPhone = authUser.phone || '';
+        userProfile.clinicName = authUser.clinicName || '';
+        userProfile.clinicAddress = authUser.address || '';
+        userProfile.gstNumber = authUser.gstNumber || '';
+        userProfile.activeRole = authUser.role === 'admin' ? 'rep' : 'doctor';
+        userProfile.actingClientId = null;
+        userProfile.gstRates = rawProfile.gstRates || [5, 12, 18, 28];
+        userProfile.defaultGstRate = rawProfile.defaultGstRate || 12;
+      } else {
+        if (userProfile.gstRates === undefined) {
+          userProfile.gstRates = rawProfile.gstRates || [5, 12, 18, 28];
+        }
+        if (userProfile.defaultGstRate === undefined) {
+          userProfile.defaultGstRate = rawProfile.defaultGstRate || 12;
+        }
+      }
+      return userProfile;
+    }
+    
+    return rawProfile;
+  }, [authUser]);
   const isDoctorMode = profile?.activeRole === 'doctor';
   const activeProfileImage = profile
     ? (profile.activeRole === 'doctor' && profile.actingClientId
@@ -277,45 +329,6 @@ export default function App() {
 
   const cartCount = Object.values(cart).reduce((s, i) => s + i.qty, 0);
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <DashboardScreen authUser={authUser} onNavigate={setActiveTab} />;
-      case 'catalog':
-        return <ProductCatalog 
-          authUser={authUser} 
-          cart={cart} 
-          onCartChange={setCart} 
-          onOrderPlaced={() => setActiveTab('sales')} 
-          onLoginRequired={(afterLoginFn) => { 
-            if (afterLoginFn) setPostLoginAction(() => afterLoginFn); 
-            setShowLoginModal(true); 
-          }} 
-        />;
-      case 'orders':
-        return <OrderManagement />;
-      case 'products':
-        return <ProductManagement />;
-      case 'sales':
-        return isAdmin ? <ProSalesSubscreen lang={lang} profile={profile} onNavigate={setActiveTab} /> : <DoctorOrders authUser={authUser} onGoToCatalog={() => setActiveTab('catalog')} />;
-      case 'implants':
-        return <ProImplantsSubscreen lang={lang} profile={profile} />;
-      case 'inventory':
-        return <ProInventorySubscreen lang={lang} profile={profile} />;
-      case 'reminders':
-        return <ProRemindersSubscreen lang={lang} profile={profile} />;
-      case 'guides':
-        return <ProGuidesSubscreen lang={lang} profile={profile} />;
-      case 'master':
-        return <ProMasterDataSubscreen lang={lang} profile={profile} />;
-      case 'profile':
-        return <ProProfileSettingsSubscreen lang={lang} profile={profile} />;
-      case 'admin':
-        return <AdminPanel />;
-      default:
-        return isAdmin ? <DashboardScreen authUser={authUser} onNavigate={setActiveTab} /> : <ProductCatalog authUser={authUser} cart={cart} onCartChange={setCart} onLoginRequired={() => setShowLoginModal(true)} />;
-    }
-  };
 
   const splashLoader = (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: 'linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 50%, #f0fdf4 100%)' }}>
@@ -639,7 +652,35 @@ export default function App() {
       </div>
 
       <main>
-        {renderContent()}
+        <Routes>
+          <Route path="/dashboard" element={<DashboardScreen authUser={authUser} onNavigate={setActiveTab} />} />
+          <Route path="/catalog" element={
+            <ProductCatalog
+              authUser={authUser}
+              cart={cart}
+              onCartChange={setCart}
+              onOrderPlaced={() => setActiveTab('sales')}
+              onLoginRequired={(afterLoginFn) => {
+                if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
+                setShowLoginModal(true);
+              }}
+            />
+          } />
+          <Route path="/orders" element={<OrderManagement />} />
+          <Route path="/products" element={<ProductManagement />} />
+          <Route path="/sales" element={isAdmin ? <ProSalesSubscreen lang={lang} profile={profile} onNavigate={setActiveTab} /> : <DoctorOrders authUser={authUser} onGoToCatalog={() => setActiveTab('catalog')} />} />
+          <Route path="/implants" element={<ProImplantsSubscreen lang={lang} profile={profile} />} />
+          <Route path="/inventory" element={<ProInventorySubscreen lang={lang} profile={profile} />} />
+          <Route path="/reminders" element={<ProRemindersSubscreen lang={lang} profile={profile} />} />
+          <Route path="/guides" element={<ProGuidesSubscreen lang={lang} profile={profile} />} />
+          <Route path="/master" element={<ProMasterDataSubscreen lang={lang} profile={profile} authUser={authUser} />} />
+          <Route path="/profile" element={<ProProfileSettingsSubscreen lang={lang} profile={profile} authUser={authUser} />} />
+          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="*" element={isAdmin
+            ? <DashboardScreen authUser={authUser} onNavigate={setActiveTab} />
+            : <ProductCatalog authUser={authUser} cart={cart} onCartChange={setCart} onLoginRequired={() => setShowLoginModal(true)} />
+          } />
+        </Routes>
       </main>
 
       {/* Bottom Premium Nav Bar */}

@@ -8,13 +8,7 @@ import {
 } from 'lucide-react';
 import PremiumSelect from './ui/PremiumSelect';
 
-export default function ProProfileSettingsSubscreen() {
-  // Read all user profile keys from IndexedDB
-  const profileList = useLiveQuery(() => db.userProfile.toArray()) || [];
-  
-  // Convert array to object
-  const profile = profileList.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
-
+export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUser }) {
   // Local Form States
   const [userName, setUserName] = useState('');
   const [role, setRole] = useState('');
@@ -22,6 +16,7 @@ export default function ProProfileSettingsSubscreen() {
   const [userPhone, setUserPhone] = useState('');
   const [clinicName, setClinicName] = useState('');
   const [clinicAddress, setClinicAddress] = useState('');
+  const [gstNumber, setGstNumber] = useState('');
   const [profileImage, setProfileImage] = useState('');
   const [activeRole, setActiveRole] = useState('rep');
   const [actingClientId, setActingClientId] = useState('');
@@ -47,14 +42,14 @@ export default function ProProfileSettingsSubscreen() {
 
   // Initialize form fields when profile loads
   useEffect(() => {
-    if (profileList.length > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUserName(profile.userName || 'Chandra');
-      setRole(profile.role || 'B2B Sales Representative');
-      setUserEmail(profile.userEmail || 'chandra@dentalpro.com');
-      setUserPhone(profile.userPhone || '+91 99887 76655');
-      setClinicName(profile.clinicName || 'Apex Dental Distributor');
-      setClinicAddress(profile.clinicAddress || 'Hitech City, Hyderabad, 500081');
+    if (profile && Object.keys(profile).length > 0) {
+      setUserName(profile.userName || '');
+      setRole(profile.role || '');
+      setUserEmail(profile.userEmail || '');
+      setUserPhone(profile.userPhone || '');
+      setClinicName(profile.clinicName || '');
+      setClinicAddress(profile.clinicAddress || '');
+      setGstNumber(profile.gstNumber || '36AAAAA1111A1Z1');
       setActiveRole(profile.activeRole || 'rep');
       const actingId = profile.actingClientId ? parseInt(profile.actingClientId) : '';
       setActingClientId(actingId);
@@ -63,8 +58,19 @@ export default function ProProfileSettingsSubscreen() {
         ? `profileImage_doctor_${actingId}`
         : 'profileImage_rep';
       setProfileImage(profile[imgKey] || profile.profileImage || '');
+    } else if (authUser) {
+      setUserName(authUser.name || '');
+      setRole(authUser.role === 'admin' ? 'Administrator' : 'Clinic Doctor / Manager');
+      setUserEmail(authUser.user?.email || '');
+      setUserPhone(authUser.phone || '');
+      setClinicName(authUser.clinicName || '');
+      setClinicAddress(authUser.address || '');
+      setGstNumber(authUser.gstNumber || '36AAAAA1111A1Z1');
+      setActiveRole(authUser.role === 'admin' ? 'rep' : 'doctor');
+      setActingClientId('');
+      setProfileImage('');
     }
-  }, [profileList]);
+  }, [profile, authUser]);
 
   const handleClientSelectForRole = (clientId) => {
     setActingClientId(clientId);
@@ -89,23 +95,43 @@ export default function ProProfileSettingsSubscreen() {
         ? `profileImage_doctor_${actingClientId}`
         : 'profileImage_rep';
 
+      const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
+
       await db.userProfile.bulkPut([
-        { key: 'userName', value: userName },
-        { key: 'role', value: role },
-        { key: 'userEmail', value: userEmail },
-        { key: 'userPhone', value: userPhone },
-        { key: 'clinicName', value: clinicName },
-        { key: 'clinicAddress', value: clinicAddress },
-        { key: imgKey, value: profileImage },
-        { key: 'activeRole', value: activeRole },
-        { key: 'actingClientId', value: actingClientId ? parseInt(actingClientId) : null }
+        { key: `${prefix}userName`, value: userName },
+        { key: `${prefix}role`, value: role },
+        { key: `${prefix}userEmail`, value: userEmail },
+        { key: `${prefix}userPhone`, value: userPhone },
+        { key: `${prefix}clinicName`, value: clinicName },
+        { key: `${prefix}clinicAddress`, value: clinicAddress },
+        { key: `${prefix}gstNumber`, value: gstNumber },
+        { key: `${prefix}${imgKey}`, value: profileImage },
+        { key: `${prefix}activeRole`, value: activeRole },
+        { key: `${prefix}actingClientId`, value: actingClientId ? parseInt(actingClientId) : null }
       ]);
 
       // Set generic profileImage key for basic fallback
-      await db.userProfile.put({ key: 'profileImage', value: profileImage });
+      await db.userProfile.put({ key: `${prefix}profileImage`, value: profileImage });
+
+      // Sync back to Supabase profiles
+      if (authUser?.user?.id) {
+        const { error: supabaseErr } = await supabase
+          .from('profiles')
+          .update({
+            name: userName,
+            clinic_name: clinicName,
+            phone: userPhone,
+            address: clinicAddress,
+            gst_number: gstNumber
+          })
+          .eq('id', authUser.user.id);
+        
+        if (supabaseErr) {
+          console.error('Supabase profile update failed:', supabaseErr);
+        }
+      }
 
       alert('Profile and Access Role updated successfully!');
-      window.location.reload();
     } catch (err) {
       console.error(err);
       alert('Failed to save profile details.');
@@ -381,7 +407,6 @@ export default function ProProfileSettingsSubscreen() {
       setLastSynced(timeNow);
       setSyncStatus('success');
       setTimeout(() => setSyncStatus('idle'), 3000);
-      window.location.reload();
     } catch (err) {
       console.error('Cloud Sync failed:', err);
       setSyncStatus('error');
@@ -550,11 +575,13 @@ export default function ProProfileSettingsSubscreen() {
                 onChange={(e) => {
                   setActiveRole(e.target.value);
                   if (e.target.value === 'rep') {
-                    setUserName(profile.userName || 'Chandra');
-                    setRole('B2B Sales Representative');
-                    setUserEmail(profile.userEmail || 'chandra@dentalpro.com');
-                    setUserPhone(profile.userPhone || '+91 99887 76655');
-                    setClinicName(profile.clinicName || 'Apex Dental Distributor');
+                    setUserName(profile.userName || authUser?.name || 'Chandra');
+                    setRole(profile.role || (authUser?.role === 'admin' ? 'Administrator' : 'B2B Sales Representative'));
+                    setUserEmail(profile.userEmail || authUser?.user?.email || 'chandra@dentalpro.com');
+                    setUserPhone(profile.userPhone || authUser?.phone || '+91 99887 76655');
+                    setClinicName(profile.clinicName || authUser?.clinicName || 'Apex Dental Distributor');
+                    setClinicAddress(profile.clinicAddress || authUser?.address || 'Hitech City, Hyderabad, 500081');
+                    setGstNumber(profile.gstNumber || authUser?.gstNumber || '36AAAAA1111A1Z1');
                     setActingClientId('');
                     setProfileImage(profile.profileImage_rep || profile.profileImage || '');
                   } else if (clientsList.length > 0) {
@@ -643,6 +670,16 @@ export default function ProProfileSettingsSubscreen() {
               </label>
               <input 
                 type="text" required value={clinicAddress} onChange={(e) => setClinicAddress(e.target.value)}
+                style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                <Shield size={12} /> GSTIN (GST Number)
+              </label>
+              <input 
+                type="text" required value={gstNumber} onChange={(e) => setGstNumber(e.target.value)}
                 style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', outline: 'none' }}
               />
             </div>

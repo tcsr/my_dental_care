@@ -28,19 +28,37 @@ export default function LoginScreen({ onLogin, isModal = false }) {
 
       const { data: profile, error: profileErr } = await supabase
         .from('profiles')
-        .select('role, approved, name')
+        .select('role, approved, name, clinic_name, phone, address, gst_number')
         .eq('id', data.user.id)
         .single();
 
       if (profileErr) throw profileErr;
 
       if (profile.role === 'admin') {
-        onLogin({ role: 'admin', name: profile.name, user: data.user });
+        onLogin({ 
+          role: 'admin', 
+          name: profile.name, 
+          user: data.user,
+          clinicName: profile.clinic_name,
+          phone: profile.phone,
+          address: profile.address,
+          gstNumber: profile.gst_number,
+          approved: profile.approved
+        });
       } else if (!profile.approved) {
         setScreen('pending');
         await supabase.auth.signOut();
       } else {
-        onLogin({ role: profile.role, name: profile.name, user: data.user });
+        onLogin({ 
+          role: profile.role, 
+          name: profile.name, 
+          user: data.user,
+          clinicName: profile.clinic_name,
+          phone: profile.phone,
+          address: profile.address,
+          gstNumber: profile.gst_number,
+          approved: profile.approved
+        });
       }
     } catch (err) {
       setError(err?.message || err?.error_description || String(err) || 'Login failed.');
