@@ -406,21 +406,21 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
               </div>
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '4px' }}>Recommended Implant Torque (Ncm)</label>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <div style={{ flex: '1 1 100px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  <div>
                     <input type="number" required min="0" placeholder="Narrow" value={torqueNarrow} onChange={(e) => setTorqueNarrow(e.target.value)}
                       style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
-                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))' }}>Narrow (3.3mm)</span>
+                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))', display: 'block', marginTop: '2px', textAlign: 'center' }}>Narrow (3.3mm)</span>
                   </div>
-                  <div style={{ flex: '1 1 100px' }}>
+                  <div>
                     <input type="number" required min="0" placeholder="Standard" value={torqueStandard} onChange={(e) => setTorqueStandard(e.target.value)}
                       style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
-                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))' }}>Standard (4.0mm)</span>
+                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))', display: 'block', marginTop: '2px', textAlign: 'center' }}>Standard (4.0mm)</span>
                   </div>
-                  <div style={{ flex: '1 1 100px' }}>
+                  <div>
                     <input type="number" required min="0" placeholder="Wide" value={torqueWide} onChange={(e) => setTorqueWide(e.target.value)}
                       style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
-                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))' }}>Wide (5.0mm)</span>
+                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))', display: 'block', marginTop: '2px', textAlign: 'center' }}>Wide (5.0mm)</span>
                   </div>
                 </div>
               </div>
