@@ -255,7 +255,7 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
         key: rzpKey,
         amount: orderData.amount,
         currency: orderData.currency || 'INR',
-        name: 'Lal Dental Care',
+        name: 'Simple Implant',
         description: 'Clinic Case Order Payment',
         image: 'https://cdn-icons-png.flaticon.com/512/3482/3482200.png',
         order_id: orderData.order_id,

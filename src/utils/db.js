@@ -22,13 +22,63 @@ db.version(6).stores({
   b2bWarehouses: '++id, name, address'
 });
 
+// Basal Implant size matrix (from "Simple Implant" product line PPT).
+// SKU-prefixed with BSL- so the v7 upgrade hook can seed it idempotently.
+const BASAL_IMPLANT_SEED = [
+  ['3.0', '10'], ['3.2', '12'], ['3.2', '15'], ['3.7', '10'], ['3.7', '12'],
+  ['3.7', '15'], ['4.2', '10'], ['4.5', '10'], ['4.5', '12'], ['5.0', '8'],
+  ['3.0', '14'], ['3.0', '16'], ['3.0', '18'], ['3.5', '14'], ['3.5', '16'],
+  ['3.5', '18'], ['3.5', '20'], ['3.5', '22'], ['3.5', '24'],
+  ['2.7', '14'], ['2.7', '16'], ['2.7', '18'], ['2.7', '20'],
+  ['3.6', '14'], ['3.6', '16'], ['3.6', '18'], ['3.6', '20'], ['3.6', '22'], ['3.6', '24'],
+  ['4.5', '14'], ['4.5', '16'], ['4.5', '18']
+].map(([d, l]) => ({
+  name: `Basal Implant ${d}x${l}mm`,
+  category: 'Implant',
+  sku: `BSL-${d}-${l}`,
+  price: 3500, // placeholder — update with real distributor pricing
+  purchaseCost: 1500,
+  stock: 0,
+  minStock: 5,
+  isSerialized: false,
+  batches: [],
+  material: 'Titanium Gr5 (Ti6Al4V)',
+  finish: 'Polished',
+  sterilization: 'ETO',
+  warrantyPct: 100,
+  bendableAngle: 20
+}));
+
+// v7: client customer-segment tagging + marketing leads module.
+// Only tables with actual index changes need restating; unchanged tables carry over.
+db.version(7).stores({
+  b2bClients: '++id, name, type, contactPerson, email, phone, address, discountTier, customerCategory',
+  marketingLeads: '++id, name, customerCategory, region, channel, status, clientId, createdDate'
+});
+
+// Idempotent Basal implant SKU seed — called on every app boot (not tied to the version(7)
+// upgrade transaction, since Dexie skips .upgrade() callbacks entirely for brand-new databases).
+export async function seedBasalImplants() {
+  // Transaction serializes concurrent calls (e.g. React StrictMode's double-invoked
+  // effects in dev) so the count-then-insert check can't race across two callers.
+  await db.transaction('rw', db.b2bProducts, async () => {
+    const already = await db.b2bProducts.where('sku').startsWith('BSL-').count();
+    if (already === 0) {
+      await db.b2bProducts.bulkAdd(BASAL_IMPLANT_SEED);
+    }
+  });
+}
+
 // Seed Initial B2B Data
 export async function seedDemoData() {
+  // Transaction serializes concurrent calls (e.g. React StrictMode's double-invoked
+  // effects in dev) so the isSeeded check can't race across two callers.
+  await db.transaction('rw', db.tables, async () => {
   const isSeeded = await db.userProfile.get('dbSeeded');
   if (isSeeded) return;
 
   await db.userProfile.bulkPut([
-    { key: 'userName', value: 'Chandra (Lal Dental Care)' },
+    { key: 'userName', value: 'Chandra (Simple Implant)' },
     { key: 'role', value: 'B2B Sales Representative' },
     { key: 'gstRates', value: [5, 12, 18, 28] },
     { key: 'defaultGstRate', value: 12 },
@@ -168,6 +218,7 @@ export async function seedDemoData() {
     { clientId: 1, notes: 'Visited Dr. Emily. She asked about the next shipment of zygomatic custom models.', date: Date.now() - 6 * 24 * 60 * 60 * 1000 },
     { clientId: 1, notes: 'Phone call. Confirmed order requirements for next month.', date: Date.now() - 2 * 24 * 60 * 60 * 1000 }
   ]);
+  });
 }
 
 export async function clearAllData() {
@@ -186,7 +237,8 @@ export async function clearAllData() {
     db.creditNotes.clear(),
     db.crmLogs.clear(),
     db.b2bStates.clear(),
-    db.b2bWarehouses.clear()
+    db.b2bWarehouses.clear(),
+    db.marketingLeads.clear()
   ]);
   localStorage.clear();
 }

@@ -18,6 +18,14 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
   const [defaultGstRate, setDefaultGstRate] = useState(profile.defaultGstRate || 12);
   const [loading, setLoading] = useState(true);
 
+  // Form State - Sales & Clinical Settings
+  const [commissionRate, setCommissionRate] = useState(((profile.commissionRate ?? 0.05) * 100).toString());
+  const [salesQuota, setSalesQuota] = useState((profile.salesQuota || 500000).toString());
+  const [torqueNarrow, setTorqueNarrow] = useState((profile.torqueNarrow ?? 20).toString());
+  const [torqueStandard, setTorqueStandard] = useState((profile.torqueStandard ?? 30).toString());
+  const [torqueWide, setTorqueWide] = useState((profile.torqueWide ?? 35).toString());
+  const [savingSettings, setSavingSettings] = useState(false);
+
   // Form State - States
   const [newStateName, setNewStateName] = useState('');
   const [editingState, setEditingState] = useState(null);
@@ -44,6 +52,11 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
     
     setGstRates(profile.gstRates || [5, 12, 18, 28]);
     setDefaultGstRate(profile.defaultGstRate || 12);
+    setCommissionRate(((profile.commissionRate ?? 0.05) * 100).toString());
+    setSalesQuota((profile.salesQuota || 500000).toString());
+    setTorqueNarrow((profile.torqueNarrow ?? 20).toString());
+    setTorqueStandard((profile.torqueStandard ?? 30).toString());
+    setTorqueWide((profile.torqueWide ?? 35).toString());
     setLoading(false);
   };
 
@@ -108,6 +121,29 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
     loadData();
   };
 
+  const handleSaveSalesClinicalSettings = async (e) => {
+    e.preventDefault();
+    const commissionPct = parseFloat(commissionRate);
+    const quota = parseInt(salesQuota);
+    const tNarrow = parseInt(torqueNarrow);
+    const tStandard = parseInt(torqueStandard);
+    const tWide = parseInt(torqueWide);
+    if (isNaN(commissionPct) || commissionPct < 0 || commissionPct > 100) return alert('Invalid commission rate');
+    if (isNaN(quota) || quota < 0) return alert('Invalid sales quota');
+    if ([tNarrow, tStandard, tWide].some(v => isNaN(v) || v < 0)) return alert('Invalid torque value');
+    setSavingSettings(true);
+    const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
+    await db.userProfile.bulkPut([
+      { key: `${prefix}commissionRate`, value: commissionPct / 100 },
+      { key: `${prefix}salesQuota`, value: quota },
+      { key: `${prefix}torqueNarrow`, value: tNarrow },
+      { key: `${prefix}torqueStandard`, value: tStandard },
+      { key: `${prefix}torqueWide`, value: tWide }
+    ]);
+    setSavingSettings(false);
+    alert('Sales & clinical settings saved!');
+  };
+
   // States CRUD
   const handleAddState = async (e) => {
     e.preventDefault();
@@ -161,12 +197,19 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
   };
 
   const handleExport = () => {
-    const data = { states, warehouses, gstRates, defaultGstRate };
+    const data = {
+      states, warehouses, gstRates, defaultGstRate,
+      commissionRate: parseFloat(commissionRate) / 100,
+      salesQuota: parseInt(salesQuota),
+      torqueNarrow: parseInt(torqueNarrow),
+      torqueStandard: parseInt(torqueStandard),
+      torqueWide: parseInt(torqueWide)
+    };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'lal_dental_master_settings.json';
+    a.download = 'simple_implant_master_settings.json';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -189,6 +232,11 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
         const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
         if (data.gstRates) await db.userProfile.put({ key: `${prefix}gstRates`, value: data.gstRates });
         if (data.defaultGstRate) await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: data.defaultGstRate });
+        if (data.commissionRate !== undefined) await db.userProfile.put({ key: `${prefix}commissionRate`, value: data.commissionRate });
+        if (data.salesQuota) await db.userProfile.put({ key: `${prefix}salesQuota`, value: data.salesQuota });
+        if (data.torqueNarrow) await db.userProfile.put({ key: `${prefix}torqueNarrow`, value: data.torqueNarrow });
+        if (data.torqueStandard) await db.userProfile.put({ key: `${prefix}torqueStandard`, value: data.torqueStandard });
+        if (data.torqueWide) await db.userProfile.put({ key: `${prefix}torqueWide`, value: data.torqueWide });
         loadData();
         alert('Settings imported successfully!');
       } catch (err) {
@@ -337,6 +385,49 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
             </div>
             </div>
 
+          </div>
+
+          <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))' }}>
+            <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontFamily: 'Outfit', fontWeight: '800' }}>
+              <span style={{ fontSize: '1.1rem', marginRight: '2px' }}>⚙️</span> Sales & Clinical Settings
+            </h3>
+            <form onSubmit={handleSaveSalesClinicalSettings} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 160px' }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '4px' }}>Sales Commission Rate (%)</label>
+                  <input type="number" required min="0" max="100" step="0.1" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ flex: '1 1 160px' }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '4px' }}>Sales Quota Target (₹)</label>
+                  <input type="number" required min="0" value={salesQuota} onChange={(e) => setSalesQuota(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '4px' }}>Recommended Implant Torque (Ncm)</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 100px' }}>
+                    <input type="number" required min="0" placeholder="Narrow" value={torqueNarrow} onChange={(e) => setTorqueNarrow(e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))' }}>Narrow (3.3mm)</span>
+                  </div>
+                  <div style={{ flex: '1 1 100px' }}>
+                    <input type="number" required min="0" placeholder="Standard" value={torqueStandard} onChange={(e) => setTorqueStandard(e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))' }}>Standard (4.0mm)</span>
+                  </div>
+                  <div style={{ flex: '1 1 100px' }}>
+                    <input type="number" required min="0" placeholder="Wide" value={torqueWide} onChange={(e) => setTorqueWide(e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))' }}>Wide (5.0mm)</span>
+                  </div>
+                </div>
+              </div>
+              <button type="submit" disabled={savingSettings} className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontSize: '0.78rem', fontWeight: 'bold', cursor: savingSettings ? 'not-allowed' : 'pointer', fontFamily: 'Outfit', opacity: savingSettings ? 0.6 : 1 }}>
+                {savingSettings ? 'Saving...' : 'Save Settings'}
+              </button>
+            </form>
           </div>
 
           <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))' }}>

@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- MIGRATION: Gap fixes for Lal Dental Care
+-- MIGRATION: Gap fixes for Simple Implant
 -- Run this in Supabase Dashboard → SQL Editor
 -- ─────────────────────────────────────────────────────────────────────────────
 

@@ -73,7 +73,8 @@ const uploadImage = async (file) => {
 
 const B2B_CATEGORIES = ['Implant', 'Abutment', 'Crown', 'Bridge', 'Surgical Tool'];
 const EMPTY_B2C = { name: '', category: 'Implants', price: '', stock_qty: '', description: '', active: true, image_url: '' };
-const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '' };
+const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0' };
+const STERILIZATION_METHODS = ['ETO', 'Autoclave', 'Gamma'];
 
 function Field({ label, children }) {
   return (
@@ -210,7 +211,12 @@ export default function ProductManagement() {
         purchaseCost: p.purchaseCost || '',
         minStock: p.minStock || 5,
         isSerialized: !!p.isSerialized,
-        image: p.image || ''
+        image: p.image || '',
+        material: p.material || '',
+        finish: p.finish || '',
+        sterilization: p.sterilization || 'ETO',
+        warrantyPct: p.warrantyPct ?? '100',
+        bendableAngle: p.bendableAngle ?? '0'
       });
     } else {
       setForm({
@@ -252,6 +258,11 @@ export default function ProductManagement() {
           isSerialized: form.isSerialized,
           serialNumbers: form.isSerialized && form.initialSerial ? [form.initialSerial] : [],
           image: form.image || '',
+          material: form.material?.trim() || '',
+          finish: form.finish?.trim() || '',
+          sterilization: form.sterilization || 'ETO',
+          warrantyPct: parseFloat(form.warrantyPct) || 0,
+          bendableAngle: parseFloat(form.bendableAngle) || 0,
           batches: [
             {
               batchNo: finalBatchNo,
@@ -272,7 +283,12 @@ export default function ProductManagement() {
           purchaseCost: costNum,
           minStock: parseInt(form.minStock) || 5,
           isSerialized: form.isSerialized,
-          image: form.image || ''
+          image: form.image || '',
+          material: form.material?.trim() || '',
+          finish: form.finish?.trim() || '',
+          sterilization: form.sterilization || 'ETO',
+          warrantyPct: parseFloat(form.warrantyPct) || 0,
+          bendableAngle: parseFloat(form.bendableAngle) || 0
         });
         alert('B2B Product updated successfully!');
       }
@@ -634,6 +650,33 @@ export default function ProductManagement() {
                   </PremiumSelect>
                 </Field>
 
+                {isB2b && (
+                  <div style={{ background: 'hsl(var(--border-color) / 10%)', padding: 12, borderRadius: 12, border: '1px solid hsl(var(--border-color))', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <h4 style={{ fontSize: '0.72rem', fontWeight: 800, margin: 0, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>Technical Spec Sheet (Optional)</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <Field label="Material">
+                        <input value={form.material} onChange={e => setForm(f => ({ ...f, material: e.target.value }))} placeholder="e.g. Titanium Gr5 (Ti6Al4V)" className="form-input" />
+                      </Field>
+                      <Field label="Surface Finish">
+                        <input value={form.finish} onChange={e => setForm(f => ({ ...f, finish: e.target.value }))} placeholder="e.g. Polished" className="form-input" />
+                      </Field>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                      <Field label="Sterilization">
+                        <PremiumSelect value={form.sterilization} onChange={e => setForm(f => ({ ...f, sterilization: e.target.value }))} className="form-select">
+                          {STERILIZATION_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                        </PremiumSelect>
+                      </Field>
+                      <Field label="Warranty %">
+                        <input type="number" value={form.warrantyPct} onChange={e => setForm(f => ({ ...f, warrantyPct: e.target.value }))} placeholder="100" className="form-input" />
+                      </Field>
+                      <Field label="Bendable Angle °">
+                        <input type="number" value={form.bendableAngle} onChange={e => setForm(f => ({ ...f, bendableAngle: e.target.value }))} placeholder="20" className="form-input" />
+                      </Field>
+                    </div>
+                  </div>
+                )}
+
                 {!isB2b && (
                   <Field label="Description">
                     <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional product details..." rows={3}
@@ -922,6 +965,45 @@ export default function ProductManagement() {
                         <div style={{ fontSize: '0.82rem', fontWeight: 800, color: selectedProductPreview.isSerialized ? '#0ea5e9' : 'hsl(var(--text-muted))', marginTop: 2 }}>{selectedProductPreview.isSerialized ? 'Enabled ✅' : 'Disabled ❌'}</div>
                       </div>
                     </div>
+
+                    {/* Technical Spec Sheet */}
+                    {(selectedProductPreview.material || selectedProductPreview.finish || selectedProductPreview.sterilization || selectedProductPreview.bendableAngle) && (
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ fontSize: '0.62rem', fontWeight: 800, color: 'hsl(var(--text-dim))', marginBottom: 6 }}>Technical Spec Sheet:</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: 'hsl(var(--bg-dark))', padding: 12, borderRadius: 12, border: '1px solid hsl(var(--border-color))' }}>
+                          {selectedProductPreview.material && (
+                            <div>
+                              <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Material</div>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2 }}>{selectedProductPreview.material}</div>
+                            </div>
+                          )}
+                          {selectedProductPreview.finish && (
+                            <div>
+                              <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Finish</div>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2 }}>{selectedProductPreview.finish}</div>
+                            </div>
+                          )}
+                          {selectedProductPreview.sterilization && (
+                            <div>
+                              <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Sterilization</div>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2 }}>{selectedProductPreview.sterilization}</div>
+                            </div>
+                          )}
+                          {!!selectedProductPreview.warrantyPct && (
+                            <div>
+                              <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Warranty</div>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#10b981', marginTop: 2 }}>{selectedProductPreview.warrantyPct}%</div>
+                            </div>
+                          )}
+                          {!!selectedProductPreview.bendableAngle && (
+                            <div>
+                              <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Bendable Angle</div>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2 }}>{selectedProductPreview.bendableAngle}°</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Serial Numbers tag cloud */}
                     {selectedProductPreview.isSerialized && selectedProductPreview.serialNumbers && selectedProductPreview.serialNumbers.length > 0 && (

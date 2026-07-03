@@ -14,6 +14,7 @@ export default function ProRemindersSubscreen({ lang }) {
   const orders = useLiveQuery(() => db.b2bOrders.toArray()) || [];
   const implantCases = useLiveQuery(() => db.implantCases.toArray()) || [];
   const products = useLiveQuery(() => db.b2bProducts.toArray()) || [];
+  const leads = useLiveQuery(() => db.marketingLeads.toArray()) || [];
 
   const [isScanning, setIsScanning] = useState(false);
   const [selectedWhatsappReminder, setSelectedWhatsappReminder] = useState(null);
@@ -197,6 +198,26 @@ export default function ProRemindersSubscreen({ lang }) {
       }
     }
 
+    // 4. Scan stale marketing leads (no status update in 7+ days, not yet closed out)
+    const staleThreshold = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    for (const lead of leads) {
+      if (lead.status !== 'Converted' && lead.status !== 'Lost' && (lead.dateStatusUpdated || lead.createdDate || 0) < staleThreshold) {
+        const existing = reminders.some(r => r.message.includes(`lead "${lead.name}"`));
+        if (!existing) {
+          await db.automatedReminders.add({
+            recipientId: 0, // system/sales rep
+            type: 'Lead Follow-Up',
+            title: `Follow Up Needed: ${lead.name}`,
+            message: `Lead "${lead.name}" (${lead.customerCategory}, ${lead.region}) has been stuck at status "${lead.status}" for over 7 days. Reach out via ${lead.channel} to move the pipeline forward.`,
+            status: 'Sent',
+            dateScheduled: Date.now(),
+            dateSent: Date.now()
+          });
+          newRemindersCount++;
+        }
+      }
+    }
+
     setTimeout(() => {
       setIsScanning(false);
       alert(`Automated scan complete! Generated ${newRemindersCount} new reminders including WhatsApp API notifications.`);
@@ -219,6 +240,7 @@ export default function ProRemindersSubscreen({ lang }) {
     }
     if (type === 'Payment Due') return <Mail size={16} color="hsl(var(--color-hyper))" />;
     if (type === 'Implant Follow-Up') return <Smartphone size={16} color="hsl(var(--primary))" />;
+    if (type === 'Lead Follow-Up') return <Bell size={16} color="hsl(var(--secondary))" />;
     return <AlertCircle size={16} color="hsl(var(--color-hypo))" />;
   };
 
@@ -671,8 +693,8 @@ function WhatsappSimulatorModal({ reminder, onClose, orders }) {
     } else if (action === 'ai') {
       setMessages(prev => [
         ...prev,
-        { sender: 'them', text: 'Connect me to Lal Dental Care AI support.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
-        { sender: 'us', text: `Lal Dental Bot: Hello Doctor, I am the Lal Dental Care virtual assistant. You can check invoices, update implant casing checkups, and request stock reconciliations directly from the portal dashboards.`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+        { sender: 'them', text: 'Connect me to Simple Implant AI support.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+        { sender: 'us', text: `Simple Implant Bot: Hello Doctor, I am the Simple Implant virtual assistant. You can check invoices, update implant casing checkups, and request stock reconciliations directly from the portal dashboards.`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
       ]);
     }
   };

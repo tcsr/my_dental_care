@@ -1,27 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, seedDemoData, clearAllData } from './utils/db';
+import { db, seedDemoData, seedBasalImplants, clearAllData } from './utils/db';
 import { supabase } from './utils/supabase';
-import ProSalesSubscreen from './components/ProSalesSubscreen';
-import ProImplantsSubscreen from './components/ProImplantsSubscreen';
-import ProInventorySubscreen from './components/ProInventorySubscreen';
-import ProRemindersSubscreen from './components/ProRemindersSubscreen';
-import ProGuidesSubscreen from './components/ProGuidesSubscreen';
-import ProMasterDataSubscreen from './components/ProMasterDataSubscreen';
-import ProProfileSettingsSubscreen from './components/ProProfileSettingsSubscreen';
 import AiAssistant from './components/AiAssistant';
 import LoginScreen from './components/LoginScreen';
-import AdminPanel from './components/AdminPanel';
 import PremiumSelect from './components/ui/PremiumSelect';
+import PremiumLoader from './components/ui/PremiumLoader';
 import DashboardScreen from './components/DashboardScreen';
 import ProductCatalog from './components/ProductCatalog';
 import DoctorOrders from './components/DoctorOrders';
-import OrderManagement from './components/OrderManagement';
-import ProductManagement from './components/ProductManagement';
 import { t } from './utils/i18n';
-import { ShoppingBag, ShoppingCart, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList } from 'lucide-react';
+
+// Lazy-loaded: admin/rep-only screens, not needed for first paint (catalog/dashboard land first).
+const ProSalesSubscreen = lazy(() => import('./components/ProSalesSubscreen'));
+const ProImplantsSubscreen = lazy(() => import('./components/ProImplantsSubscreen'));
+const ProInventorySubscreen = lazy(() => import('./components/ProInventorySubscreen'));
+const ProRemindersSubscreen = lazy(() => import('./components/ProRemindersSubscreen'));
+const ProMarketingSubscreen = lazy(() => import('./components/ProMarketingSubscreen'));
+const ProGuidesSubscreen = lazy(() => import('./components/ProGuidesSubscreen'));
+const ProMasterDataSubscreen = lazy(() => import('./components/ProMasterDataSubscreen'));
+const ProProfileSettingsSubscreen = lazy(() => import('./components/ProProfileSettingsSubscreen'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
+const OrderManagement = lazy(() => import('./components/OrderManagement'));
+const ProductManagement = lazy(() => import('./components/ProductManagement'));
+import { ShoppingBag, ShoppingCart, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList, Megaphone } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -232,6 +236,7 @@ export default function App() {
     async function init() {
       try {
         await seedDemoData();
+        await seedBasalImplants();
         setIsDbReady(true);
       } catch (err) {
         console.error('Failed to seed database:', err);
@@ -418,16 +423,17 @@ export default function App() {
         userProfile.gstNumber = authUser.gstNumber || '';
         userProfile.activeRole = authUser.role === 'admin' ? 'rep' : 'doctor';
         userProfile.actingClientId = null;
-        userProfile.gstRates = rawProfile.gstRates || [5, 12, 18, 28];
-        userProfile.defaultGstRate = rawProfile.defaultGstRate || 12;
-      } else {
-        if (userProfile.gstRates === undefined) {
-          userProfile.gstRates = rawProfile.gstRates || [5, 12, 18, 28];
-        }
-        if (userProfile.defaultGstRate === undefined) {
-          userProfile.defaultGstRate = rawProfile.defaultGstRate || 12;
-        }
       }
+
+      // Resolved independently of the branch above: prefer this user's prefixed
+      // setting, fall back to a legacy unprefixed value, then a sane default.
+      userProfile.gstRates = rawProfile[`${prefix}gstRates`] ?? rawProfile.gstRates ?? [5, 12, 18, 28];
+      userProfile.defaultGstRate = rawProfile[`${prefix}defaultGstRate`] ?? rawProfile.defaultGstRate ?? 12;
+      userProfile.commissionRate = rawProfile[`${prefix}commissionRate`] ?? rawProfile.commissionRate ?? 0.05;
+      userProfile.salesQuota = rawProfile[`${prefix}salesQuota`] ?? rawProfile.salesQuota ?? 500000;
+      userProfile.torqueNarrow = rawProfile[`${prefix}torqueNarrow`] ?? rawProfile.torqueNarrow ?? 20;
+      userProfile.torqueStandard = rawProfile[`${prefix}torqueStandard`] ?? rawProfile.torqueStandard ?? 30;
+      userProfile.torqueWide = rawProfile[`${prefix}torqueWide`] ?? rawProfile.torqueWide ?? 35;
       return userProfile;
     }
     
@@ -490,7 +496,7 @@ export default function App() {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(14, 165, 233, 0.15)"/>
               <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" stroke="currentColor" fill="none"/>
             </svg>
-            <span style={{ color: '#0f172a' }}>Lal Dental Care</span>
+            <span style={{ color: '#0f172a' }}>Simple Implant</span>
           </h2>
           <button onClick={() => setIsSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
             <X size={20} />
@@ -601,6 +607,9 @@ export default function App() {
                   </button>
                   <button className={`sidebar-link ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => handleNav('reminders')}>
                     <Bell size={16} /><span>{t('navAlerts', lang)}</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'marketing' ? 'active' : ''}`} onClick={() => handleNav('marketing')}>
+                    <Megaphone size={16} /><span>{t('navMarketing', lang)}</span>
                   </button>
                   <button className={`sidebar-link ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => handleNav('guides')}>
                     <Film size={16} /><span>{t('navGuides', lang)}</span>
@@ -868,6 +877,7 @@ export default function App() {
       </div>
 
       <main>
+        <Suspense fallback={<PremiumLoader text="Loading..." />}>
         <Routes>
           {isLoggedIn ? (
             <>
@@ -892,6 +902,7 @@ export default function App() {
               <Route path="/implants" element={<ProImplantsSubscreen lang={lang} profile={profile} />} />
               <Route path="/inventory" element={<ProInventorySubscreen lang={lang} profile={profile} />} />
               <Route path="/reminders" element={<ProRemindersSubscreen lang={lang} profile={profile} />} />
+              <Route path="/marketing" element={<ProMarketingSubscreen lang={lang} profile={profile} />} />
               <Route path="/guides" element={<ProGuidesSubscreen lang={lang} profile={profile} />} />
               <Route path="/master" element={<ProMasterDataSubscreen lang={lang} profile={profile} authUser={authUser} />} />
               <Route path="/profile" element={<ProProfileSettingsSubscreen lang={lang} profile={profile} authUser={authUser} isAdmin={isAdmin} />} />
@@ -920,6 +931,7 @@ export default function App() {
             </>
           )}
         </Routes>
+        </Suspense>
       </main>
 
       {/* Bottom Premium Nav Bar */}

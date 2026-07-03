@@ -47,7 +47,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
           approved: profile.approved
         });
       } else if (!profile.approved) {
-        setError('Your account is pending approval from Lal Dental Care admin. Please wait or contact support.');
+        setError('Your account is pending approval from Simple Implant admin. Please wait or contact support.');
         await supabase.auth.signOut();
       } else {
         onLogin({ 
@@ -166,7 +166,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
             Registration Submitted!
           </h3>
           <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.7, maxWidth: '300px', margin: '0 auto 8px' }}>
-            Your clinic account is pending approval from Lal Dental Care.
+            Your clinic account is pending approval from Simple Implant.
           </p>
           <p style={{ fontSize: '0.78rem', color: '#0ea5e9', fontWeight: 700, margin: '0 auto 28px' }}>
             You'll receive access once an admin approves your account.
@@ -233,7 +233,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
           </button>
           <div>
             <h2 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1.3rem', color: '#0f172a', margin: 0 }}>Create Account</h2>
-            <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '2px 0 0' }}>Register your clinic on Lal Dental Care</p>
+            <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '2px 0 0' }}>Register your clinic on Simple Implant</p>
           </div>
         </div>
 
@@ -336,7 +336,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
           <span style={{ fontSize: '2rem' }}>🦷</span>
         </div>
         <h1 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.65rem', background: 'linear-gradient(135deg, #0284c7, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '0 0 6px' }}>
-          Lal Dental Care
+          Simple Implant
         </h1>
         <p style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>
           B2B Dental Implant & Order Management
@@ -376,7 +376,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
 
       <div style={{ marginTop: 16, padding: '16px', background: 'rgba(14,165,233,0.04)', borderRadius: 12, border: '1px solid rgba(14,165,233,0.1)', textAlign: 'center' }}>
         <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 10px', fontWeight: 500 }}>
-          New to Lal Dental Care?
+          New to Simple Implant?
         </p>
         <button onClick={() => { setScreen('register'); setError(''); }} style={btnOutline}>
           Register your Clinic

@@ -75,6 +75,13 @@ export default function ProImplantsSubscreen({ lang, profile }) {
   const platformMatch = fixtureD === abutmentD;
   const crownMatch = abutmentD === crownD;
   const isCompatible = platformMatch && crownMatch;
+
+  const getTorque = (val) => {
+    if (val === 'narrow') return profile?.torqueNarrow ?? 20;
+    if (val === 'wide') return profile?.torqueWide ?? 35;
+    return profile?.torqueStandard ?? 30;
+  };
+  const recommendedTorque = getTorque(selectedFixture);
   const startEditCase = (c) => {
     setEditingCase(c);
     setEditPatientName(c.patientName);
@@ -554,8 +561,30 @@ export default function ProImplantsSubscreen({ lang, profile }) {
                 <div style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                   <span>Platform Connection: {fixtureD}mm vs {abutmentD}mm {platformMatch ? '✓ Match' : '✗ Mismatch'}</span>
                   <span>Crown Seating Profile: {abutmentD}mm vs {crownD}mm {crownMatch ? '✓ Match' : '✗ Mismatch'}</span>
-                  <span style={{ fontWeight: 'bold', color: 'hsl(var(--text-primary))', marginTop: '4px' }}>Recommended Torque: {selectedFixture === 'narrow' ? '20' : selectedFixture === 'wide' ? '35' : '30'} Ncm</span>
+                  <span style={{ fontWeight: 'bold', color: 'hsl(var(--text-primary))', marginTop: '4px' }}>Recommended Torque: {recommendedTorque} Ncm</span>
                 </div>
+
+                {(() => {
+                  const linkedCase = associatedCaseId ? cases.find(c => c.id === parseInt(associatedCaseId)) : null;
+                  const linkedProduct = linkedCase ? products.find(p => p.id === linkedCase.implantProductId) : null;
+                  if (!linkedProduct || (!linkedProduct.material && !linkedProduct.sterilization && !linkedProduct.warrantyPct && !linkedProduct.bendableAngle)) return null;
+                  return (
+                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed hsl(var(--border-color))', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {linkedProduct.material && (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-muted))' }}>Material: {linkedProduct.material}</span>
+                      )}
+                      {linkedProduct.sterilization && (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-muted))' }}>Sterilization: {linkedProduct.sterilization}</span>
+                      )}
+                      {!!linkedProduct.warrantyPct && (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-muted))' }}>Warranty: {linkedProduct.warrantyPct}%</span>
+                      )}
+                      {!!linkedProduct.bendableAngle && (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-muted))' }}>Bendable: {linkedProduct.bendableAngle}°</span>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
                   <button
@@ -734,7 +763,7 @@ export default function ProImplantsSubscreen({ lang, profile }) {
                 <text x="71" y="18" fill="#38bdf8" fillOpacity="0.6" fontSize="4.2" fontFamily="monospace">PLATFORM: {selectedFixture === 'narrow' ? '3.3mm' : selectedFixture === 'wide' ? '5.0mm' : '4.0mm'}</text>
                 <text x="71" y="24" fill="#38bdf8" fillOpacity="0.6" fontSize="4.2" fontFamily="monospace">FIT TOLERANCE: +/-0.01mm</text>
                 <text x="71" y="30" fill="#38bdf8" fillOpacity="0.6" fontSize="4.2" fontFamily="monospace">INDEX: INTERNAL HEX</text>
-                <text x="71" y="36" fill="#38bdf8" fillOpacity="0.6" fontSize="4.2" fontFamily="monospace">REC. TORQUE: {selectedFixture === 'narrow' ? '20' : selectedFixture === 'wide' ? '35' : '30'} Ncm</text>
+                <text x="71" y="36" fill="#38bdf8" fillOpacity="0.6" fontSize="4.2" fontFamily="monospace">REC. TORQUE: {recommendedTorque} Ncm</text>
                 <text x="71" y="42" fill={isCompatible ? '#22c55e' : '#f87171'} fillOpacity="0.8" fontSize="4.2" fontFamily="monospace" fontWeight="bold">ALIGNMENT: {isCompatible ? 'COMPATIBLE' : 'WARN MISMATCH'}</text>
 
                 {/* SVG GROUP FOR FIXTURE */}

@@ -81,7 +81,7 @@ export default function AiAssistant({ lang, isOpen, onClose }) {
           if (matchedFaq) {
             replyText = matchedFaq.a;
           } else {
-            replyText = `I am your Lal Dental Care AI assistant, connected to your live local B2B database. You can ask me queries like:
+            replyText = `I am your Simple Implant AI assistant, connected to your live local B2B database. You can ask me queries like:
 - "Show me outstanding sales and unpaid invoices"
 - "Are there any low stock inventory items?"
 - "What is the status of patient implant cases?"

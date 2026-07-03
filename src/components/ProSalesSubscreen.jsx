@@ -13,6 +13,9 @@ const ALL_INDIAN_STATES_AND_UTS = [
   'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
 ];
 
+export const CUSTOMER_CATEGORIES = ['Clinic', 'Consultant', 'College', 'Research Center', 'Reseller', 'Other'];
+export const CRM_LOG_TYPES = ['Visit', 'Call', 'Sample', 'Feedback'];
+
 const getCurrentTimestamp = () => Date.now();
 const getRandomTxnId = () => Math.floor(Math.random() * 1000000000);
 
@@ -119,6 +122,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
   const [clientState, setClientState] = useState('Telangana');
   const [customCreditLimit, setCustomCreditLimit] = useState('200000');
   const [clientImage, setClientImage] = useState('');
+  const [clientCategory, setClientCategory] = useState('Clinic');
 
   // Edit Client States
   const [editingClient, setEditingClient] = useState(null);
@@ -132,6 +136,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
   const [editClientState, setEditClientState] = useState('Telangana');
   const [editCreditLimit, setEditCreditLimit] = useState('200000');
   const [editClientImage, setEditClientImage] = useState('');
+  const [editClientCategory, setEditClientCategory] = useState('Clinic');
 
   const handleFileChange = (e, callback) => {
     const file = e.target.files[0];
@@ -219,6 +224,9 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
   // CRM logs state
   const [selectedCrmClientId, setSelectedCrmClientId] = useState(null);
   const [crmNote, setCrmNote] = useState('');
+  const [crmType, setCrmType] = useState('Visit');
+  const [crmSampleProductId, setCrmSampleProductId] = useState('');
+  const [crmSampleQty, setCrmSampleQty] = useState('1');
   const [isListening, setIsListening] = useState(false);
   const [selectedChallan, setSelectedChallan] = useState(null);
 
@@ -390,7 +398,8 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
       discountTier,
       state: clientState,
       creditLimit: parseFloat(customCreditLimit) || 200000,
-      image: clientImage
+      image: clientImage,
+      customerCategory: clientCategory
     });
     setClientName('');
     setContactPerson('');
@@ -399,6 +408,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
     setAddress('');
     setCustomCreditLimit('200000');
     setClientImage('');
+    setClientCategory('Clinic');
     alert('Client registered successfully!');
   };
 
@@ -414,6 +424,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
     setEditClientState(client.state || 'Telangana');
     setEditCreditLimit(client.creditLimit ? String(client.creditLimit) : '200000');
     setEditClientImage(client.image || '');
+    setEditClientCategory(client.customerCategory || 'Other');
 
     // Reset scroll position of modal to top
     setTimeout(() => {
@@ -437,7 +448,8 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
       discountTier: editDiscountTier,
       state: editClientState,
       creditLimit: parseFloat(editCreditLimit) || 200000,
-      image: editClientImage
+      image: editClientImage,
+      customerCategory: editClientCategory
     });
     setEditingClient(null);
     setEditClientImage('');
@@ -631,13 +643,35 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
     e.preventDefault();
     if (!selectedCrmClientId || !crmNote) return;
 
+    const isSample = crmType === 'Sample' && crmSampleProductId;
+    const sampleQtyNum = parseInt(crmSampleQty) || 1;
+
     await db.crmLogs.add({
       clientId: parseInt(selectedCrmClientId),
       notes: crmNote,
-      date: Date.now()
+      date: Date.now(),
+      type: crmType,
+      ...(isSample ? { productId: parseInt(crmSampleProductId), qty: sampleQtyNum } : {})
     });
 
+    if (isSample) {
+      const product = products.find(p => p.id === parseInt(crmSampleProductId));
+      if (product) {
+        await db.b2bProducts.update(product.id, { stock: Math.max(0, (product.stock || 0) - sampleQtyNum) });
+        await db.stockAdjustments.add({
+          productId: product.id,
+          type: 'Sample Given',
+          qtyChange: -sampleQtyNum,
+          reason: `Free sample given to client #${selectedCrmClientId}`,
+          date: Date.now()
+        });
+      }
+    }
+
     setCrmNote('');
+    setCrmType('Visit');
+    setCrmSampleProductId('');
+    setCrmSampleQty('1');
     alert('Interaction log added successfully!');
   };
 
@@ -1493,6 +1527,16 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
 
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Customer Category</label>
+                  <PremiumSelect value={clientCategory} onChange={(e) => setClientCategory(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                    {CUSTOMER_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </PremiumSelect>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('discountTier', lang)}</label>
                   <PremiumSelect value={discountTier} onChange={(e) => setDiscountTier(e.target.value)}
                     style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
@@ -1740,7 +1784,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                                 </div>
                               )}
                               <div style={{ flex: 1 }}>
-                                <span style={{ fontSize: '0.55rem', color: 'hsl(var(--text-dim))' }}>Client ID: #{c.id} • State: {c.state || 'Telangana'}</span>
+                                <span style={{ fontSize: '0.55rem', color: 'hsl(var(--text-dim))' }}>Client ID: #{c.id} • State: {c.state || 'Telangana'} • {c.customerCategory || 'Other'}</span>
                                 <h4 style={{ fontSize: '0.82rem', fontWeight: 'bold', margin: '2px 0 0' }}>{c.name}</h4>
                                 <p style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))', margin: '2px 0' }}>
                                   Tier: <strong style={{ color: 'hsl(var(--primary))' }}>{c.discountTier}</strong> • Contact: {c.contactPerson}
@@ -1790,12 +1834,18 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                           <span style={{ fontSize: '0.65rem', fontWeight: '800', color: 'hsl(var(--text-muted))', display: 'block', marginBottom: '4px' }}>Timeline Notes (CRM):</span>
                           {clientNotes.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '6px' }}>
-                              {clientNotes.map((note, idx) => (
-                                <div key={idx} style={{ fontSize: '0.62rem', borderLeft: '2px solid hsl(var(--primary))', paddingLeft: '6px' }}>
-                                  <span style={{ color: 'hsl(var(--text-dim))', fontSize: '0.52rem' }}>{new Date(note.date).toLocaleDateString()}:</span>
-                                  <div style={{ color: 'hsl(var(--text-primary))' }}>{note.notes}</div>
-                                </div>
-                              ))}
+                              {clientNotes.map((note, idx) => {
+                                const noteProduct = note.productId ? products.find(p => p.id === note.productId) : null;
+                                return (
+                                  <div key={idx} style={{ fontSize: '0.62rem', borderLeft: '2px solid hsl(var(--primary))', paddingLeft: '6px' }}>
+                                    <span style={{ color: 'hsl(var(--text-dim))', fontSize: '0.52rem' }}>{new Date(note.date).toLocaleDateString()} · {note.type || 'Visit'}:</span>
+                                    <div style={{ color: 'hsl(var(--text-primary))' }}>{note.notes}</div>
+                                    {noteProduct && (
+                                      <div style={{ color: 'hsl(var(--text-muted))', fontSize: '0.58rem', marginTop: 2 }}>Sample: {noteProduct.name} ×{note.qty || 1}</div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           ) : (
                             <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '6px' }}>No visit logs recorded.</span>
@@ -1861,9 +1911,10 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
           return (totalOrder - (o.amountPaid || 0)) > 0 && o.status !== 'Returned';
         });
 
-        const targetQuotaVal = 500000;
+        const targetQuotaVal = profile?.salesQuota || 500000;
         const repQuotaPct = Math.min(100, (finalSalesVal / targetQuotaVal) * 100);
-        const commissionEarned = finalSalesVal * 0.05; // 5% flat commission
+        const commissionRate = profile?.commissionRate ?? 0.05;
+        const commissionEarned = finalSalesVal * commissionRate;
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1930,7 +1981,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '14px' }}>
                 <div style={{ background: 'hsl(var(--border-color) / 10%)', padding: '10px', borderRadius: '10px' }}>
-                  <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', display: 'block' }}>{t('commissionEarned', lang)} (5%)</span>
+                  <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', display: 'block' }}>{t('commissionEarned', lang)} ({(commissionRate * 100).toFixed(1)}%)</span>
                   <strong style={{ fontSize: '0.9rem', color: 'hsl(var(--secondary))', fontFamily: 'Outfit' }}>₹{commissionEarned.toLocaleString('en-IN')}</strong>
                 </div>
                 <div style={{ background: 'hsl(var(--border-color) / 10%)', padding: '10px', borderRadius: '10px' }}>
@@ -2289,6 +2340,32 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
             </div>
             <form onSubmit={handleAddCrmLog} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Interaction Type</label>
+                <PremiumSelect value={crmType} onChange={(e) => setCrmType(e.target.value)}
+                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                  {CRM_LOG_TYPES.map(ty => <option key={ty} value={ty}>{ty}</option>)}
+                </PremiumSelect>
+              </div>
+
+              {crmType === 'Sample' && (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ flex: 2 }}>
+                    <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Sample Product</label>
+                    <PremiumSelect value={crmSampleProductId} onChange={(e) => setCrmSampleProductId(e.target.value)}
+                      style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                      <option value="">-- Select Product --</option>
+                      {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </PremiumSelect>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Qty</label>
+                    <input type="number" min="1" value={crmSampleQty} onChange={(e) => setCrmSampleQty(e.target.value)}
+                      style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                  </div>
+                </div>
+              )}
+
+              <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <label style={{ fontSize: '0.68rem', fontWeight: 'bold', margin: 0 }}>{t('crmNotes', lang)}</label>
                   <button
@@ -2393,7 +2470,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.7rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                 <div>
                   <strong style={{ color: '#475569', textTransform: 'uppercase', fontSize: '0.6rem' }}>{t('invoiceShipFrom', lang)}</strong>
-                  <p style={{ fontWeight: 'bold', margin: '2px 0 0' }}>{profile?.clinicName || 'Lal Dental Care Ltd.'}</p>
+                  <p style={{ fontWeight: 'bold', margin: '2px 0 0' }}>{profile?.clinicName || 'Simple Implant Ltd.'}</p>
                   <p style={{ margin: 0, color: '#64748b' }}>{profile?.clinicAddress || 'Hitech City, Hyderabad, 500081'}</p>
                 </div>
                 <div>
@@ -2556,7 +2633,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.7rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginTop: '10px' }}>
                 <div>
                   <strong style={{ color: '#475569', textTransform: 'uppercase', fontSize: '0.6rem' }}>Sender (Dispatch From)</strong>
-                  <p style={{ fontWeight: 'bold', margin: '2px 0 0' }}>{profile?.clinicName || 'Lal Dental Care Ltd.'}</p>
+                  <p style={{ fontWeight: 'bold', margin: '2px 0 0' }}>{profile?.clinicName || 'Simple Implant Ltd.'}</p>
                   <p style={{ margin: 0, color: '#64748b' }}>{profile?.clinicAddress || 'Hitech City, Hyderabad, 500081'}</p>
                 </div>
                 <div>
@@ -2609,7 +2686,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                   <span style={{ display: 'block', marginTop: '4px', color: '#64748b' }}>Receiver's Signature</span>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontWeight: 'bold', display: 'block' }}>For {profile?.clinicName || 'Lal Dental Care Ltd.'}</span>
+                  <span style={{ fontWeight: 'bold', display: 'block' }}>For {profile?.clinicName || 'Simple Implant Ltd.'}</span>
                   <div style={{ width: '150px', height: '24px' }}></div>
                   <span style={{ display: 'block', marginTop: '4px', color: '#64748b' }}>Authorized Signatory</span>
                 </div>
@@ -2679,6 +2756,16 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                     <option value="Gold">Gold (10%)</option>
                     <option value="Platinum">Platinum (15%)</option>
                     <option value="VIP">VIP (20%)</option>
+                  </PremiumSelect>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Customer Category</label>
+                  <PremiumSelect value={editClientCategory} onChange={(e) => setEditClientCategory(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                    {CUSTOMER_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </PremiumSelect>
                 </div>
               </div>

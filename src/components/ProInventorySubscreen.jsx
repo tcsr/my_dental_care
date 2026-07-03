@@ -849,26 +849,28 @@ export default function ProInventorySubscreen({ lang }) {
             )}
 
             {filteredProducts.length > itemsPerPage && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  disabled={catalogPage === 1}
-                  onClick={() => setCatalogPage(prev => Math.max(1, prev - 1))}
-                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: catalogPage === 1 ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: catalogPage === 1 ? 'not-allowed' : 'pointer' }}
-                >
-                  Prev
-                </button>
-                <span style={{ fontSize: '0.72rem', alignSelf: 'center', color: 'hsl(var(--text-muted))' }}>
-                  Page {catalogPage} of {totalCatalogPages}
-                </span>
-                <button
-                  type="button"
-                  disabled={catalogPage === totalCatalogPages}
-                  onClick={() => setCatalogPage(prev => Math.min(totalCatalogPages, prev + 1))}
-                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: catalogPage === totalCatalogPages ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: catalogPage === totalCatalogPages ? 'not-allowed' : 'pointer' }}
-                >
-                  Next
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '14px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', padding: '4px', borderRadius: '999px', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
+                  <button
+                    type="button"
+                    disabled={catalogPage === 1}
+                    onClick={() => setCatalogPage(prev => Math.max(1, prev - 1))}
+                    style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', border: 'none', background: catalogPage === 1 ? 'transparent' : 'hsl(var(--primary-glow))', color: catalogPage === 1 ? 'hsl(var(--text-dim))' : 'hsl(var(--primary))', cursor: catalogPage === 1 ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'hsl(var(--text-primary))', padding: '0 12px', minWidth: '92px', textAlign: 'center' }}>
+                    Page {catalogPage} of {totalCatalogPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={catalogPage === totalCatalogPages}
+                    onClick={() => setCatalogPage(prev => Math.min(totalCatalogPages, prev + 1))}
+                    style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', border: 'none', background: catalogPage === totalCatalogPages ? 'transparent' : 'hsl(var(--primary-glow))', color: catalogPage === totalCatalogPages ? 'hsl(var(--text-dim))' : 'hsl(var(--primary))', cursor: catalogPage === totalCatalogPages ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -995,26 +997,28 @@ export default function ProInventorySubscreen({ lang }) {
             )}
 
             {filteredPOs.length > itemsPerPage && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  disabled={poPage === 1}
-                  onClick={() => setPoPage(prev => Math.max(1, prev - 1))}
-                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: poPage === 1 ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: poPage === 1 ? 'not-allowed' : 'pointer' }}
-                >
-                  Prev
-                </button>
-                <span style={{ fontSize: '0.72rem', alignSelf: 'center', color: 'hsl(var(--text-muted))' }}>
-                  Page {poPage} of {totalPoPages}
-                </span>
-                <button
-                  type="button"
-                  disabled={poPage === totalPoPages}
-                  onClick={() => setPoPage(prev => Math.min(totalPoPages, prev + 1))}
-                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: poPage === totalPoPages ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: poPage === totalPoPages ? 'not-allowed' : 'pointer' }}
-                >
-                  Next
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '14px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', padding: '4px', borderRadius: '999px', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
+                  <button
+                    type="button"
+                    disabled={poPage === 1}
+                    onClick={() => setPoPage(prev => Math.max(1, prev - 1))}
+                    style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', border: 'none', background: poPage === 1 ? 'transparent' : 'hsl(var(--primary-glow))', color: poPage === 1 ? 'hsl(var(--text-dim))' : 'hsl(var(--primary))', cursor: poPage === 1 ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'hsl(var(--text-primary))', padding: '0 12px', minWidth: '92px', textAlign: 'center' }}>
+                    Page {poPage} of {totalPoPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={poPage === totalPoPages}
+                    onClick={() => setPoPage(prev => Math.min(totalPoPages, prev + 1))}
+                    style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', border: 'none', background: poPage === totalPoPages ? 'transparent' : 'hsl(var(--primary-glow))', color: poPage === totalPoPages ? 'hsl(var(--text-dim))' : 'hsl(var(--primary))', cursor: poPage === totalPoPages ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1115,26 +1119,28 @@ export default function ProInventorySubscreen({ lang }) {
             )}
 
             {filteredTransfers.length > itemsPerPage && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  disabled={transferPage === 1}
-                  onClick={() => setTransferPage(prev => Math.max(1, prev - 1))}
-                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: transferPage === 1 ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: transferPage === 1 ? 'not-allowed' : 'pointer' }}
-                >
-                  Prev
-                </button>
-                <span style={{ fontSize: '0.72rem', alignSelf: 'center', color: 'hsl(var(--text-muted))' }}>
-                  Page {transferPage} of {totalTransferPages}
-                </span>
-                <button
-                  type="button"
-                  disabled={transferPage === totalTransferPages}
-                  onClick={() => setTransferPage(prev => Math.min(totalTransferPages, prev + 1))}
-                  style={{ padding: '4px 8px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: transferPage === totalTransferPages ? 'hsl(var(--text-muted))' : 'hsl(var(--text-primary))', cursor: transferPage === totalTransferPages ? 'not-allowed' : 'pointer' }}
-                >
-                  Next
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '14px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', padding: '4px', borderRadius: '999px', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
+                  <button
+                    type="button"
+                    disabled={transferPage === 1}
+                    onClick={() => setTransferPage(prev => Math.max(1, prev - 1))}
+                    style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', border: 'none', background: transferPage === 1 ? 'transparent' : 'hsl(var(--primary-glow))', color: transferPage === 1 ? 'hsl(var(--text-dim))' : 'hsl(var(--primary))', cursor: transferPage === 1 ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'hsl(var(--text-primary))', padding: '0 12px', minWidth: '92px', textAlign: 'center' }}>
+                    Page {transferPage} of {totalTransferPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={transferPage === totalTransferPages}
+                    onClick={() => setTransferPage(prev => Math.min(totalTransferPages, prev + 1))}
+                    style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', border: 'none', background: transferPage === totalTransferPages ? 'transparent' : 'hsl(var(--primary-glow))', color: transferPage === totalTransferPages ? 'hsl(var(--text-dim))' : 'hsl(var(--primary))', cursor: transferPage === totalTransferPages ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
               </div>
             )}
           </div>
