@@ -1804,3 +1804,57 @@ body.is-browser main button.carousel-nav-btn {
   transform: translateY(-1.5px) !important;
   box-shadow: 0 6px 16px rgba(0,0,0,0.06) !important;
 }
+
+/* Slim scroller for sidebar */
+.sidebar-scroller::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroller::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 25%);
+  border-radius: 10px;
+}
+
+.sidebar-scroller::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 50%);
+}
+
+/* Firefox support */
+.sidebar-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 25%) transparent;
+}
+
+/* Force modal vertical alignment and height overrides on desktop */
+body.is-browser .modal-overlay-container {
+  align-items: flex-start !important;
+  padding-top: 10vh !important;
+}
+
+body.is-browser .modal-content-card {
+  height: auto !important;
+  min-height: auto !important;
+  flex: none !important;
+  justify-content: flex-start !important;
+  gap: 16px !important;
+}
+
+body.is-browser .modal-content-card form {
+  height: auto !important;
+  flex: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+}
+
+body.is-browser .modal-content-card form > div {
+  height: auto !important;
+  flex: none !important;
+}
+
+

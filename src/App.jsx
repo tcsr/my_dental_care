@@ -499,7 +499,9 @@ export default function App() {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(14, 165, 233, 0.15)"/>
               <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" stroke="currentColor" fill="none"/>
             </svg>
-            <span style={{ color: '#0f172a' }}>Simple Implant</span>
+            <span className="gradient-text app-title" style={{ fontFamily: 'Outfit', fontWeight: '800', fontSize: '1.15rem', letterSpacing: '-0.01em', lineHeight: 1.1 }}>
+              {t('portalTitle', lang)}
+            </span>
           </h2>
           <button onClick={() => setIsSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
             <X size={20} />
@@ -573,7 +575,7 @@ export default function App() {
             </div>
           )}
 
-          <div style={{ borderTop: '1px solid hsl(var(--border-color))', marginTop: '16px', paddingTop: '16px', flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+          <div className="sidebar-scroller" style={{ borderTop: '1px solid hsl(var(--border-color))', marginTop: '16px', paddingTop: '16px', flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
             <div className="sidebar-menu-list">
               {!isLoggedIn ? (
                 /* ── GUEST NAV ── */

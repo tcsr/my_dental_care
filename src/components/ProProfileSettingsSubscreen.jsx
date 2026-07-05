@@ -176,6 +176,22 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
         console.warn('Warehouse sync failed:', e);
       }
 
+      // 0a. Sync GST Rates between Supabase and local Dexie
+      try {
+        const { data: remoteRates } = await supabase.from('gst_rates').select('*');
+        if (remoteRates && remoteRates.length > 0) {
+          const ratesList = remoteRates.map(r => r.rate).sort((a, b) => a - b);
+          const defaultRateObj = remoteRates.find(r => r.is_default);
+          const defaultRate = defaultRateObj ? defaultRateObj.rate : ratesList[0];
+          
+          const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
+          await db.userProfile.put({ key: `${prefix}gstRates`, value: ratesList });
+          await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: defaultRate });
+        }
+      } catch (e) {
+        console.warn('GST rates sync failed:', e);
+      }
+
       // 1. Fetch Approved Doctors from Supabase
       const { data: remoteDoctors, error: docErr } = await supabase
         .from('profiles')

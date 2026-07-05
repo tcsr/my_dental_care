@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../utils/db';
+import { supabase } from '../utils/supabase';
 import { Trash2, Edit3, X, MapPin, Warehouse, Settings, Download, Upload } from 'lucide-react';
 import PremiumSelect from './ui/PremiumSelect';
 import { t } from '../utils/i18n';
@@ -17,6 +18,7 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
   const [gstRates, setGstRates] = useState(profile.gstRates || [5, 12, 18, 28]);
   const [defaultGstRate, setDefaultGstRate] = useState(profile.defaultGstRate || 12);
   const [loading, setLoading] = useState(true);
+  const [firstLoad, setFirstLoad] = useState(true);
 
   // Form State - Sales & Clinical Settings
   const [commissionRate, setCommissionRate] = useState(((profile.commissionRate ?? 0.05) * 100).toString());
@@ -44,21 +46,51 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
   const [editGstRateValue, setEditGstRateValue] = useState('');
 
   const loadData = async () => {
-    setLoading(true);
+    if (firstLoad) {
+      setLoading(true);
+    }
     const dexieStates = await db.b2bStates.toArray();
     setStates(dexieStates || []);
     const dexieWarehouses = await db.b2bWarehouses.toArray();
     setWarehouses(dexieWarehouses || []);
     
-    setGstRates(profile.gstRates || [5, 12, 18, 28]);
-    setDefaultGstRate(profile.defaultGstRate || 12);
+    const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
+    const dbRates = await db.userProfile.get(`${prefix}gstRates`) || await db.userProfile.get('gstRates');
+    const dbDefault = await db.userProfile.get(`${prefix}defaultGstRate`) || await db.userProfile.get('defaultGstRate');
+
+    setGstRates(dbRates?.value || profile.gstRates || [5, 12, 18, 28]);
+    setDefaultGstRate(dbDefault?.value || profile.defaultGstRate || 12);
     setCommissionRate(((profile.commissionRate ?? 0.05) * 100).toString());
     setSalesQuota((profile.salesQuota || 500000).toString());
     setTorqueNarrow((profile.torqueNarrow ?? 20).toString());
     setTorqueStandard((profile.torqueStandard ?? 30).toString());
     setTorqueWide((profile.torqueWide ?? 35).toString());
     setLoading(false);
+    setFirstLoad(false);
   };
+
+  // Sync GST rates from Supabase on mount / user login to avoid infinite loop
+  useEffect(() => {
+    async function syncRates() {
+      try {
+        const { data: remoteRates, error: remoteErr } = await supabase.from('gst_rates').select('*');
+        if (!remoteErr && remoteRates && remoteRates.length > 0) {
+          const ratesList = remoteRates.map(r => r.rate).sort((a, b) => a - b);
+          const defaultRateObj = remoteRates.find(r => r.is_default);
+          const defaultRate = defaultRateObj ? defaultRateObj.rate : ratesList[0];
+          
+          const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
+          await db.userProfile.put({ key: `${prefix}gstRates`, value: ratesList });
+          await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: defaultRate });
+        }
+      } catch (e) {
+        console.warn('Failed to sync GST rates from Supabase:', e);
+      }
+    }
+    if (authUser?.user?.id) {
+      syncRates();
+    }
+  }, [authUser?.user?.id]);
 
   useEffect(() => {
     loadData();
@@ -82,8 +114,14 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
     const updated = [...gstRates, rate].sort((a, b) => a - b);
     const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
     await db.userProfile.put({ key: `${prefix}gstRates`, value: updated });
+    
+    try {
+      await supabase.from('gst_rates').insert({ rate, is_default: false });
+    } catch (err) {
+      console.warn('Failed to insert GST rate into Supabase:', err);
+    }
+    
     setNewGstRate('');
-    loadData();
   };
 
   const handleUpdateGstRate = async (e) => {
@@ -98,8 +136,14 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
     if (defaultGstRate === oldRate) {
       await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: newRate });
     }
+    
+    try {
+      await supabase.from('gst_rates').update({ rate: newRate }).eq('rate', oldRate);
+    } catch (err) {
+      console.warn('Failed to update GST rate in Supabase:', err);
+    }
+    
     setEditingGstRate(null);
-    loadData();
   };
 
   const handleDeleteGstRate = async (rateToDelete) => {
@@ -110,7 +154,12 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
       if (defaultGstRate === rateToDelete && updated.length > 0) {
         await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: updated[0] });
       }
-      loadData();
+      
+      try {
+        await supabase.from('gst_rates').delete().eq('rate', rateToDelete);
+      } catch (err) {
+        console.warn('Failed to delete GST rate from Supabase:', err);
+      }
     }
   };
 
@@ -118,7 +167,13 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
     const rateInt = parseInt(rate);
     const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
     await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: rateInt });
-    loadData();
+    
+    try {
+      await supabase.from('gst_rates').update({ is_default: false }).neq('rate', rateInt);
+      await supabase.from('gst_rates').update({ is_default: true }).eq('rate', rateInt);
+    } catch (err) {
+      console.warn('Failed to update default GST rate in Supabase:', err);
+    }
   };
 
   const handleSaveSalesClinicalSettings = async (e) => {
@@ -489,16 +544,16 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
       )}
 
       {editingState && (
-        <div className="modal-overlay-container" style={{ zIndex: 9999 }}>
-          <div className="modal-content-card animate-fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="modal-overlay-container" style={{ zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '10vh' }}>
+          <div className="modal-content-card animate-fade-in" style={{ minHeight: 'auto', height: 'auto', flex: 'none', maxWidth: '420px', width: '100%', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'flex-start' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 'none' }}>
               <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', fontFamily: 'Outfit' }}>✏️ Edit State</h3>
               <button onClick={() => setEditingState(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleUpdateState} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div>
+            <form onSubmit={handleUpdateState} style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 'none', height: 'auto', justifyContent: 'flex-start' }}>
+              <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>{t('stateName', lang)}</label>
                 <input type="text" required value={editStateName} onChange={(e) => setEditStateName(e.target.value)}
                   style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
@@ -512,21 +567,21 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
       )}
 
       {editingWh && (
-        <div className="modal-overlay-container" style={{ zIndex: 9999 }}>
-          <div className="modal-content-card animate-fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="modal-overlay-container" style={{ zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '10vh' }}>
+          <div className="modal-content-card animate-fade-in" style={{ minHeight: 'auto', height: 'auto', flex: 'none', maxWidth: '420px', width: '100%', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'flex-start' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 'none' }}>
               <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', fontFamily: 'Outfit' }}>✏️ Edit Warehouse</h3>
               <button onClick={() => setEditingWh(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleUpdateWarehouse} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div>
+            <form onSubmit={handleUpdateWarehouse} style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 'none', height: 'auto', justifyContent: 'flex-start' }}>
+              <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>{t('warehouseName', lang)}</label>
                 <input type="text" required value={editWhName} onChange={(e) => setEditWhName(e.target.value)}
                   style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
               </div>
-              <div>
+              <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>{t('warehouseAddress', lang)}</label>
                 <input type="text" value={editWhAddress} onChange={(e) => setEditWhAddress(e.target.value)}
                   style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
@@ -540,16 +595,16 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
       )}
 
       {editingGstRate !== null && (
-        <div className="modal-overlay-container" style={{ zIndex: 9999 }}>
-          <div className="modal-content-card animate-fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="modal-overlay-container" style={{ zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '10vh' }}>
+          <div className="modal-content-card animate-fade-in" style={{ minHeight: 'auto', height: 'auto', flex: 'none', maxWidth: '420px', width: '100%', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'flex-start' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 'none' }}>
               <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', fontFamily: 'Outfit' }}>✏️ Edit GST Rate</h3>
               <button onClick={() => setEditingGstRate(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleUpdateGstRate} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div>
+            <form onSubmit={handleUpdateGstRate} style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 'none', height: 'auto', justifyContent: 'flex-start' }}>
+              <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>GST Rate (%)</label>
                 <input type="number" required value={editGstRateValue} onChange={(e) => setEditGstRateValue(e.target.value)} min="0" max="100"
                   style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
