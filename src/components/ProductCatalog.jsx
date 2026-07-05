@@ -1,20 +1,29 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../utils/supabase';
-import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight, Wrench, FlaskConical, Shield, Settings } from 'lucide-react';
 import PremiumLoader from './ui/PremiumLoader';
 import EmptyStateCard from './EmptyStateCard';
 
 const CATEGORIES = ['All', 'Implants', 'Instruments', 'Materials', 'PPE', 'Equipment', 'Consumables'];
 
+function ToothIcon(props) {
+  return (
+    <svg width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fillOpacity="0.15" fill="currentColor"/>
+      <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" fill="none"/>
+    </svg>
+  );
+}
+
 const CAT = {
-  Implants:    { bg: 'rgba(99,102,241,0.12)',  color: '#6366f1', icon: '🦷' },
-  Instruments: { bg: 'rgba(14,165,233,0.12)',  color: '#0ea5e9', icon: '🔧' },
-  Materials:   { bg: 'rgba(16,185,129,0.12)',  color: '#10b981', icon: '🧪' },
-  PPE:         { bg: 'rgba(245,158,11,0.12)',  color: '#f59e0b', icon: '🧤' },
-  Equipment:   { bg: 'rgba(168,85,247,0.12)',  color: '#a855f7', icon: '⚙️' },
-  Consumables: { bg: 'rgba(236,72,153,0.12)', color: '#ec4899', icon: '📦' },
+  Implants:    { bg: 'rgba(99,102,241,0.12)',  color: '#6366f1', icon: ToothIcon },
+  Instruments: { bg: 'rgba(14,165,233,0.12)',  color: '#0ea5e9', icon: Wrench },
+  Materials:   { bg: 'rgba(16,185,129,0.12)',  color: '#10b981', icon: FlaskConical },
+  PPE:         { bg: 'rgba(245,158,11,0.12)',  color: '#f59e0b', icon: Shield },
+  Equipment:   { bg: 'rgba(168,85,247,0.12)',  color: '#a855f7', icon: Settings },
+  Consumables: { bg: 'rgba(236,72,153,0.12)', color: '#ec4899', icon: Package },
 };
-const DEFAULT_CAT = { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', icon: '📦' };
+const DEFAULT_CAT = { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', icon: Package };
 
 
 const splitImageUrls = (imageUrlStr) => {
@@ -399,36 +408,38 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                 key={p.id} 
                 onClick={() => { setSelectedProduct(p); setCarouselIndex(0); }}
                 style={{
-                  background: 'hsl(var(--bg-card))', borderRadius: 16, padding: '14px 12px',
+                  background: 'hsl(var(--bg-card))', borderRadius: 'var(--radius-lg)', padding: '14px 12px',
                   display: 'flex', flexDirection: 'column', gap: 8,
                   border: inCart ? '1.5px solid #0ea5e9' : '1px solid hsl(var(--border-color))',
-                  boxShadow: inCart ? '0 4px 16px rgba(14,165,233,0.15)' : '0 2px 8px rgba(15,23,42,0.04)',
+                  boxShadow: inCart ? '0 4px 16px rgba(14,165,233,0.15)' : 'var(--shadow-xs)',
                   position: 'relative', overflow: 'hidden', transition: 'all 0.2s',
                   cursor: 'pointer'
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = inCart 
-                    ? '0 6px 20px rgba(14,165,233,0.22)' 
-                    : '0 6px 16px rgba(15,23,42,0.08)';
+                  e.currentTarget.style.boxShadow = inCart
+                    ? '0 6px 20px rgba(14,165,233,0.22)'
+                    : 'var(--shadow-sm)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = inCart 
-                    ? '0 4px 16px rgba(14,165,233,0.15)' 
-                    : '0 2px 8px rgba(15,23,42,0.04)';
+                  e.currentTarget.style.boxShadow = inCart
+                    ? '0 4px 16px rgba(14,165,233,0.15)'
+                    : 'var(--shadow-xs)';
                 }}
               >
                 {/* Product Image Thumbnail */}
-                <div style={{ width: '100%', height: 110, borderRadius: 12, overflow: 'hidden', background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '100%', height: 110, borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {images && images.length > 0 ? (
                     <img src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
                   ) : (
-                    <div style={{ fontSize: '2.5rem', color: cs.color }}>{cs.icon}</div>
+                    <div style={{ color: cs.color, display: 'flex' }}>
+                      {typeof cs.icon === 'string' ? <span style={{ fontSize: '2.5rem' }}>{cs.icon}</span> : <cs.icon size={40} />}
+                    </div>
                   )}
                 </div>
 
-                <span style={{ fontSize: '0.55rem', fontWeight: 800, color: cs.color, background: cs.bg, padding: '2px 7px', borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.06em', alignSelf: 'flex-start' }}>
+                <span style={{ fontSize: '0.55rem', fontWeight: 800, color: cs.color, background: cs.bg, padding: '2px 7px', borderRadius: 'var(--radius-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', alignSelf: 'flex-start' }}>
                   {p.category || 'General'}
                 </span>
 
@@ -446,7 +457,7 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                   <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1rem', color: 'hsl(var(--text-primary))' }}>
                     ₹{p.price?.toLocaleString('en-IN')}
                   </span>
-                  <span style={{ fontSize: '0.58rem', fontWeight: 800, padding: '2px 7px', borderRadius: 6, background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
+                  <span style={{ fontSize: '0.58rem', fontWeight: 800, padding: '2px 7px', borderRadius: 'var(--radius-xs)', background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
                     {outOfStock ? 'Out of Stock' : lowStock ? `${p.stock_qty} left` : 'In Stock'}
                   </span>
                 </div>
@@ -463,7 +474,7 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                     </button>
                     <span 
                       onClick={(e) => { e.stopPropagation(); setCartOpen(true); }} 
-                      style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 6px', borderRadius: 6, transition: 'background 0.15s' }}
+                      style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 6px', borderRadius: 'var(--radius-xs)', transition: 'background 0.15s' }}
                       title="View Cart"
                     >{inCart.qty}</span>
                     <button 
@@ -558,8 +569,10 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                 cartItems.map(({ product: p, qty }) => {
                   const cs = catConfig[p.category] || DEFAULT_CAT;
                   return (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'hsl(var(--bg-dark))', borderRadius: 14, border: '1px solid hsl(var(--border-color))' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: cs.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>{cs.icon}</div>
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'hsl(var(--bg-dark))', borderRadius: 'var(--radius-md)', border: '1px solid hsl(var(--border-color))' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: cs.bg, color: cs.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
+                        {typeof cs.icon === 'string' ? cs.icon : <cs.icon size={17} />}
+                      </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'hsl(var(--text-primary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
                         <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', marginTop: 1 }}>₹{p.price?.toLocaleString('en-IN')}</div>
@@ -662,8 +675,8 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                     onError={(e) => { e.target.style.display = 'none'; }}
                   />
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, opacity: 0.45 }}>
-                    <div style={{ fontSize: '4rem' }}>{cs.icon}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, opacity: 0.45, color: cs.color }}>
+                    {typeof cs.icon === 'string' ? <span style={{ fontSize: '4rem' }}>{cs.icon}</span> : <cs.icon size={64} />}
                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'hsl(var(--text-muted))', fontFamily: 'Outfit' }}>No images uploaded</span>
                   </div>
                 )}
@@ -726,7 +739,7 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
               <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                   <div>
-                    <span style={{ fontSize: '0.6rem', fontWeight: 800, color: cs.color, background: cs.bg, padding: '3px 8px', borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'inline-block', marginBottom: 6 }}>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 800, color: cs.color, background: cs.bg, padding: '3px 8px', borderRadius: 'var(--radius-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'inline-block', marginBottom: 6 }}>
                       {selectedProduct.category || 'General'}
                     </span>
                     <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, lineHeight: 1.3, wordBreak: 'break-word' }}>
@@ -747,16 +760,16 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
 
                 {/* Badges / Stock */}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
+                  <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '3px 8px', borderRadius: 'var(--radius-xs)', background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
                     {outOfStock ? 'Out of Stock' : lowStock ? `Only ${selectedProduct.stock_qty} left` : 'In Stock'}
                   </span>
                   {selectedProduct.sku && (
-                    <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-muted))' }}>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-xs)', background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-muted))' }}>
                       SKU: {selectedProduct.sku}
                     </span>
                   )}
                   {selectedProduct.is_serialized && (
-                    <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgba(168,85,247,0.08)', color: '#a855f7' }}>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-xs)', background: 'rgba(168,85,247,0.08)', color: '#a855f7' }}>
                       Tracked by Serial
                     </span>
                   )}
@@ -830,7 +843,7 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <span 
                           onClick={() => { setSelectedProduct(null); setCartOpen(true); }}
-                          style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 8px', borderRadius: 6, transition: 'background 0.15s' }}
+                          style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 8px', borderRadius: 'var(--radius-xs)', transition: 'background 0.15s' }}
                           title="View Cart"
                         >{inCart.qty}</span>
                         <span style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>IN CART</span>

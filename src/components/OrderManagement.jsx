@@ -293,13 +293,13 @@ export default function OrderManagement() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
         {/* Active Stats */}
         <div style={{ 
-          background: 'hsl(var(--bg-card))', borderRadius: '16px', padding: '20px', 
+          background: 'hsl(var(--bg-card))', borderRadius: 'var(--radius-lg)', padding: '20px',
           border: '1px solid hsl(var(--border-color))', borderTop: '4px solid #f59e0b',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)', display: 'flex', flexDirection: 'column',
+          boxShadow: 'var(--shadow-xs)', display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', textAlign: 'center', transition: 'transform 0.2s',
           cursor: 'default'
         }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-          <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
             <Clock size={20} />
           </div>
           <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Active Orders</div>
@@ -308,13 +308,13 @@ export default function OrderManagement() {
 
         {/* Shipped Stats */}
         <div style={{ 
-          background: 'hsl(var(--bg-card))', borderRadius: '16px', padding: '20px', 
+          background: 'hsl(var(--bg-card))', borderRadius: 'var(--radius-lg)', padding: '20px',
           border: '1px solid hsl(var(--border-color))', borderTop: '4px solid #6366f1',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)', display: 'flex', flexDirection: 'column',
+          boxShadow: 'var(--shadow-xs)', display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', textAlign: 'center', transition: 'transform 0.2s',
           cursor: 'default'
         }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-          <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
             <Truck size={20} />
           </div>
           <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>In Transit</div>
@@ -323,13 +323,13 @@ export default function OrderManagement() {
 
         {/* Revenue Stats */}
         <div style={{ 
-          background: 'hsl(var(--bg-card))', borderRadius: '16px', padding: '20px', 
+          background: 'hsl(var(--bg-card))', borderRadius: 'var(--radius-lg)', padding: '20px',
           border: '1px solid hsl(var(--border-color))', borderTop: '4px solid #10b981',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)', display: 'flex', flexDirection: 'column',
+          boxShadow: 'var(--shadow-xs)', display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', textAlign: 'center', transition: 'transform 0.2s',
           cursor: 'default'
         }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-          <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
             <TrendingUp size={20} />
           </div>
           <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Total Value</div>
@@ -356,7 +356,7 @@ export default function OrderManagement() {
           style={{
             width: '100%',
             padding: '12px 14px 12px 42px',
-            borderRadius: 14,
+            borderRadius: 'var(--radius-sm)',
             border: searchFocused ? '1.5px solid hsl(var(--primary))' : '1.5px solid hsl(var(--border-color))',
             background: 'hsl(var(--bg-card))',
             color: 'hsl(var(--text-primary))',
@@ -365,7 +365,7 @@ export default function OrderManagement() {
             fontWeight: 500,
             outline: 'none',
             transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: searchFocused ? '0 4px 18px hsl(var(--primary-glow))' : '0 2px 6px rgba(0,0,0,0.01)'
+            boxShadow: searchFocused ? '0 4px 18px hsl(var(--primary-glow))' : 'var(--shadow-xs)'
           }}
         />
         {searchQuery && (
@@ -543,9 +543,9 @@ export default function OrderManagement() {
                   {/* Stepper tracking progress bar inside each card (Visual & Interactive!) */}
                   {order.status !== 'cancelled' && (
                     <div style={{ 
-                      background: 'hsl(var(--bg-dark) / 50%)', 
-                      borderRadius: 14, 
-                      padding: '12px 14px', 
+                      background: 'hsl(var(--bg-dark) / 50%)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '12px 14px',
                       margin: '14px 0', 
                       border: '1px solid hsl(var(--border-color) / 40%)' 
                     }}>
@@ -830,16 +830,16 @@ export default function OrderManagement() {
         <div className="modal-overlay-container animate-fade-in" style={{ zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', position: 'fixed', inset: 0 }}>
           <div onClick={() => setDispatchModal(null)} style={{ position: 'absolute', inset: 0 }} />
           
-          <div className="confirm-dialog-card" style={{ 
-            background: 'rgba(255, 255, 255, 0.92)', 
+          <div className="confirm-dialog-card" style={{
+            background: 'hsl(var(--bg-card) / 92%)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.7)', 
-            padding: '24px 22px', 
-            maxWidth: 380, 
-            width: 'calc(100% - 32px)', 
-            borderRadius: 24, 
-            boxShadow: '0 20px 40px rgba(15,23,42,0.15)',
+            border: '1px solid rgba(255, 255, 255, 0.7)',
+            padding: '24px 22px',
+            maxWidth: 380,
+            width: 'calc(100% - 32px)',
+            borderRadius: 'var(--radius-2xl)',
+            boxShadow: 'var(--shadow-lg)',
             position: 'relative',
             zIndex: 100001,
             animation: 'fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'

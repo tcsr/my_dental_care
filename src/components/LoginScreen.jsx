@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../utils/supabase';
-import { Eye, EyeOff, Mail, Lock, User, Building2, Phone, MapPin, FileText, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Building2, Phone, MapPin, FileText, ArrowRight, ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default function LoginScreen({ onLogin, isModal = false }) {
   const [screen, setScreen] = useState('login'); // 'login' | 'register' | 'pending' | 'forgot'
@@ -333,7 +333,10 @@ export default function LoginScreen({ onLogin, isModal = false }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 12px 32px rgba(14,165,233,0.35)',
         }}>
-          <span style={{ fontSize: '2rem' }}>🦷</span>
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(255,255,255,0.2)"/>
+            <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" stroke="#fff" fill="none"/>
+          </svg>
         </div>
         <h1 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.65rem', background: 'linear-gradient(135deg, #0284c7, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '0 0 6px' }}>
           Simple Implant
@@ -408,7 +411,7 @@ function Wrapper({ children, isModal }) {
     }}>
       <div style={{
         width: '100%', maxWidth: 420, background: '#fff',
-        borderRadius: 24, padding: '36px 32px',
+        borderRadius: 'var(--radius-2xl)', padding: '36px 32px',
         boxShadow: '0 24px 60px rgba(0,0,0,0.1), 0 4px 16px rgba(0,0,0,0.06)',
         border: '1px solid rgba(255,255,255,0.8)'
       }}>
@@ -428,7 +431,7 @@ function PremiumInput({ icon, label, required, type = 'text', placeholder, value
       <div className="premium-input-container" style={{
         display: 'flex', alignItems: 'center', gap: 10,
         border: `1.5px solid ${focused ? '#0ea5e9' : '#e2e8f0'}`,
-        borderRadius: 10, padding: '0 12px', background: focused ? '#f0f9ff' : '#f8fafc',
+        borderRadius: 'var(--radius-sm)', padding: '0 12px', background: focused ? '#f0f9ff' : '#f8fafc',
         transition: 'all 0.2s', boxShadow: focused ? '0 0 0 3px rgba(14,165,233,0.1)' : 'none'
       }}>
         <span style={{ color: focused ? '#0ea5e9' : '#94a3b8', display: 'flex', flexShrink: 0, transition: 'color 0.2s' }}>{icon}</span>
@@ -452,17 +455,17 @@ function ErrorBox({ msg }) {
   return (
     <div style={{
       background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
-      borderRadius: 10, padding: '10px 14px', fontSize: '0.75rem', color: '#dc2626',
+      borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '0.75rem', color: '#dc2626',
       marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500
     }}>
-      ⚠️ {msg}
+      <AlertTriangle size={15} style={{ flexShrink: 0 }} /> {msg}
     </div>
   );
 }
 
 const btnPrimary = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-  padding: '13px 20px', borderRadius: 12, border: 'none', cursor: 'pointer',
+  padding: '12px 20px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
   background: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)',
   color: '#fff', fontWeight: 800, fontSize: '0.82rem', fontFamily: 'Outfit',
   boxShadow: '0 4px 16px rgba(14,165,233,0.35)', transition: 'all 0.2s',
@@ -471,7 +474,7 @@ const btnPrimary = {
 
 const btnOutline = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-  padding: '11px 20px', borderRadius: 12, cursor: 'pointer',
+  padding: '12px 20px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
   background: 'transparent', border: '1.5px solid #e2e8f0',
   color: '#374151', fontWeight: 700, fontSize: '0.78rem', fontFamily: 'Outfit',
   transition: 'all 0.2s', width: '100%'

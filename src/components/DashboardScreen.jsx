@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import {
   TrendingUp, Users, AlertTriangle,
-  Clock, Truck, Package
+  Clock, Truck, Package, Flame
 } from 'lucide-react';
 import PremiumLoader from './ui/PremiumLoader';
 import EmptyStateCard from './EmptyStateCard';
@@ -129,8 +129,8 @@ export default function DashboardScreen({ authUser, onNavigate }) {
 
     return (
       <div className="glass-card" style={{ padding: '16px 18px', margin: 0 }}>
-        <h4 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '0.82rem', color: 'hsl(var(--text-primary))', margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          📈 7-Day Sales Trend (₹)
+        <h4 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '0.82rem', color: 'hsl(var(--text-primary))', margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <TrendingUp size={14} color="hsl(var(--primary))" /> 7-Day Sales Trend (₹)
         </h4>
         <div style={{ position: 'relative', width: '100%' }}>
           <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
@@ -197,8 +197,8 @@ export default function DashboardScreen({ authUser, onNavigate }) {
 
     return (
       <div className="glass-card" style={{ padding: '16px 18px', margin: 0 }}>
-        <h4 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '0.82rem', color: 'hsl(var(--text-primary))', margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          🔥 Top Selling Products
+        <h4 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '0.82rem', color: 'hsl(var(--text-primary))', margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Flame size={14} color="#f59e0b" /> Top Selling Products
         </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {data.map((item, idx) => {
@@ -212,7 +212,7 @@ export default function DashboardScreen({ authUser, onNavigate }) {
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'hsl(var(--text-primary))', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '80%' }}>
                     {idx + 1}. {item.name}
                   </span>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: barColor, background: `${barColor}10`, padding: '2px 8px', borderRadius: 6 }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: barColor, background: `${barColor}10`, padding: '2px 8px', borderRadius: 'var(--radius-xs)' }}>
                     {item.qty} sold
                   </span>
                 </div>
@@ -247,7 +247,7 @@ export default function DashboardScreen({ authUser, onNavigate }) {
 
       {/* Revenue hero */}
       <div style={{
-        borderRadius: 24, padding: '24px 20px', marginBottom: 18,
+        borderRadius: 'var(--radius-2xl)', padding: '24px 20px', marginBottom: 18,
         background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)',
         boxShadow: '0 10px 30px hsl(var(--primary) / 25%), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
         position: 'relative', overflow: 'hidden',
@@ -286,7 +286,7 @@ export default function DashboardScreen({ authUser, onNavigate }) {
 
       {/* Low stock alert */}
       {lowStock.length > 0 && (
-        <div style={{ background: 'hsl(var(--color-hyper) / 5%)', border: '1px solid hsl(var(--color-hyper) / 20%)', borderRadius: 16, padding: '14px 16px', marginBottom: 16 }}>
+        <div style={{ background: 'hsl(var(--color-hyper) / 5%)', border: '1px solid hsl(var(--color-hyper) / 20%)', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: 16, boxShadow: 'var(--shadow-xs)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <AlertTriangle size={15} color="hsl(var(--color-hyper))" />
             <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'hsl(var(--color-hyper))', fontFamily: 'Outfit' }}>
@@ -296,7 +296,7 @@ export default function DashboardScreen({ authUser, onNavigate }) {
           {lowStock.map(p => (
             <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: '1px solid hsl(var(--color-hyper) / 8%)' }}>
               <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-primary))', fontWeight: 600 }}>{p.name}</span>
-              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: p.stock_qty === 0 ? 'hsl(var(--color-hyper))' : '#f59e0b', background: p.stock_qty === 0 ? 'hsl(var(--color-hyper) / 10%)' : 'rgba(245,158,11,0.1)', padding: '2px 8px', borderRadius: 6 }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: p.stock_qty === 0 ? 'hsl(var(--color-hyper))' : '#f59e0b', background: p.stock_qty === 0 ? 'hsl(var(--color-hyper) / 10%)' : 'rgba(245,158,11,0.1)', padding: '2px 8px', borderRadius: 'var(--radius-xs)' }}>
                 {p.stock_qty === 0 ? 'Out of Stock' : `${p.stock_qty} left`}
               </span>
             </div>
@@ -369,14 +369,14 @@ function StatCard({ icon, label, value, color, alert, onClick }) {
       }}
       onMouseLeave={e => {
         e.currentTarget.style.transform = 'none';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.boxShadow = 'var(--shadow-xs)';
         e.currentTarget.style.borderColor = 'hsl(var(--border-color))';
       }}
     >
       {alert && value > 0 && (
         <span style={{ position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` }} />
       )}
-      <div style={{ color, display: 'flex', background: `${color}12`, width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ color, display: 'flex', background: `${color}12`, width: 28, height: 28, borderRadius: 'var(--radius-xs)', alignItems: 'center', justifyContent: 'center' }}>
         {icon}
       </div>
       <div>
@@ -397,7 +397,7 @@ function StatusBadge({ status }) {
   };
   const s = map[status] || map.pending;
   return (
-    <span style={{ fontSize: '0.58rem', fontWeight: 800, color: s.color, background: s.bg, padding: '2px 7px', borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+    <span style={{ fontSize: '0.58rem', fontWeight: 800, color: s.color, background: s.bg, padding: '2px 7px', borderRadius: 'var(--radius-xs)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
       {s.label}
     </span>
   );

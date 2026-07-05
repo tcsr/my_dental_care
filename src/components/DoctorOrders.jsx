@@ -45,24 +45,24 @@ function StatCard({ title, value, icon, color }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         background: 'hsl(var(--bg-card))',
-        borderRadius: '20px',
+        borderRadius: 'var(--radius-lg)',
         padding: '18px 22px',
         display: 'flex',
         alignItems: 'center',
         gap: '16px',
         border: '1.5px solid hsl(var(--border-color))',
-        boxShadow: hovered 
+        boxShadow: hovered
           ? `0 16px 36px rgba(15,23,42,0.08), 0 4px 14px ${color}18`
-          : '0 4px 20px rgba(15,23,42,0.02)',
+          : 'var(--shadow-xs)',
         transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
         transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         cursor: 'pointer'
       }}
     >
-      <div style={{ 
-        width: 44, 
-        height: 44, 
-        borderRadius: 14, 
+      <div style={{
+        width: 44,
+        height: 44,
+        borderRadius: 'var(--radius-sm)',
         background: hovered ? `linear-gradient(135deg, ${color}20, ${color}35)` : `${color}08`, 
         color: color, 
         display: 'flex', 

@@ -27,7 +27,26 @@
  
   /* Dimensions */
   --nav-height: 72px;
-  --max-width: 480px; 
+  --max-width: 480px;
+
+  /* Radius scale — keeps border-radius consistent across screens */
+  --radius-xs: 8px;   /* small badges, icon chips */
+  --radius-sm: 10px;  /* inputs, tab buttons, small selects */
+  --radius-md: 12px;  /* buttons, sidebar links */
+  --radius-lg: 16px;  /* stat cards, secondary cards */
+  --radius-xl: 20px;  /* .glass-card default */
+  --radius-2xl: 24px; /* modals (desktop), empty states, hero cards */
+
+  /* Shadow scale — gives resting states real depth, not just on hover */
+  --shadow-xs: 0 2px 8px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 4px 14px rgba(15, 23, 42, 0.07);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.10);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.14);
+
+  /* Tint scale — for badge/pill backgrounds */
+  --tint-8: 8%;
+  --tint-12: 12%;
+  --tint-20: 20%;
 }
 
 /* Base Styles */
