@@ -63,11 +63,20 @@ const getProductImages = (product) => {
   return []; // No uploaded image — return empty, show placeholder
 };
 
-export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPlaced, onLoginRequired, cartOpen, setCartOpen }) {
-  const [products, setProducts] = useState([]);
+export default function ProductCatalog({ 
+  authUser, 
+  cart, 
+  onCartChange, 
+  onOrderPlaced, 
+  onLoginRequired, 
+  cartOpen, 
+  setCartOpen,
+  products = [],
+  categories = [],
+  refreshGlobalData
+}) {
   const [categoriesList, setCategoriesList] = useState(CATEGORIES);
   const [catConfig, setCatConfig] = useState(CAT);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [placing, setPlacing] = useState(false);
@@ -75,61 +84,17 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
 
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase.from('product_categories').select('*').eq('active', true);
-      if (error) throw error;
-      if (data && data.length > 0) {
-        const list = ['All', ...data.map(c => c.name)];
-        setCategoriesList(list);
-        const config = {};
-        data.forEach(c => {
-          config[c.name] = { bg: c.bg_color || 'rgba(14,165,233,0.1)', color: c.text_color || '#0ea5e9', icon: c.icon || '📦' };
-        });
-        setCatConfig(config);
-      }
-    } catch (e) {
-      console.warn('Could not load categories from DB, using fallback:', e);
+  useEffect(() => {
+    if (categories && categories.length > 0) {
+      const list = ['All', ...categories.map(c => c.name)];
+      setCategoriesList(list);
+      const config = {};
+      categories.forEach(c => {
+        config[c.name] = { bg: c.bg_color || 'rgba(14,165,233,0.1)', color: c.text_color || '#0ea5e9', icon: c.icon || '📦' };
+      });
+      setCatConfig(config);
     }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const cached = sessionStorage.getItem('pc_products_cache');
-      if (cached && cached !== 'undefined') {
-        try {
-          setProducts(JSON.parse(cached));
-          setLoading(false);
-        } catch (e) {
-          console.warn('Cache parse error:', e);
-          setLoading(true);
-        }
-      } else {
-        setLoading(true);
-      }
-
-      const { data, error } = await supabase.from('products').select('*').or('active.eq.true,active.is.null').order('name');
-      if (error) throw error;
-      if (data) {
-        setProducts(data);
-        try {
-          sessionStorage.setItem('pc_products_cache', JSON.stringify(data));
-        } catch (e) {
-          console.warn('Could not cache products to sessionStorage:', e);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchCategories();
-    fetchProducts(); 
-  }, []);
+  }, [categories]);
 
   const filtered = useMemo(() => products.filter(p => {
     const matchCat = category === 'All' || p.category === category;
@@ -212,7 +177,7 @@ export default function ProductCatalog({ authUser, cart, onCartChange, onOrderPl
     setPlacing(false);
     setCartOpen(false);
     setOrderDone(true);
-    fetchProducts();
+    if (refreshGlobalData) refreshGlobalData('all');
     setTimeout(() => { setOrderDone(false); }, 5000);
   };
 

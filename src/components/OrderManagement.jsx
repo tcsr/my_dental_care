@@ -46,10 +46,10 @@ const getInitials = (name) => {
     .toUpperCase();
 };
 
-export default function OrderManagement() {
+export default function OrderManagement({ orders: propOrders = [], profiles: propProfiles = [], products: propProducts = [], refreshGlobalData }) {
   const [orders, setOrders] = useState([]);
   const [profiles, setProfiles] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(propOrders.length === 0 && propProfiles.length === 0);
   const [tab, setTab] = useState('all');
   const [updating, setUpdating] = useState(null);
   const [expanded, setExpanded] = useState(null);
@@ -57,33 +57,9 @@ export default function OrderManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
 
-  const fetchOrders = async (forceRefresh = false) => {
+  const fetchOrders = async () => {
     try {
-      if (forceRefresh) setLoading(true);
-
-      const cachedOrders = sessionStorage.getItem('om_orders_cache');
-      const cachedProfiles = sessionStorage.getItem('om_profiles_cache');
-      
-      if (!forceRefresh && cachedOrders && cachedProfiles && cachedOrders !== 'undefined' && cachedProfiles !== 'undefined') {
-        try {
-          setOrders(JSON.parse(cachedOrders));
-          setProfiles(JSON.parse(cachedProfiles));
-          setLoading(false);
-        } catch (e) {
-          console.warn('Cache parse error:', e);
-          setLoading(true);
-        }
-      } else if (!forceRefresh) {
-        setLoading(true);
-      }
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select('*, order_items(qty, unit_price, product:products(name, category))')
-        .order('created_at', { ascending: false });
-        
-      if (ordersError) throw ordersError;
-
-      const cloudOrders = ordersData || [];
+      const cloudOrders = propOrders || [];
 
       const localOrdersRaw = await db.b2bOrders.toArray();
       const localClients = await db.b2bClients.toArray();
@@ -121,15 +97,9 @@ export default function OrderManagement() {
 
       const allOrders = [...cloudOrders, ...localOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-      const doctorIds = [...new Set(cloudOrders.map(o => o.doctor_id).filter(Boolean))];
       const map = {};
-      if (doctorIds.length) {
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, name, clinic_name, phone')
-          .in('id', doctorIds);
-        (profilesData || []).forEach(p => { map[p.id] = p; });
-      }
+      (propProfiles || []).forEach(p => { map[p.id] = p; });
+
       localOrders.forEach(lo => {
         map[lo.doctor_id] = {
           name: lo._localClient.name,
@@ -140,12 +110,6 @@ export default function OrderManagement() {
 
       setProfiles(map);
       setOrders(allOrders);
-      try {
-        sessionStorage.setItem('om_orders_cache', JSON.stringify(allOrders));
-        sessionStorage.setItem('om_profiles_cache', JSON.stringify(map));
-      } catch (e) {
-        console.warn('Could not cache orders to sessionStorage:', e);
-      }
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -154,24 +118,19 @@ export default function OrderManagement() {
   };
 
   useEffect(() => {
-    // Clear stale cache to ensure normalization fix applies
-    sessionStorage.removeItem('om_orders_cache');
-    sessionStorage.removeItem('om_profiles_cache');
     fetchOrders();
-  }, []);
+  }, [propOrders, propProfiles, propProducts]);
 
   const updateStatus = async (orderId, newStatus) => {
     setUpdating(orderId);
     if (String(orderId).startsWith('local-')) {
       const idStr = String(orderId).replace('local-', '');
       await db.b2bOrders.update(parseInt(idStr), { status: newStatus.charAt(0).toUpperCase() + newStatus.slice(1) });
+      await fetchOrders();
     } else {
       await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+      if (refreshGlobalData) await refreshGlobalData('orders');
     }
-    // Clear stale session cache so doctors see updated status immediately
-    sessionStorage.removeItem('om_orders_cache');
-    sessionStorage.removeItem('om_profiles_cache');
-    await fetchOrders();
     setUpdating(null);
   };
 
@@ -182,12 +141,12 @@ export default function OrderManagement() {
       if (String(orderId).startsWith('local-')) {
         const idStr = String(orderId).replace('local-', '');
         await db.b2bOrders.delete(parseInt(idStr));
+        await fetchOrders();
       } else {
         const { error } = await supabase.from('orders').delete().eq('id', orderId);
         if (error) throw error;
+        if (refreshGlobalData) await refreshGlobalData('orders');
       }
-      sessionStorage.removeItem('om_orders_cache');
-      await fetchOrders();
     } catch (e) {
       console.error('Error deleting order:', e);
       alert('Failed to delete order: ' + e.message);

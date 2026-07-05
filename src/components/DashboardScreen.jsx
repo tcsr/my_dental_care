@@ -7,23 +7,14 @@ import {
 import PremiumLoader from './ui/PremiumLoader';
 import EmptyStateCard from './EmptyStateCard';
 
-export default function DashboardScreen({ authUser, onNavigate }) {
+export default function DashboardScreen({ authUser, onNavigate, products = [], orders = [], profiles = [] }) {
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [lowStock, setLowStock] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
-    setLoading(true);
-    const [ordersRes, productsRes, profilesRes] = await Promise.all([
-      supabase.from('orders').select('*, order_items(qty, unit_price, product_id, products(name))').order('created_at', { ascending: false }),
-      supabase.from('products').select('*').eq('active', true),
-      supabase.from('profiles').select('id, approved').neq('role', 'admin'),
-    ]);
-
-    const orders = ordersRes.data || [];
-    const products = productsRes.data || [];
-    const profiles = profilesRes.data || [];
+  useEffect(() => {
+    const activeProducts = products.filter(p => p.active === true || p.active === null);
+    const filteredProfiles = profiles.filter(p => p.role !== 'admin');
 
     const totalRevenue = orders
       .filter(o => o.status === 'delivered')
@@ -32,9 +23,9 @@ export default function DashboardScreen({ authUser, onNavigate }) {
     const pendingOrders = orders.filter(o => o.status === 'pending').length;
     const dispatchedOrders = orders.filter(o => o.status === 'dispatched').length;
     const totalOrders = orders.length;
-    const approvedDoctors = profiles.filter(p => p.approved).length;
-    const pendingDoctors = profiles.filter(p => !p.approved).length;
-    const totalProducts = products.length;
+    const approvedDoctors = filteredProfiles.filter(p => p.approved).length;
+    const pendingDoctors = filteredProfiles.filter(p => !p.approved).length;
+    const totalProducts = activeProducts.length;
 
     // Last 7 days daily revenue calculation
     const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -67,7 +58,7 @@ export default function DashboardScreen({ authUser, onNavigate }) {
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 4);
 
-    const low = products.filter(p => p.stock_qty <= 5);
+    const low = activeProducts.filter(p => (p.stock_qty ?? p.stock) <= 5);
 
     setStats({
       totalRevenue,
@@ -82,13 +73,9 @@ export default function DashboardScreen({ authUser, onNavigate }) {
     });
     setRecentOrders(orders.slice(0, 5));
     setLowStock(low);
-    setLoading(false);
-  };
+  }, [products, orders, profiles]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetchData(); }, []);
-
-  if (loading) {
+  if (!stats) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
         <PremiumLoader text="Loading dashboard..." />

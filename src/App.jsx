@@ -172,6 +172,127 @@ export default function App() {
   const [activeAlarmClient, setActiveAlarmClient] = useState(null);
   const [isAiOpen, setIsAiOpen] = useState(false);
 
+  // Real-time memory cache states
+  const [globalProducts, setGlobalProducts] = useState([]);
+  const [globalOrders, setGlobalOrders] = useState([]);
+  const [globalProfiles, setGlobalProfiles] = useState([]);
+  const [globalCategories, setGlobalCategories] = useState([]);
+  const [globalLoading, setGlobalLoading] = useState(false);
+
+  const fetchGlobalProducts = async () => {
+    try {
+      const { data, error } = await supabase.from('products').select('*').or('active.eq.true,active.is.null').order('name');
+      if (!error && data) setGlobalProducts(data);
+    } catch (e) {
+      console.warn('Global fetch products failed:', e);
+    }
+  };
+
+  const fetchGlobalOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, order_items(qty, unit_price, product_id, product:products(name, category))')
+        .order('created_at', { ascending: false });
+      if (!error && data) setGlobalOrders(data);
+    } catch (e) {
+      console.warn('Global fetch orders failed:', e);
+    }
+  };
+
+  const fetchGlobalProfiles = async () => {
+    try {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (!error && data) setGlobalProfiles(data);
+    } catch (e) {
+      console.warn('Global fetch profiles failed:', e);
+    }
+  };
+
+  const fetchGlobalCategories = async () => {
+    try {
+      const { data, error } = await supabase.from('product_categories').select('*').eq('active', true);
+      if (!error && data) setGlobalCategories(data);
+    } catch (e) {
+      console.warn('Global fetch categories failed:', e);
+    }
+  };
+
+  const refreshGlobalData = async (table = 'all') => {
+    if (table === 'all' || table === 'products') await fetchGlobalProducts();
+    if (table === 'all' || table === 'orders' || table === 'order_items') await fetchGlobalOrders();
+    if (table === 'all' || table === 'profiles') await fetchGlobalProfiles();
+    if (table === 'all' || table === 'categories') await fetchGlobalCategories();
+  };
+
+  useEffect(() => {
+    let activeSubscriptions = [];
+
+    const initGlobalData = async () => {
+      setGlobalLoading(true);
+      try {
+        const fetchers = [fetchGlobalProducts(), fetchGlobalCategories()];
+        if (isLoggedIn) {
+          fetchers.push(fetchGlobalOrders(), fetchGlobalProfiles());
+        }
+        await Promise.all(fetchers);
+      } catch (err) {
+        console.error('Initial fetch failed:', err);
+      } finally {
+        setGlobalLoading(false);
+      }
+    };
+
+    initGlobalData();
+
+    // Supabase Realtime subscriptions
+    const productsSub = supabase
+      .channel('realtime-products')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        fetchGlobalProducts();
+      })
+      .subscribe();
+
+    const categoriesSub = supabase
+      .channel('realtime-categories')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_categories' }, () => {
+        fetchGlobalCategories();
+      })
+      .subscribe();
+
+    activeSubscriptions.push(productsSub, categoriesSub);
+
+    if (isLoggedIn) {
+      const ordersSub = supabase
+        .channel('realtime-orders')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+          fetchGlobalOrders();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => {
+          fetchGlobalOrders();
+        })
+        .subscribe();
+
+      const profilesSub = supabase
+        .channel('realtime-profiles')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+          fetchGlobalProfiles();
+        })
+        .subscribe();
+
+      activeSubscriptions.push(ordersSub, profilesSub);
+    } else {
+      setGlobalOrders([]);
+      setGlobalProfiles([]);
+    }
+
+    return () => {
+      activeSubscriptions.forEach(sub => {
+        supabase.removeChannel(sub);
+      });
+    };
+  }, [isLoggedIn]);
+
   // Custom global confirm modal setup
   const [confirmModal, setConfirmModal] = useState(null);
 
@@ -483,6 +604,8 @@ export default function App() {
   if (!isDbReady) return splashLoader;
 
   if (!authChecked) return splashLoader;
+
+  if (globalLoading) return splashLoader;
 
 
 
@@ -886,7 +1009,15 @@ export default function App() {
         <Routes>
           {isLoggedIn ? (
             <>
-              <Route path="/dashboard" element={<DashboardScreen authUser={authUser} onNavigate={setActiveTab} />} />
+              <Route path="/dashboard" element={
+                <DashboardScreen 
+                  authUser={authUser} 
+                  onNavigate={setActiveTab} 
+                  products={globalProducts}
+                  orders={globalOrders}
+                  profiles={globalProfiles}
+                />
+              } />
               <Route path="/catalog" element={
                 <ProductCatalog
                   authUser={authUser}
@@ -899,9 +1030,19 @@ export default function App() {
                     if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
                     setShowLoginModal(true);
                   }}
+                  products={globalProducts}
+                  categories={globalCategories}
+                  refreshGlobalData={refreshGlobalData}
                 />
               } />
-              <Route path="/orders" element={<OrderManagement />} />
+              <Route path="/orders" element={
+                <OrderManagement 
+                  orders={globalOrders}
+                  profiles={globalProfiles}
+                  products={globalProducts}
+                  refreshGlobalData={refreshGlobalData}
+                />
+              } />
               <Route path="/products" element={<ProductManagement />} />
               <Route path="/sales" element={isAdmin ? <ProSalesSubscreen lang={lang} profile={profile} onNavigate={setActiveTab} /> : <DoctorOrders authUser={authUser} onGoToCatalog={() => setActiveTab('catalog')} />} />
               <Route path="/implants" element={<ProImplantsSubscreen lang={lang} profile={profile} />} />
@@ -930,6 +1071,9 @@ export default function App() {
                     if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
                     setShowLoginModal(true);
                   }}
+                  products={globalProducts}
+                  categories={globalCategories}
+                  refreshGlobalData={refreshGlobalData}
                 />
               } />
               <Route path="*" element={<Navigate to="/catalog" replace />} />
