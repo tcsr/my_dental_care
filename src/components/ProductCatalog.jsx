@@ -527,7 +527,7 @@ export default function ProductCatalog({
                 <div style={{ width: '100%', height: 150, overflow: 'hidden', background: 'hsl(var(--bg-dark))', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid hsl(var(--border-color))' }}>
                   <div className="product-card-overlay" />
                   {images && images.length > 0 ? (
-                    <img className="product-card-img" src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                    <img className="product-card-img" src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} loading="lazy" />
                   ) : (
                     <div style={{ color: cs.color, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: 0.5 }}>
                       {typeof cs.icon === 'string' ? <span style={{ fontSize: '2.5rem' }}>{cs.icon}</span> : <cs.icon size={40} />}
@@ -558,7 +558,7 @@ export default function ProductCatalog({
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 6 }}>
                     <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.08rem', color: 'hsl(var(--text-primary))' }}>
-                      ₹{p.price?.toLocaleString('en-IN')}
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'hsl(var(--text-muted))', marginRight: 2 }}>₹</span>{p.price?.toLocaleString('en-IN')}
                     </span>
                     <span style={{ fontSize: '0.56rem', fontWeight: 800, padding: '3px 8px', borderRadius: 8, background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
                       {outOfStock ? 'Out of Stock' : lowStock ? `${p.stock_qty} left` : 'In Stock'}
@@ -606,12 +606,43 @@ export default function ProductCatalog({
       {cartCount > 0 && !cartOpen && (
         <button
           onClick={() => setCartOpen(true)}
-          style={{ position: 'fixed', bottom: 88, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', border: 'none', borderRadius: 24, padding: '13px 24px', display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.85rem', fontWeight: 800, fontFamily: 'Outfit', cursor: 'pointer', boxShadow: '0 10px 32px rgba(14,165,233,0.45)', whiteSpace: 'nowrap' }}
+          style={{ 
+            position: 'fixed', 
+            bottom: 30, 
+            left: '50%', 
+            transform: 'translateX(-50%)', 
+            zIndex: 1000, 
+            background: 'linear-gradient(135deg, #0f172a, #1e293b)', 
+            color: '#fff', 
+            border: '1.5px solid rgba(14, 165, 233, 0.4)', 
+            borderRadius: 30, 
+            padding: '14px 28px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 12, 
+            fontSize: '0.88rem', 
+            fontWeight: 800, 
+            fontFamily: 'Outfit', 
+            cursor: 'pointer', 
+            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.35), 0 0 15px rgba(14, 165, 233, 0.15)', 
+            whiteSpace: 'nowrap',
+            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateX(-50%) translateY(-2px)';
+            e.currentTarget.style.borderColor = '#0ea5e9';
+            e.currentTarget.style.boxShadow = '0 24px 48px rgba(15, 23, 42, 0.45), 0 0 20px rgba(14, 165, 233, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateX(-50%)';
+            e.currentTarget.style.borderColor = 'rgba(14, 165, 233, 0.4)';
+            e.currentTarget.style.boxShadow = '0 20px 40px rgba(15, 23, 42, 0.35), 0 0 15px rgba(14, 165, 233, 0.15)';
+          }}
         >
-          <ShoppingCart size={17} />
-          <span>{cartCount} item{cartCount !== 1 ? 's' : ''}</span>
-          <span style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.35)' }} />
-          <span>₹{cartTotal.toLocaleString('en-IN')}</span>
+          <ShoppingCart size={18} strokeWidth={2.5} style={{ color: '#0ea5e9' }} />
+          <span style={{ letterSpacing: '0.01em' }}>{cartCount} item{cartCount !== 1 ? 's' : ''}</span>
+          <span style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.15)' }} />
+          <span style={{ color: '#0ea5e9', fontWeight: 900 }}>₹{cartTotal.toLocaleString('en-IN')}</span>
         </button>
       )}
 
@@ -862,7 +893,7 @@ export default function ProductCatalog({
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.35rem', color: '#0ea5e9' }}>
-                      ₹{selectedProduct.price?.toLocaleString('en-IN')}
+                      <span style={{ fontSize: '1.05rem', fontWeight: 600, color: 'hsl(var(--text-muted))', marginRight: 2 }}>₹</span>{selectedProduct.price?.toLocaleString('en-IN')}
                     </div>
                     {selectedProduct.unit && (
                       <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', marginTop: 1 }}>
