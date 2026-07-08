@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
+import { useStore } from '../utils/store';
 import {
   TrendingUp, Users, AlertTriangle,
   Clock, Truck, Package, Flame
@@ -7,7 +8,11 @@ import {
 import PremiumLoader from './ui/PremiumLoader';
 import EmptyStateCard from './EmptyStateCard';
 
-export default function DashboardScreen({ authUser, onNavigate, products = [], orders = [], profiles = [] }) {
+export default function DashboardScreen({ authUser, onNavigate }) {
+  const products = useStore(state => state.products);
+  const orders = useStore(state => state.orders);
+  const profiles = useStore(state => state.profiles);
+
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [lowStock, setLowStock] = useState([]);

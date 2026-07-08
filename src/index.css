@@ -1273,7 +1273,7 @@ button {
   /* Make buttons smaller on desktop browser and prevent stretching */
   body.is-browser .btn-primary,
   body.is-browser .btn-secondary,
-  body.is-browser main button:not(.tab-btn):not(.sidebar-link):not(.sidebar-header button):not(.app-header button):not(.qty-btn):not(.modal-close-btn):not(.carousel-nav-btn):not(.premium-select-btn):not(.cat-chip) {
+  body.is-browser main button:not(.tab-btn):not(.sidebar-link):not(.sidebar-header button):not(.app-header button):not(.qty-btn):not(.modal-close-btn):not(.carousel-nav-btn):not(.premium-select-btn):not(.cat-chip):not(.search-clear-btn):not(.modal-close-btn-premium) {
     width: auto !important;
     min-width: unset !important;
     max-width: 320px !important;
@@ -1296,7 +1296,7 @@ button {
 
   body.is-browser .modal-content-card {
     width: 100% !important;
-    max-width: 520px !important;
+    max-width: 600px !important;
     min-height: auto !important;
     max-height: 90vh !important;
     border-radius: 24px !important;
@@ -1855,6 +1855,23 @@ body.is-browser .modal-content-card form {
 body.is-browser .modal-content-card form > div {
   height: auto !important;
   flex: none !important;
+}
+
+/* Shimmer animation keyframes */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Skeleton shimmer base class */
+.shimmer-placeholder {
+  background: linear-gradient(90deg, hsl(var(--border-color)/30%) 25%, hsl(var(--border-color)/60%) 37%, hsl(var(--border-color)/30%) 63%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite linear;
 }
 
 

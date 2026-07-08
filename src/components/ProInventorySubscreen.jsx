@@ -48,14 +48,24 @@ const getCategoryKey = (cat) => {
   return 'General';
 };
 
+const resolveUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
+    return url;
+  }
+  const path = url.startsWith('/') ? url.substring(1) : url;
+  const base = import.meta.env.BASE_URL || '/';
+  return base + path;
+};
+
 const getProductImages = (product) => {
+  let urls = [];
   if (product && product.image_url && product.image_url.trim()) {
-    return splitImageUrls(product.image_url);
+    urls = splitImageUrls(product.image_url);
+  } else if (product && product.image && product.image.trim()) {
+    urls = splitImageUrls(product.image);
   }
-  if (product && product.image && product.image.trim()) {
-    return splitImageUrls(product.image);
-  }
-  return []; // No uploaded image — return empty, show placeholder
+  return urls.map(resolveUrl);
 };
 
 const getCurrentTimestamp = () => Date.now();
@@ -680,7 +690,7 @@ export default function ProInventorySubscreen({ lang }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flex: 1 }}>
                         {item.image ? (
-                          <img src={item.image.includes('|') ? item.image.split('|')[0] : item.image} alt={item.name} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid hsl(var(--border-color))', flexShrink: 0 }} />
+                          <img src={resolveUrl(item.image.includes('|') ? item.image.split('|')[0] : item.image)} alt={item.name} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid hsl(var(--border-color))', flexShrink: 0 }} />
                         ) : (
                           <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1rem', flexShrink: 0 }}>
                             {item.name.charAt(0)}

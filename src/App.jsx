@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, seedDemoData, seedBasalImplants, clearAllData } from './utils/db';
+import { db, seedDemoData, seedBasalImplants, seedSurgicalKit, clearAllData, processSyncQueue } from './utils/db';
 import { supabase } from './utils/supabase';
 import AiAssistant from './components/AiAssistant';
 import LoginScreen from './components/LoginScreen';
@@ -12,6 +12,45 @@ import DashboardScreen from './components/DashboardScreen';
 import ProductCatalog from './components/ProductCatalog';
 import DoctorOrders from './components/DoctorOrders';
 import { t } from './utils/i18n';
+import { useStore } from './utils/store';
+
+// Simple console log redirector to capture browser console logs in the workspace
+(function() {
+  const origLog = console.log;
+  const origWarn = console.warn;
+  const origError = console.error;
+
+  function sendToServer(type, args) {
+    const message = Array.from(args).map(arg => {
+      if (typeof arg === 'object') {
+        try { return JSON.stringify(arg); } catch (e) { return String(arg); }
+      }
+      return String(arg);
+    }).join(' ');
+    fetch('http://localhost:3099/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, message })
+    }).catch(() => {});
+  }
+
+  console.log = function() {
+    origLog.apply(console, arguments);
+    sendToServer('LOG', arguments);
+  };
+  console.warn = function() {
+    origWarn.apply(console, arguments);
+    sendToServer('WARN', arguments);
+  };
+  console.error = function() {
+    origError.apply(console, arguments);
+    sendToServer('ERROR', arguments);
+  };
+  
+  window.addEventListener('error', function(e) {
+    sendToServer('UNCAUGHT', [e.message, e.filename, e.lineno]);
+  });
+})();
 
 // Lazy-loaded: admin/rep-only screens, not needed for first paint (catalog/dashboard land first).
 const ProSalesSubscreen = lazy(() => import('./components/ProSalesSubscreen'));
@@ -172,91 +211,45 @@ export default function App() {
   const [activeAlarmClient, setActiveAlarmClient] = useState(null);
   const [isAiOpen, setIsAiOpen] = useState(false);
 
-  // Real-time memory cache states
-  const [globalProducts, setGlobalProducts] = useState([]);
-  const [globalOrders, setGlobalOrders] = useState([]);
-  const [globalProfiles, setGlobalProfiles] = useState([]);
-  const [globalCategories, setGlobalCategories] = useState([]);
-  const [globalLoading, setGlobalLoading] = useState(false);
+  // Real-time memory cache using Zustand store
+  const globalLoading = useStore(state => state.loading);
+  const initData = useStore(state => state.initData);
+  const clearData = useStore(state => state.clearData);
+  const storeProducts = useStore(state => state.products);
 
-  const fetchGlobalProducts = async () => {
-    try {
-      const { data, error } = await supabase.from('products').select('*').or('active.eq.true,active.is.null').order('name');
-      if (!error && data) setGlobalProducts(data);
-    } catch (e) {
-      console.warn('Global fetch products failed:', e);
-    }
-  };
-
-  const fetchGlobalOrders = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*, order_items(qty, unit_price, product_id, product:products(name, category))')
-        .order('created_at', { ascending: false });
-      if (!error && data) setGlobalOrders(data);
-    } catch (e) {
-      console.warn('Global fetch orders failed:', e);
-    }
-  };
-
-  const fetchGlobalProfiles = async () => {
-    try {
-      const { data, error } = await supabase.from('profiles').select('*');
-      if (!error && data) setGlobalProfiles(data);
-    } catch (e) {
-      console.warn('Global fetch profiles failed:', e);
-    }
-  };
-
-  const fetchGlobalCategories = async () => {
-    try {
-      const { data, error } = await supabase.from('product_categories').select('*').eq('active', true);
-      if (!error && data) setGlobalCategories(data);
-    } catch (e) {
-      console.warn('Global fetch categories failed:', e);
-    }
-  };
-
-  const refreshGlobalData = async (table = 'all') => {
-    if (table === 'all' || table === 'products') await fetchGlobalProducts();
-    if (table === 'all' || table === 'orders' || table === 'order_items') await fetchGlobalOrders();
-    if (table === 'all' || table === 'profiles') await fetchGlobalProfiles();
-    if (table === 'all' || table === 'categories') await fetchGlobalCategories();
-  };
+  useEffect(() => {
+    console.log('App.jsx storeProducts changed:', storeProducts);
+  }, [storeProducts]);
 
   useEffect(() => {
     let activeSubscriptions = [];
 
-    const initGlobalData = async () => {
-      setGlobalLoading(true);
-      try {
-        const fetchers = [fetchGlobalProducts(), fetchGlobalCategories()];
-        if (isLoggedIn) {
-          fetchers.push(fetchGlobalOrders(), fetchGlobalProfiles());
-        }
-        await Promise.all(fetchers);
-      } catch (err) {
-        console.error('Initial fetch failed:', err);
-      } finally {
-        setGlobalLoading(false);
+    // Trigger initial data load
+    initData(isLoggedIn);
+
+    // Online event handler to trigger syncQueue processing
+    const handleOnlineStatusChange = () => {
+      if (navigator.onLine) {
+        processSyncQueue();
       }
     };
+    window.addEventListener('online', handleOnlineStatusChange);
 
-    initGlobalData();
+    // Run sync worker on mount
+    handleOnlineStatusChange();
 
     // Supabase Realtime subscriptions
     const productsSub = supabase
       .channel('realtime-products')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
-        fetchGlobalProducts();
+        useStore.getState().fetchProducts();
       })
       .subscribe();
 
     const categoriesSub = supabase
       .channel('realtime-categories')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'product_categories' }, () => {
-        fetchGlobalCategories();
+        useStore.getState().fetchCategories();
       })
       .subscribe();
 
@@ -266,27 +259,27 @@ export default function App() {
       const ordersSub = supabase
         .channel('realtime-orders')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-          fetchGlobalOrders();
+          useStore.getState().fetchOrders();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => {
-          fetchGlobalOrders();
+          useStore.getState().fetchOrders();
         })
         .subscribe();
 
       const profilesSub = supabase
         .channel('realtime-profiles')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-          fetchGlobalProfiles();
+          useStore.getState().fetchProfiles();
         })
         .subscribe();
 
       activeSubscriptions.push(ordersSub, profilesSub);
     } else {
-      setGlobalOrders([]);
-      setGlobalProfiles([]);
+      clearData();
     }
 
     return () => {
+      window.removeEventListener('online', handleOnlineStatusChange);
       activeSubscriptions.forEach(sub => {
         supabase.removeChannel(sub);
       });
@@ -358,6 +351,7 @@ export default function App() {
       try {
         await seedDemoData();
         await seedBasalImplants();
+        await seedSurgicalKit();
         setIsDbReady(true);
       } catch (err) {
         console.error('Failed to seed database:', err);
@@ -721,35 +715,35 @@ export default function App() {
                   <button className={`sidebar-link ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => handleNav('orders')}>
                     <ClipboardList size={16} /><span>Orders</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'products' ? 'active' : ''}`} onClick={() => handleNav('products')}>
-                    <Store size={16} /><span>Products</span>
-                  </button>
                   <button className={`sidebar-link ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => handleNav('sales')}>
                     <ShoppingBag size={16} /><span>{t('navSales', lang)}</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'implants' ? 'active' : ''}`} onClick={() => handleNav('implants')}>
-                    <Activity size={16} /><span>{t('navImplants', lang)}</span>
+                  <button className={`sidebar-link ${activeTab === 'products' ? 'active' : ''}`} onClick={() => handleNav('products')}>
+                    <Store size={16} /><span>Products</span>
                   </button>
                   <button className={`sidebar-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => handleNav('inventory')}>
                     <Package size={16} /><span>{t('navInventory', lang)}</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => handleNav('reminders')}>
-                    <Bell size={16} /><span>{t('navAlerts', lang)}</span>
+                  <button className={`sidebar-link ${activeTab === 'implants' ? 'active' : ''}`} onClick={() => handleNav('implants')}>
+                    <Activity size={16} /><span>{t('navImplants', lang)}</span>
                   </button>
                   <button className={`sidebar-link ${activeTab === 'marketing' ? 'active' : ''}`} onClick={() => handleNav('marketing')}>
                     <Megaphone size={16} /><span>{t('navMarketing', lang)}</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => handleNav('guides')}>
-                    <Film size={16} /><span>{t('navGuides', lang)}</span>
-                  </button>
                   <button className={`sidebar-link ${activeTab === 'master' ? 'active' : ''}`} onClick={() => handleNav('master')}>
                     <Settings size={16} /><span>{t('navMaster', lang)}</span>
                   </button>
-                  <button className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => handleNav('profile')}>
-                    <User size={16} /><span>Profile & Settings</span>
-                  </button>
                   <button className={`sidebar-link ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => handleNav('admin')}>
                     <ShieldCheck size={16} /><span>Admin Panel</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'reminders' ? 'active' : ''}`} onClick={() => handleNav('reminders')}>
+                    <Bell size={16} /><span>{t('navAlerts', lang)}</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => handleNav('guides')}>
+                    <Film size={16} /><span>{t('navGuides', lang)}</span>
+                  </button>
+                  <button className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => handleNav('profile')}>
+                    <User size={16} /><span>Profile & Settings</span>
                   </button>
                 </>
               ) : (
@@ -1013,9 +1007,6 @@ export default function App() {
                 <DashboardScreen 
                   authUser={authUser} 
                   onNavigate={setActiveTab} 
-                  products={globalProducts}
-                  orders={globalOrders}
-                  profiles={globalProfiles}
                 />
               } />
               <Route path="/catalog" element={
@@ -1030,18 +1021,10 @@ export default function App() {
                     if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
                     setShowLoginModal(true);
                   }}
-                  products={globalProducts}
-                  categories={globalCategories}
-                  refreshGlobalData={refreshGlobalData}
                 />
               } />
               <Route path="/orders" element={
-                <OrderManagement 
-                  orders={globalOrders}
-                  profiles={globalProfiles}
-                  products={globalProducts}
-                  refreshGlobalData={refreshGlobalData}
-                />
+                <OrderManagement />
               } />
               <Route path="/products" element={<ProductManagement />} />
               <Route path="/sales" element={isAdmin ? <ProSalesSubscreen lang={lang} profile={profile} onNavigate={setActiveTab} /> : <DoctorOrders authUser={authUser} onGoToCatalog={() => setActiveTab('catalog')} />} />
@@ -1071,9 +1054,6 @@ export default function App() {
                     if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
                     setShowLoginModal(true);
                   }}
-                  products={globalProducts}
-                  categories={globalCategories}
-                  refreshGlobalData={refreshGlobalData}
                 />
               } />
               <Route path="*" element={<Navigate to="/catalog" replace />} />

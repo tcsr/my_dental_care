@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../utils/supabase';
+import { useStore } from '../utils/store';
 import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight, Wrench, FlaskConical, Shield, Settings } from 'lucide-react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../utils/db';
 import PremiumLoader from './ui/PremiumLoader';
 import EmptyStateCard from './EmptyStateCard';
 
@@ -9,18 +12,18 @@ const CATEGORIES = ['All', 'Implants', 'Instruments', 'Materials', 'PPE', 'Equip
 function ToothIcon(props) {
   return (
     <svg width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fillOpacity="0.15" fill="currentColor"/>
-      <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" fill="none"/>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fillOpacity="0.15" fill="currentColor" />
+      <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" fill="none" />
     </svg>
   );
 }
 
 const CAT = {
-  Implants:    { bg: 'rgba(99,102,241,0.12)',  color: '#6366f1', icon: ToothIcon },
-  Instruments: { bg: 'rgba(14,165,233,0.12)',  color: '#0ea5e9', icon: Wrench },
-  Materials:   { bg: 'rgba(16,185,129,0.12)',  color: '#10b981', icon: FlaskConical },
-  PPE:         { bg: 'rgba(245,158,11,0.12)',  color: '#f59e0b', icon: Shield },
-  Equipment:   { bg: 'rgba(168,85,247,0.12)',  color: '#a855f7', icon: Settings },
+  Implants: { bg: 'rgba(99,102,241,0.12)', color: '#6366f1', icon: ToothIcon },
+  Instruments: { bg: 'rgba(14,165,233,0.12)', color: '#0ea5e9', icon: Wrench },
+  Materials: { bg: 'rgba(16,185,129,0.12)', color: '#10b981', icon: FlaskConical },
+  PPE: { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', icon: Shield },
+  Equipment: { bg: 'rgba(168,85,247,0.12)', color: '#a855f7', icon: Settings },
   Consumables: { bg: 'rgba(236,72,153,0.12)', color: '#ec4899', icon: Package },
 };
 const DEFAULT_CAT = { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', icon: Package };
@@ -56,25 +59,51 @@ const getCategoryKey = (cat) => {
   return 'General';
 };
 
-const getProductImages = (product) => {
-  if (product && product.image_url && product.image_url.trim()) {
-    return splitImageUrls(product.image_url);
+const resolveUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
+    return url;
   }
-  return []; // No uploaded image — return empty, show placeholder
+  const path = url.startsWith('/') ? url.substring(1) : url;
+  const base = import.meta.env.BASE_URL || '/';
+  return base + path;
 };
 
-export default function ProductCatalog({ 
-  authUser, 
-  cart, 
-  onCartChange, 
-  onOrderPlaced, 
-  onLoginRequired, 
-  cartOpen, 
-  setCartOpen,
-  products = [],
-  categories = [],
-  refreshGlobalData
+const getProductImages = (product) => {
+  let urls = [];
+  if (product && product.image_url && product.image_url.trim()) {
+    urls = splitImageUrls(product.image_url);
+  }
+  return urls.map(resolveUrl);
+};
+
+export default function ProductCatalog({
+  authUser,
+  cart,
+  onCartChange,
+  onOrderPlaced,
+  onLoginRequired,
+  cartOpen,
+  setCartOpen
 }) {
+  const storeProducts = useStore(state => state.products);
+  const dbProducts = useLiveQuery(() => db.b2bProducts.toArray()) || [];
+
+  const products = useMemo(() => {
+    if (storeProducts && storeProducts.length > 0 && storeProducts.some(p => p.sku && p.sku.startsWith('INST-'))) {
+      return storeProducts;
+    }
+    return dbProducts.map(p => ({
+      ...p,
+      stock_qty: p.stock, // B2C compatibility alias
+      image_url: p.image || p.image_url || '', // B2C compatibility alias
+      description: p.description || p.material || p.finish || '' // B2C compatibility alias
+    }));
+  }, [storeProducts, dbProducts]);
+
+  const categories = useStore(state => state.categories);
+  const loading = useStore(state => state.loading);
+
   const [categoriesList, setCategoriesList] = useState(CATEGORIES);
   const [catConfig, setCatConfig] = useState(CAT);
   const [search, setSearch] = useState('');
@@ -97,9 +126,11 @@ export default function ProductCatalog({
   }, [categories]);
 
   const filtered = useMemo(() => products.filter(p => {
-    const matchCat = category === 'All' || p.category === category;
+    if (p.active === false) return false;
+    const mappedCat = getCategoryKey(p.category);
+    const matchCat = category === 'All' || p.category === category || mappedCat === category;
     const q = search.toLowerCase();
-    const matchSearch = !q || p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
+    const matchSearch = !q || p.name?.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q)) || (p.sku && p.sku.toLowerCase().includes(q));
     return matchCat && matchSearch;
   }), [products, search, category]);
 
@@ -145,12 +176,12 @@ export default function ProductCatalog({
     setPlacing(true);
     const finalTotal = Math.round(cartTotal * 1.12);
     const notesStr = paymentId ? `Paid via Razorpay. Transaction ID: ${paymentId}` : 'Payment pending / manual';
-    
+
     const { data: order, error } = await supabase
       .from('orders')
-      .insert({ 
-        doctor_id: user.user.id, 
-        status: 'pending', 
+      .insert({
+        doctor_id: user.user.id,
+        status: 'pending',
         total: finalTotal,
         notes: notesStr
       })
@@ -177,7 +208,7 @@ export default function ProductCatalog({
     setPlacing(false);
     setCartOpen(false);
     setOrderDone(true);
-    if (refreshGlobalData) refreshGlobalData('all');
+    useStore.getState().refresh('all');
     setTimeout(() => { setOrderDone(false); }, 5000);
   };
 
@@ -316,6 +347,94 @@ export default function ProductCatalog({
 
   return (
     <div style={{ paddingBottom: 100 }}>
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .product-card {
+          animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+          transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease !important;
+          will-change: transform;
+        }
+        .product-card:hover {
+          transform: translateY(-3px) !important;
+          box-shadow: 0 12px 32px rgba(15, 23, 42, 0.10) !important;
+          border-color: #0ea5e9 !important;
+        }
+        .product-card:hover .product-card-img {
+          transform: scale(1.05);
+        }
+        .product-card:hover .product-card-overlay {
+          opacity: 1;
+        }
+        .product-card-img {
+          transition: transform 0.4s ease;
+        }
+        .product-card-overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, transparent 40%, rgba(15, 23, 42, 0.04) 100%);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          pointer-events: none;
+          z-index: 1;
+        }
+        .cat-chip {
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .cat-chip:hover {
+          transform: translateY(-1px) !important;
+          border-color: #0ea5e9 !important;
+        }
+        .search-clear-btn {
+          width: 24px !important;
+          height: 24px !important;
+          min-width: 24px !important;
+          max-width: 24px !important;
+          min-height: 24px !important;
+          max-height: 24px !important;
+          border-radius: 50% !important;
+          padding: 0 !important;
+          box-sizing: border-box !important;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .search-clear-btn:hover {
+          transform: translateY(-50%) scale(1.15) rotate(90deg) !important;
+          background-color: #ef4444 !important;
+          color: #fff !important;
+        }
+        .modal-close-btn-premium {
+          width: 36px !important;
+          height: 36px !important;
+          min-width: 36px !important;
+          max-width: 36px !important;
+          min-height: 36px !important;
+          max-height: 36px !important;
+          border-radius: 50% !important;
+          padding: 0 !important;
+          box-sizing: border-box !important;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .modal-close-btn-premium:hover {
+          transform: scale(1.1) rotate(90deg) !important;
+          background-color: #ef4444 !important;
+          color: #fff !important;
+          border-color: #ef4444 !important;
+        }
+        .detail-modal-footer {
+          position: sticky;
+          bottom: 0;
+          background: hsl(var(--bg-card));
+          border-top: 1px solid hsl(var(--border-color));
+          padding: 16px 20px;
+          z-index: 10;
+          box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.06);
+          display: flex;
+          justify-content: flex-end;
+        }
+      `}</style>
+
       {/* Success toast with CTA */}
       {orderDone && (
         <div style={{ position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: '#fff', borderRadius: 16, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 8px 32px rgba(15,23,42,0.18)', border: '1px solid rgba(16,185,129,0.2)', padding: '12px 16px', minWidth: 260 }}>
@@ -337,17 +456,38 @@ export default function ProductCatalog({
         <Search size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-dim))', pointerEvents: 'none' }} />
         <input
           value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..."
-          style={{ width: '100%', padding: '12px 14px 12px 38px', background: 'hsl(var(--bg-card))', border: '1.5px solid hsl(var(--border-color))', borderRadius: 12, fontSize: '0.88rem', color: 'hsl(var(--text-primary))', outline: 'none', fontFamily: 'Outfit', boxSizing: 'border-box', transition: 'all 0.2s ease' }}
+          style={{ width: '100%', padding: '12px 38px 12px 38px', background: 'hsl(var(--bg-card))', border: '1.5px solid hsl(var(--border-color))', borderRadius: 12, fontSize: '0.88rem', color: 'hsl(var(--text-primary))', outline: 'none', fontFamily: 'Outfit', boxSizing: 'border-box', transition: 'all 0.2s ease' }}
           onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 3px rgba(14, 165, 233, 0.15)'; }}
           onBlur={e => { e.target.style.borderColor = 'hsl(var(--border-color))'; e.target.style.boxShadow = 'none'; }}
         />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="search-clear-btn"
+            style={{ 
+              position: 'absolute', 
+              right: 12, 
+              top: '50%', 
+              transform: 'translateY(-50%)', 
+              background: 'rgba(239, 68, 68, 0.1)', 
+              border: 'none', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              color: '#ef4444'
+            }}
+          >
+            <X size={13} strokeWidth={2.5} style={{ width: '13px', height: '13px', display: 'block' }} />
+          </button>
+        )}
       </div>
 
       {/* Category chips */}
-      <div className="cat-scroll" style={{ display: 'flex', gap: 7, overflowX: 'auto', marginBottom: 20, paddingBottom: 4, scrollbarWidth: 'none' }}>
+      <div className="cat-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 20, paddingTop: 6, paddingBottom: 8, scrollbarWidth: 'none' }}>
         <style>{`.cat-scroll::-webkit-scrollbar{display:none}`}</style>
         {categoriesList.map(cat => (
-          <button key={cat} className="cat-chip" onClick={() => setCategory(cat)} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, fontFamily: 'Outfit', border: '1.5px solid', cursor: 'pointer', transition: 'all 0.2s', background: category === cat ? '#0ea5e9' : 'transparent', borderColor: category === cat ? '#0ea5e9' : 'hsl(var(--border-color))', color: category === cat ? '#fff' : 'hsl(var(--text-muted))' }}>
+          <button key={cat} className="cat-chip" onClick={() => setCategory(cat)} style={{ flexShrink: 0, padding: '8px 16px', borderRadius: 24, fontSize: '0.78rem', fontWeight: 700, fontFamily: 'Outfit', border: '1.5px solid', cursor: 'pointer', transition: 'all 0.2s', background: category === cat ? '#0ea5e9' : 'transparent', borderColor: category === cat ? '#0ea5e9' : 'hsl(var(--border-color))', color: category === cat ? '#fff' : 'hsl(var(--text-muted))' }}>
             {cat}
           </button>
         ))}
@@ -355,106 +495,107 @@ export default function ProductCatalog({
 
       {/* Product grid */}
       {filtered.length === 0 ? (
-        <EmptyStateCard 
-          icon={Package} 
-          title="No Products Found" 
-          message="Try a different search or category to find what you're looking for." 
+        <EmptyStateCard
+          icon={Package}
+          title="No Products Found"
+          message="Try a different search or category to find what you're looking for."
         />
       ) : (
         <div className="product-catalog-grid">
-          {filtered.map(p => {
+          {filtered.map((p, index) => {
             const cs = catConfig[p.category] || DEFAULT_CAT;
             const inCart = (cart || {})[p.id];
             const outOfStock = p.stock_qty === null || p.stock_qty === undefined || p.stock_qty <= 0;
             const lowStock = !outOfStock && p.stock_qty <= 5;
             const images = getProductImages(p);
             return (
-              <div 
-                key={p.id} 
+              <div
+                key={p.id}
                 onClick={() => { setSelectedProduct(p); setCarouselIndex(0); }}
+                className="product-card"
                 style={{
-                  background: 'hsl(var(--bg-card))', borderRadius: 'var(--radius-lg)', padding: '14px 12px',
-                  display: 'flex', flexDirection: 'column', gap: 8,
+                  background: 'hsl(var(--bg-card))', borderRadius: 20, padding: 0,
+                  display: 'flex', flexDirection: 'column',
                   border: inCart ? '1.5px solid #0ea5e9' : '1px solid hsl(var(--border-color))',
-                  boxShadow: inCart ? '0 4px 16px rgba(14,165,233,0.15)' : 'var(--shadow-xs)',
-                  position: 'relative', overflow: 'hidden', transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = inCart
-                    ? '0 6px 20px rgba(14,165,233,0.22)'
-                    : 'var(--shadow-sm)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = inCart
-                    ? '0 4px 16px rgba(14,165,233,0.15)'
-                    : 'var(--shadow-xs)';
+                  boxShadow: inCart ? '0 8px 24px rgba(14,165,233,0.15)' : 'var(--shadow-sm)',
+                  position: 'relative', overflow: 'hidden',
+                  cursor: 'pointer',
+                  animationDelay: `${index * 0.04}s`
                 }}
               >
                 {/* Product Image Thumbnail */}
-                <div style={{ width: '100%', height: 110, borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '100%', height: 150, overflow: 'hidden', background: 'hsl(var(--bg-dark))', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid hsl(var(--border-color))' }}>
+                  <div className="product-card-overlay" />
                   {images && images.length > 0 ? (
-                    <img src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                    <img className="product-card-img" src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
                   ) : (
-                    <div style={{ color: cs.color, display: 'flex' }}>
+                    <div style={{ color: cs.color, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: 0.5 }}>
                       {typeof cs.icon === 'string' ? <span style={{ fontSize: '2.5rem' }}>{cs.icon}</span> : <cs.icon size={40} />}
+                      <span style={{ fontSize: '0.5rem', fontWeight: 700, color: 'hsl(var(--text-dim))', fontFamily: 'Outfit' }}>No Image</span>
                     </div>
+                  )}
+                  {/* Category Pill Overlay */}
+                  <span style={{ position: 'absolute', left: 8, bottom: 8, fontSize: '0.55rem', fontWeight: 800, color: '#fff', background: cs.color, padding: '4px 10px', borderRadius: 8, textTransform: 'uppercase', letterSpacing: '0.06em', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', zIndex: 2 }}>
+                    {p.category || 'General'}
+                  </span>
+                  {images && images.length > 1 && (
+                    <span style={{ position: 'absolute', right: 8, top: 8, fontSize: '0.5rem', fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.45)', padding: '3px 7px', borderRadius: 6, backdropFilter: 'blur(4px)', zIndex: 2 }}>
+                      {images.length} imgs
+                    </span>
                   )}
                 </div>
 
-                <span style={{ fontSize: '0.55rem', fontWeight: 800, color: cs.color, background: cs.bg, padding: '2px 7px', borderRadius: 'var(--radius-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', alignSelf: 'flex-start' }}>
-                  {p.category || 'General'}
-                </span>
+                <div style={{ padding: '12px 14px 0', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                  <div style={{ fontSize: '0.84rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minHeight: 36 }}>
+                    {(p.name || '').replace(/`/g, '')}
+                  </div>
 
-                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                  {(p.name || '').replace(/`/g, '')}
+                  {p.description && (
+                    <div style={{ fontSize: '0.64rem', color: 'hsl(var(--text-muted))', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
+                      {p.description}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 6 }}>
+                    <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.08rem', color: 'hsl(var(--text-primary))' }}>
+                      ₹{p.price?.toLocaleString('en-IN')}
+                    </span>
+                    <span style={{ fontSize: '0.56rem', fontWeight: 800, padding: '3px 8px', borderRadius: 8, background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
+                      {outOfStock ? 'Out of Stock' : lowStock ? `${p.stock_qty} left` : 'In Stock'}
+                    </span>
+                  </div>
                 </div>
 
-                {p.description && (
-                  <div style={{ fontSize: '0.64rem', color: 'hsl(var(--text-muted))', lineHeight: 1.45, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                    {p.description}
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 4 }}>
-                  <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1rem', color: 'hsl(var(--text-primary))' }}>
-                    ₹{p.price?.toLocaleString('en-IN')}
-                  </span>
-                  <span style={{ fontSize: '0.58rem', fontWeight: 800, padding: '2px 7px', borderRadius: 'var(--radius-xs)', background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
-                    {outOfStock ? 'Out of Stock' : lowStock ? `${p.stock_qty} left` : 'In Stock'}
-                  </span>
+                <div style={{ padding: '0 14px 14px', display: 'flex', justifyContent: 'flex-end' }}>
+                  {outOfStock ? (
+                    <div style={{ width: '100%', textAlign: 'center', fontSize: '0.66rem', color: 'hsl(var(--text-dim))', padding: '10px 0', borderTop: '1px solid hsl(var(--border-color))', fontWeight: 700 }}>Currently unavailable</div>
+                  ) : inCart ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.12)', borderRadius: 12, padding: '5px 6px', width: '100%' }}>
+                      <button
+                        className="qty-btn"
+                        onClick={(e) => { e.stopPropagation(); removeFromCart(p.id); }}
+                      >
+                        <Minus size={13} strokeWidth={2.5} />
+                      </button>
+                      <span
+                        onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
+                        style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 6px', borderRadius: 'var(--radius-xs)', transition: 'background 0.15s' }}
+                        title="View Cart"
+                      >{inCart.qty}</span>
+                      <button
+                        className="qty-btn"
+                        onClick={(e) => { e.stopPropagation(); addToCart(p); }}
+                        disabled={p.stock_qty !== null && p.stock_qty !== undefined && inCart.qty >= p.stock_qty}
+                      >
+                        <Plus size={13} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={(e) => { e.stopPropagation(); addToCart(p); }} style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 12px rgba(14,165,233,0.25)', transition: 'all 0.2s ease', marginLeft: 'auto' }}>
+                      <Plus size={14} strokeWidth={2.5} /> Add to Cart
+                    </button>
+                  )}
                 </div>
-
-                {outOfStock ? (
-                  <div style={{ textAlign: 'center', fontSize: '0.66rem', color: 'hsl(var(--text-dim))', padding: '6px 0', borderTop: '1px solid hsl(var(--border-color))' }}>Currently unavailable</div>
-                ) : inCart ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.12)', borderRadius: 12, padding: '4px 6px' }}>
-                    <button 
-                      className="qty-btn"
-                      onClick={(e) => { e.stopPropagation(); removeFromCart(p.id); }} 
-                    >
-                      <Minus size={13} strokeWidth={2.5} />
-                    </button>
-                    <span 
-                      onClick={(e) => { e.stopPropagation(); setCartOpen(true); }} 
-                      style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 6px', borderRadius: 'var(--radius-xs)', transition: 'background 0.15s' }}
-                      title="View Cart"
-                    >{inCart.qty}</span>
-                    <button 
-                      className="qty-btn"
-                      onClick={(e) => { e.stopPropagation(); addToCart(p); }} 
-                      disabled={p.stock_qty !== null && p.stock_qty !== undefined && inCart.qty >= p.stock_qty}
-                    >
-                      <Plus size={13} strokeWidth={2.5} />
-                    </button>
-                  </div>
-                ) : (
-                  <button onClick={(e) => { e.stopPropagation(); addToCart(p); }} style={{ width: '100%', padding: '8px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, boxShadow: '0 3px 10px rgba(14,165,233,0.25)' }}>
-                    <Plus size={13} /> Add to Cart
-                  </button>
-                )}
               </div>
             );
           })}
@@ -488,17 +629,17 @@ export default function ProductCatalog({
             }
           `}</style>
           <div onClick={() => setCartOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', animation: 'cartFadeIn 0.2s ease-out' }} />
-          <div style={{ 
-            position: 'relative', 
-            marginTop: '5vh', 
-            background: 'hsl(var(--bg-card))', 
-            borderRadius: '24px', 
+          <div style={{
+            position: 'relative',
+            marginTop: '5vh',
+            background: 'hsl(var(--bg-card))',
+            borderRadius: '24px',
             width: '100%',
-            maxWidth: '620px', 
-            maxHeight: '85vh', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            boxShadow: '0 24px 64px rgba(15,23,42,0.25)', 
+            maxWidth: '620px',
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 24px 64px rgba(15,23,42,0.25)',
             border: '1px solid hsl(var(--border-color))',
             animation: 'cartSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             overflow: 'hidden'
@@ -513,8 +654,8 @@ export default function ProductCatalog({
                   {cartItems.length > 0 && (
                     <button onClick={clearCart} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', color: '#ef4444', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit', transition: 'all 0.2s' }}>Clear All</button>
                   )}
-                  <button 
-                    onClick={() => setCartOpen(false)} 
+                  <button
+                    onClick={() => setCartOpen(false)}
                     style={{ background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s' }}
                   >
                     <X size={15} strokeWidth={2.5} color="hsl(var(--text-primary))" />
@@ -543,16 +684,16 @@ export default function ProductCatalog({
                         <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', marginTop: 1 }}>₹{p.price?.toLocaleString('en-IN')}</div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                        <button 
+                        <button
                           className="qty-btn"
-                          onClick={() => removeFromCart(p.id)} 
+                          onClick={() => removeFromCart(p.id)}
                         >
                           <Minus size={11} strokeWidth={2.5} />
                         </button>
                         <span style={{ fontSize: '0.85rem', fontWeight: 800, minWidth: 16, textAlign: 'center', fontFamily: 'Outfit' }}>{qty}</span>
-                        <button 
+                        <button
                           className="qty-btn"
-                          onClick={() => addToCart(p)} 
+                          onClick={() => addToCart(p)}
                           disabled={p.stock_qty !== null && p.stock_qty !== undefined && qty >= p.stock_qty}
                         >
                           <Plus size={11} strokeWidth={2.5} />
@@ -576,17 +717,17 @@ export default function ProductCatalog({
                 </div>
                 <button
                   onClick={placeOrder} disabled={placing}
-                  style={{ 
-                    padding: '12px 22px', 
-                    borderRadius: 12, 
-                    border: 'none', 
-                    background: placing ? 'hsl(var(--border-color))' : 'linear-gradient(135deg, hsl(var(--primary)), #6366f1)', 
-                    color: '#fff', 
-                    fontSize: '0.85rem', 
-                    fontWeight: 800, 
-                    cursor: placing ? 'not-allowed' : 'pointer', 
-                    fontFamily: 'Outfit', 
-                    boxShadow: placing ? 'none' : '0 6px 18px rgba(14,165,233,0.3)', 
+                  style={{
+                    padding: '12px 22px',
+                    borderRadius: 12,
+                    border: 'none',
+                    background: placing ? 'hsl(var(--border-color))' : 'linear-gradient(135deg, hsl(var(--primary)), #6366f1)',
+                    color: '#fff',
+                    fontSize: '0.85rem',
+                    fontWeight: 800,
+                    cursor: placing ? 'not-allowed' : 'pointer',
+                    fontFamily: 'Outfit',
+                    boxShadow: placing ? 'none' : '0 6px 18px rgba(14,165,233,0.3)',
                     transition: 'all 0.2s',
                     display: 'flex',
                     alignItems: 'center',
@@ -622,21 +763,43 @@ export default function ProductCatalog({
                 to { transform: translateY(0); opacity: 1; }
               }
             `}</style>
-            
-            <div 
-              onClick={() => { setSelectedProduct(null); setCarouselIndex(0); }} 
-              style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', animation: 'fadeIn 0.2s ease-out' }} 
+
+            <div
+              onClick={() => { setSelectedProduct(null); setCarouselIndex(0); }}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.35)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', animation: 'fadeIn 0.2s ease-out' }}
             />
-            
-            <div style={{ position: 'relative', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', borderRadius: 24, width: '100%', maxWidth: 440, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 64px rgba(15, 23, 42, 0.25)', animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)', zIndex: 1 }}>
-              
+
+            <div style={{ position: 'relative', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', borderRadius: 28, width: '100%', maxWidth: 600, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 32px 80px rgba(15, 23, 42, 0.3)', animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)', zIndex: 1 }}>
+
+              {/* Close Button directly on modal container */}
+              <button 
+                onClick={() => { setSelectedProduct(null); setCarouselIndex(0); }} 
+                className="modal-close-btn-premium"
+                style={{ 
+                  position: 'absolute', 
+                  top: 16, 
+                  right: 16, 
+                  zIndex: 100,
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  color: '#0f172a',
+                  border: '1px solid hsl(var(--border-color))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                }}
+              >
+                <X size={16} strokeWidth={2.5} style={{ width: '16px', height: '16px', display: 'block' }} />
+              </button>
+
               {/* Image Carousel */}
               <div style={{ position: 'relative', width: '100%', height: 260, background: 'hsl(var(--bg-dark))', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {images.length > 0 ? (
-                  <img 
-                    src={images[carouselIndex]} 
-                    alt={selectedProduct.name} 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'all 0.3s ease' }} 
+                  <img
+                    src={images[carouselIndex]}
+                    alt={selectedProduct.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'all 0.3s ease' }}
                     onError={(e) => { e.target.style.display = 'none'; }}
                   />
                 ) : (
@@ -646,39 +809,25 @@ export default function ProductCatalog({
                   </div>
                 )}
 
-                {/* Close Button overlay */}
-                <button 
-                  className="modal-close-btn dark-overlay"
-                  onClick={() => { setSelectedProduct(null); setCarouselIndex(0); }} 
-                  style={{ 
-                    position: 'absolute', 
-                    top: 14, 
-                    right: 14, 
-                    zIndex: 10
-                  }}
-                >
-                  <X size={15} strokeWidth={2.5} />
-                </button>
-
                 {/* Left/Right nav buttons — only when multiple images exist */}
                 {images.length > 1 && (
                   <>
-                    <button 
+                    <button
                       className="carousel-nav-btn"
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        setCarouselIndex(prev => (prev === 0 ? images.length - 1 : prev - 1)); 
-                      }} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCarouselIndex(prev => (prev === 0 ? images.length - 1 : prev - 1));
+                      }}
                       style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', zIndex: 10 }}
                     >
                       <ChevronLeft size={18} strokeWidth={2.5} />
                     </button>
-                    <button 
+                    <button
                       className="carousel-nav-btn"
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        setCarouselIndex(prev => (prev === images.length - 1 ? 0 : prev + 1)); 
-                      }} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCarouselIndex(prev => (prev === images.length - 1 ? 0 : prev + 1));
+                      }}
                       style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', zIndex: 10 }}
                     >
                       <ChevronRight size={18} strokeWidth={2.5} />
@@ -690,29 +839,29 @@ export default function ProductCatalog({
                 {images.length > 1 && (
                   <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6, zIndex: 10 }}>
                     {images.map((_, idx) => (
-                      <button 
-                        key={idx} 
-                        onClick={(e) => { e.stopPropagation(); setCarouselIndex(idx); }} 
-                        style={{ width: 8, height: 8, borderRadius: '50%', border: 'none', background: carouselIndex === idx ? '#fff' : 'rgba(255, 255, 255, 0.45)', cursor: 'pointer', padding: 0, transition: 'all 0.2s' }} 
+                      <button
+                        key={idx}
+                        onClick={(e) => { e.stopPropagation(); setCarouselIndex(idx); }}
+                        style={{ width: 8, height: 8, borderRadius: '50%', border: 'none', background: carouselIndex === idx ? '#fff' : 'rgba(255, 255, 255, 0.45)', cursor: 'pointer', padding: 0, transition: 'all 0.2s' }}
                       />
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Product Info */}
-              <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Scrollable Product Info */}
+              <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                   <div>
-                    <span style={{ fontSize: '0.6rem', fontWeight: 800, color: cs.color, background: cs.bg, padding: '3px 8px', borderRadius: 'var(--radius-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'inline-block', marginBottom: 6 }}>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#fff', background: cs.color, padding: '4px 10px', borderRadius: 'var(--radius-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'inline-block', marginBottom: 6 }}>
                       {selectedProduct.category || 'General'}
                     </span>
-                    <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, lineHeight: 1.3, wordBreak: 'break-word' }}>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, lineHeight: 1.3, wordBreak: 'break-word' }}>
                       {(selectedProduct.name || '').replace(/`/g, '')}
                     </h2>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.25rem', color: '#0ea5e9' }}>
+                    <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.35rem', color: '#0ea5e9' }}>
                       ₹{selectedProduct.price?.toLocaleString('en-IN')}
                     </div>
                     {selectedProduct.unit && (
@@ -725,57 +874,69 @@ export default function ProductCatalog({
 
                 {/* Badges / Stock */}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '3px 8px', borderRadius: 'var(--radius-xs)', background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
+                  <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '4px 10px', borderRadius: 'var(--radius-xs)', background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
                     {outOfStock ? 'Out of Stock' : lowStock ? `Only ${selectedProduct.stock_qty} left` : 'In Stock'}
                   </span>
                   {selectedProduct.sku && (
-                    <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-xs)', background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-muted))' }}>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '4px 10px', borderRadius: 'var(--radius-xs)', background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-muted))' }}>
                       SKU: {selectedProduct.sku}
                     </span>
                   )}
                   {selectedProduct.is_serialized && (
-                    <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-xs)', background: 'rgba(168,85,247,0.08)', color: '#a855f7' }}>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '4px 10px', borderRadius: 'var(--radius-xs)', background: 'rgba(168,85,247,0.08)', color: '#a855f7' }}>
                       Tracked by Serial
                     </span>
                   )}
                 </div>
 
-                {/* B2C Product Details Grid */}
+                {/* Premium Specifications Grid */}
                 <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: 12 }}>
                   <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px 0' }}>Product Details</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: 'hsl(var(--bg-dark))', padding: 12, borderRadius: 12, border: '1px solid hsl(var(--border-color))' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: 'hsl(var(--bg-dark))', padding: 14, borderRadius: 16, border: '1px solid hsl(var(--border-color))' }}>
                     <div>
-                      <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Stock Qty</div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981', marginTop: 2 }}>
-                        {outOfStock ? '0 (Out)' : `${selectedProduct.stock_qty} units`}
+                      <div style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Availability</div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800, color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981', marginTop: 2 }}>
+                        {outOfStock ? 'Out of Stock' : lowStock ? `Low — ${selectedProduct.stock_qty} left` : '✅ In Stock'}
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Availability</div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981', marginTop: 2 }}>
-                        {outOfStock ? 'Out of Stock' : lowStock ? `Low — ${selectedProduct.stock_qty} left` : '✅ Available'}
+                      <div style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Category</div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800, color: cs.color, marginTop: 2 }}>{selectedProduct.category || 'General'}</div>
+                    </div>
+                    {selectedProduct.material && (
+                      <div>
+                        <div style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Material</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2 }}>{selectedProduct.material}</div>
                       </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Category</div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: cs.color, marginTop: 2 }}>{selectedProduct.category || 'General'}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Listing Status</div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: selectedProduct.active === false ? '#ef4444' : '#10b981', marginTop: 2 }}>
-                        {selectedProduct.active === false ? 'Inactive ❌' : 'Active ✅'}
+                    )}
+                    {selectedProduct.finish && (
+                      <div>
+                        <div style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Surface Finish</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2 }}>{selectedProduct.finish}</div>
                       </div>
-                    </div>
+                    )}
+                    {selectedProduct.sterilization && (
+                      <div>
+                        <div style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Sterilization</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2 }}>{selectedProduct.sterilization}</div>
+                      </div>
+                    )}
+                    {selectedProduct.warrantyPct > 0 && (
+                      <div>
+                        <div style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Warranty</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2 }}>{selectedProduct.warrantyPct}% Coverage</div>
+                      </div>
+                    )}
                     {selectedProduct.sku && (
                       <div style={{ gridColumn: '1 / -1' }}>
-                        <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>SKU / Product Code</div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2, fontFamily: 'monospace' }}>{selectedProduct.sku}</div>
+                        <div style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>SKU / Product Code</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2, fontFamily: 'monospace' }}>{selectedProduct.sku}</div>
                       </div>
                     )}
                     {selectedProduct.unit && (
                       <div style={{ gridColumn: '1 / -1' }}>
-                        <div style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Unit</div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2 }}>per {selectedProduct.unit}</div>
+                        <div style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Unit</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 2 }}>per {selectedProduct.unit}</div>
                       </div>
                     )}
                   </div>
@@ -785,51 +946,51 @@ export default function ProductCatalog({
                 {selectedProduct.description && (
                   <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: 12 }}>
                     <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 6px 0' }}>Description</h4>
-                    <p style={{ fontSize: '0.78rem', color: 'hsl(var(--text-primary))', lineHeight: 1.5, margin: 0, maxHeight: 110, overflowY: 'auto' }}>
+                    <p style={{ fontSize: '0.78rem', color: 'hsl(var(--text-primary))', lineHeight: 1.6, margin: 0 }}>
                       {selectedProduct.description}
                     </p>
                   </div>
                 )}
+              </div>
 
-                {/* Action Footer */}
-                <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: 16, marginTop: 4 }}>
+              {/* Sticky Action Footer */}
+              <div className="detail-modal-footer">
                   {outOfStock ? (
-                    <div style={{ padding: '12px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 12, color: '#ef4444', fontSize: '0.78rem', textAlign: 'center', fontWeight: 800, fontFamily: 'Outfit' }}>
+                    <div style={{ width: '100%', padding: '12px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 12, color: '#ef4444', fontSize: '0.78rem', textAlign: 'center', fontWeight: 800, fontFamily: 'Outfit' }}>
                       🚫 Currently Out of Stock
                     </div>
                   ) : inCart ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.08)', borderRadius: 14, padding: '8px 12px', border: '1.5px solid #0ea5e9' }}>
-                      <button 
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.08)', borderRadius: 14, padding: '8px 12px', border: '1.5px solid #0ea5e9', width: '100%' }}>
+                      <button
                         className="qty-btn"
-                        onClick={() => removeFromCart(selectedProduct.id)} 
+                        onClick={() => removeFromCart(selectedProduct.id)}
                       >
                         <Minus size={14} strokeWidth={2.5} />
                       </button>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <span 
+                        <span
                           onClick={() => { setSelectedProduct(null); setCartOpen(true); }}
                           style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 8px', borderRadius: 'var(--radius-xs)', transition: 'background 0.15s' }}
                           title="View Cart"
                         >{inCart.qty}</span>
                         <span style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>IN CART</span>
                       </div>
-                      <button 
+                      <button
                         className="qty-btn"
-                        onClick={() => addToCart(selectedProduct)} 
+                        onClick={() => addToCart(selectedProduct)}
                         disabled={selectedProduct.stock_qty !== null && selectedProduct.stock_qty !== undefined && inCart.qty >= selectedProduct.stock_qty}
                       >
                         <Plus size={14} strokeWidth={2.5} />
                       </button>
                     </div>
                   ) : (
-                    <button 
-                      onClick={() => addToCart(selectedProduct)} 
-                      style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 16px rgba(14,165,233,0.3)' }}
+                    <button
+                      onClick={() => addToCart(selectedProduct)}
+                      style={{ padding: '14px 28px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 16px rgba(14,165,233,0.3)', letterSpacing: '0.02em', marginLeft: 'auto' }}
                     >
                       <Plus size={16} /> Add to Cart
                     </button>
                   )}
-                </div>
               </div>
             </div>
           </div>

@@ -18,6 +18,8 @@ import {
 import PremiumLoader from './ui/PremiumLoader';
 import EmptyStateCard from './EmptyStateCard';
 
+import { useStore } from '../utils/store';
+
 const STATUSES = ['all', 'pending', 'confirmed', 'dispatched', 'delivered'];
 
 const STATUS_CFG = {
@@ -46,7 +48,12 @@ const getInitials = (name) => {
     .toUpperCase();
 };
 
-export default function OrderManagement({ orders: propOrders = [], profiles: propProfiles = [], products: propProducts = [], refreshGlobalData }) {
+export default function OrderManagement() {
+  const propOrders = useStore(state => state.orders);
+  const propProfiles = useStore(state => state.profiles);
+  const propProducts = useStore(state => state.products);
+  const refreshGlobalData = (table) => useStore.getState().refresh(table);
+
   const [orders, setOrders] = useState([]);
   const [profiles, setProfiles] = useState({});
   const [loading, setLoading] = useState(propOrders.length === 0 && propProfiles.length === 0);

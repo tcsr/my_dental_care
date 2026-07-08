@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
+import { useStore } from '../utils/store';
 import { db } from '../utils/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Edit3, Trash2, Package, Search, X, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, Barcode, Warehouse } from 'lucide-react';
@@ -53,14 +54,24 @@ const getCategoryKey = (cat) => {
   return 'General';
 };
 
+const resolveUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
+    return url;
+  }
+  const path = url.startsWith('/') ? url.substring(1) : url;
+  const base = import.meta.env.BASE_URL || '/';
+  return base + path;
+};
+
 const getProductImages = (product) => {
+  let urls = [];
   if (product && product.image_url && product.image_url.trim()) {
-    return splitImageUrls(product.image_url);
+    urls = splitImageUrls(product.image_url);
+  } else if (product && product.image && product.image.trim()) {
+    urls = splitImageUrls(product.image);
   }
-  if (product && product.image && product.image.trim()) {
-    return splitImageUrls(product.image);
-  }
-  return []; // No uploaded image — return empty, show placeholder
+  return urls.map(resolveUrl);
 };
 
 const uploadImage = async (file) => {
@@ -88,26 +99,31 @@ function Field({ label, children }) {
 const inputStyle = { width: '100%', padding: '12px 16px', background: 'hsl(var(--bg-dark))', border: '1.5px solid hsl(var(--border-color))', borderRadius: 12, fontSize: '0.88rem', color: 'hsl(var(--text-primary))', outline: 'none', fontFamily: 'Outfit', boxSizing: 'border-box', transition: 'all 0.2s ease' };
 
 export default function ProductManagement() {
-  const [subTab, setSubTab] = useState('b2c'); // 'b2c' (Cloud B2C Catalog) or 'b2b' (B2B Rep Catalog)
-  const [products, setProducts] = useState([]);
+  const [subTab, setSubTab] = useState('b2b'); // B2B Rep Catalog
+  
+  const products = useStore(state => state.products);
+  const categories = useStore(state => state.categories);
+  const storeLoading = useStore(state => state.loading);
+ 
   const b2bProducts = useLiveQuery(() => db.b2bProducts.toArray()) || [];
   const warehousesList = useLiveQuery(() => db.b2bWarehouses.toArray()) || [
     { id: 'wh-1', name: 'Main Warehouse' },
     { id: 'wh-2', name: 'Hyderabad Hub' },
     { id: 'wh-3', name: 'Rep Kit' }
   ];
-
+ 
   const [categoriesList, setCategoriesList] = useState(CATEGORIES);
   const [catColors, setCatColors] = useState(CAT_COLOR);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(null);
-  const [form, setForm] = useState(EMPTY_B2C);
+  const [form, setForm] = useState(EMPTY_B2B);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [selectedProductPreview, setSelectedProductPreview] = useState(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+
+  const loading = products.length === 0 && storeLoading;
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -137,60 +153,16 @@ export default function ProductManagement() {
     e.target.value = '';
   };
 
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase.from('product_categories').select('*').eq('active', true);
-      if (error) throw error;
-      if (data && data.length > 0) {
-        setCategoriesList(data.map(c => c.name));
-        const colors = {};
-        data.forEach(c => {
-          colors[c.name] = c.text_color || '#0ea5e9';
-        });
-        setCatColors(colors);
-      }
-    } catch (e) {
-      console.warn('Could not load categories in ProductManagement:', e);
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const cached = sessionStorage.getItem('pm_products_cache');
-      if (cached && cached !== 'undefined') {
-        try {
-          setProducts(JSON.parse(cached));
-          setLoading(false);
-        } catch (e) {
-          console.warn('Cache parse error:', e);
-          setLoading(true);
-        }
-      } else {
-        setLoading(true);
-      }
-      
-      const { data, error } = await supabase.from('products').select('*').order('name');
-      if (error) throw error;
-      if (data) {
-        setProducts(data);
-        try {
-          sessionStorage.setItem('pm_products_cache', JSON.stringify(data));
-        } catch (e) {
-          console.warn('Could not cache products to sessionStorage:', e);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchCategories();
-    fetchProducts();
-  }, []);
+    if (categories && categories.length > 0) {
+      setCategoriesList(categories.map(c => c.name));
+      const colors = {};
+      categories.forEach(c => {
+        colors[c.name] = c.text_color || '#0ea5e9';
+      });
+      setCatColors(colors);
+    }
+  }, [categories]);
 
   const openAdd = () => {
     if (subTab === 'b2b') {
@@ -241,9 +213,21 @@ export default function ProductManagement() {
       setSaving(true);
       const priceNum = parseFloat(form.price);
       const costNum = parseFloat(form.purchaseCost) || Math.round(priceNum * 0.5);
+      const stockQty = parseInt(form.stock) || 0;
+
+      const supabasePayload = {
+        name: form.name.trim(),
+        category: form.category === 'Implant' ? 'Implants' : form.category === 'Abutment' ? 'Materials' : 'Instruments',
+        price: priceNum,
+        stock_qty: stockQty,
+        sku: form.sku.trim(),
+        purchase_cost: costNum,
+        is_serialized: form.isSerialized,
+        image_url: form.image || '',
+        active: true
+      };
 
       if (modal === 'add') {
-        const stockQty = parseInt(form.stock) || 0;
         const finalBatchNo = form.batchNo || 'BATCH-GEN-' + Math.floor(100 + Math.random() * 900);
         const finalExpiry = form.batchExpiry ? new Date(form.batchExpiry).getTime() : Date.now() + 365 * 24 * 60 * 60 * 1000;
         
@@ -272,8 +256,16 @@ export default function ProductManagement() {
             }
           ]
         };
-        await db.b2bProducts.add(newProduct);
-        alert('B2B Product added successfully!');
+        const newId = await db.b2bProducts.add(newProduct);
+        try {
+          const { data: inserted, error } = await supabase.from('products').insert(supabasePayload).select().single();
+          if (!error && inserted) {
+            await db.b2bProducts.update(newId, { supabase_id: inserted.id });
+          }
+        } catch (e) {
+          console.error('Supabase insert failed:', e);
+        }
+        alert('Product added successfully!');
       } else {
         await db.b2bProducts.update(modal.id, {
           name: form.name.trim(),
@@ -290,8 +282,22 @@ export default function ProductManagement() {
           warrantyPct: parseFloat(form.warrantyPct) || 0,
           bendableAngle: parseFloat(form.bendableAngle) || 0
         });
-        alert('B2B Product updated successfully!');
+        const localProd = await db.b2bProducts.get(modal.id);
+        try {
+          if (localProd && localProd.supabase_id) {
+            await supabase.from('products').update(supabasePayload).eq('id', localProd.supabase_id);
+          } else {
+            const { data: inserted } = await supabase.from('products').insert(supabasePayload).select().single();
+            if (inserted) {
+              await db.b2bProducts.update(modal.id, { supabase_id: inserted.id });
+            }
+          }
+        } catch (e) {
+          console.error('Supabase update failed:', e);
+        }
+        alert('Product updated successfully!');
       }
+      useStore.getState().refresh('products');
       setSaving(false);
       setModal(null);
     } else {
@@ -303,7 +309,7 @@ export default function ProductManagement() {
       } else {
         await supabase.from('products').update(payload).eq('id', modal.id);
       }
-      await fetchProducts();
+      useStore.getState().refresh('products');
       setSaving(false);
       setModal(null);
     }
@@ -313,12 +319,20 @@ export default function ProductManagement() {
     if (!(await confirm('Delete this product? This cannot be undone.'))) return;
     setDeleting(id);
     if (subTab === 'b2b') {
+      const localProd = await db.b2bProducts.get(id);
+      try {
+        if (localProd && localProd.supabase_id) {
+          await supabase.from('products').delete().eq('id', localProd.supabase_id);
+        }
+      } catch (e) {
+        console.error('Supabase delete failed:', e);
+      }
       await db.b2bProducts.delete(id);
-      alert('B2B Product deleted successfully!');
+      alert('Product deleted successfully!');
     } else {
       await supabase.from('products').delete().eq('id', id);
-      await fetchProducts();
     }
+    useStore.getState().refresh('products');
     setDeleting(null);
   };
 
@@ -338,32 +352,14 @@ export default function ProductManagement() {
 
   return (
     <div style={{ paddingBottom: 12 }}>
-      {/* Sub Tabs Selection */}
-      <div className="tab-group">
-        <button
-          onClick={() => setSubTab('b2c')}
-          className={`tab-btn ${subTab === 'b2c' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-        >
-          <Package size={14} /> Cloud B2C Catalog
-        </button>
-        <button
-          onClick={() => setSubTab('b2b')}
-          className={`tab-btn ${subTab === 'b2b' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-        >
-          <Warehouse size={14} /> B2B Rep Catalog
-        </button>
-      </div>
-
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h2 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.15rem', color: 'hsl(var(--text-primary))', margin: '0 0 2px' }}>
-            {subTab === 'b2b' ? 'B2B Representative Catalog' : 'Dentist B2C Catalog'}
+            Product Catalog
           </h2>
           <p style={{ fontSize: '0.72rem', color: 'hsl(var(--text-muted))' }}>
-            {subTab === 'b2b' ? 'Manage B2B representative stock items' : 'Manage dentist B2C catalog items'}
+            Manage catalog stock items and details
           </p>
         </div>
         <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit', boxShadow: '0 4px 14px rgba(14,165,233,0.3)', flexShrink: 0 }}>
@@ -548,7 +544,7 @@ export default function ProductManagement() {
             <div className="modal-content-card animate-fade-in" style={{ padding: '24px 20px', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
                 <h3 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.15rem', color: 'hsl(var(--text-primary))', margin: 0 }}>
-                  {modal === 'add' ? `Add ${isB2b ? 'B2B' : 'B2C'} Product` : `Edit ${isB2b ? 'B2B' : 'B2C'} Product`}
+                  {modal === 'add' ? 'Add Product' : 'Edit Product'}
                 </h3>
                 <button 
                   className="modal-close-btn light-bg" 
@@ -733,7 +729,7 @@ export default function ProductManagement() {
                               background: 'hsl(var(--bg-dark))' 
                             }}
                           >
-                            <img src={url} alt={`Uploaded ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={resolveUrl(url)} alt={`Uploaded ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             <button 
                               type="button"
                               onClick={() => {
