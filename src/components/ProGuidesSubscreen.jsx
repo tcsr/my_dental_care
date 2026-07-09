@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
@@ -18,20 +18,38 @@ export default function ProGuidesSubscreen({ lang }) {
   // Add Video form states
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [newSourceType, setNewSourceType] = useState('youtube'); // 'youtube' | 'local'
   const [newUrl, setNewUrl] = useState('');
+  const [newLocalPath, setNewLocalPath] = useState('');
   const [newTag, setNewTag] = useState('Implant');
   const [newDesc, setNewDesc] = useState('');
 
   // Edit Video form states
   const [editingVideo, setEditingVideo] = useState(null);
   const [editTitle, setEditTitle] = useState('');
+  const [editSourceType, setEditSourceType] = useState('youtube'); // 'youtube' | 'local'
   const [editUrl, setEditUrl] = useState('');
+  const [editLocalPath, setEditLocalPath] = useState('');
   const [editTag, setEditTag] = useState('Implant');
   const [editDesc, setEditDesc] = useState('');
 
   const handleCloseVideo = () => {
     setSelectedVideo(null);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (selectedVideo) {
+          setSelectedVideo(null);
+        } else if (editingVideo) {
+          setEditingVideo(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedVideo, editingVideo]);
 
   // Helper to extract YouTube video ID from standard URL or share link
   const getYouTubeId = (url) => {
@@ -43,22 +61,36 @@ export default function ProGuidesSubscreen({ lang }) {
 
   const handleAddVideo = async (e) => {
     e.preventDefault();
-    const ytId = getYouTubeId(newUrl);
-    if (!ytId) {
-      alert('Invalid YouTube URL. Please enter a valid watch link or short share link.');
-      return;
-    }
     if (!newTitle) return;
+
+    let ytId = null;
+    let localPathVal = null;
+
+    if (newSourceType === 'youtube') {
+      ytId = getYouTubeId(newUrl);
+      if (!ytId) {
+        alert('Invalid YouTube URL. Please enter a valid watch link or short share link.');
+        return;
+      }
+    } else {
+      if (!newLocalPath.trim()) {
+        alert('Please enter a local video file path.');
+        return;
+      }
+      localPathVal = newLocalPath.trim();
+    }
 
     await db.customGuides.add({
       title: newTitle,
       desc: newDesc,
       youtubeId: ytId,
+      localPath: localPathVal,
       tag: newTag
     });
 
     setNewTitle('');
     setNewUrl('');
+    setNewLocalPath('');
     setNewDesc('');
     setShowAddForm(false);
     alert('Training video guide added successfully!');
@@ -67,24 +99,39 @@ export default function ProGuidesSubscreen({ lang }) {
   const handleStartEdit = (video) => {
     setEditingVideo(video);
     setEditTitle(video.title);
-    setEditUrl(`https://www.youtube.com/watch?v=${video.youtubeId}`);
+    setEditSourceType(video.localPath ? 'local' : 'youtube');
+    setEditUrl(video.youtubeId ? `https://www.youtube.com/watch?v=${video.youtubeId}` : '');
+    setEditLocalPath(video.localPath || '');
     setEditTag(video.tag);
     setEditDesc(video.desc);
   };
 
   const handleUpdateVideo = async (e) => {
     e.preventDefault();
-    const ytId = getYouTubeId(editUrl);
-    if (!ytId) {
-      alert('Invalid YouTube URL.');
-      return;
-    }
     if (!editTitle) return;
+
+    let ytId = null;
+    let localPathVal = null;
+
+    if (editSourceType === 'youtube') {
+      ytId = getYouTubeId(editUrl);
+      if (!ytId) {
+        alert('Invalid YouTube URL.');
+        return;
+      }
+    } else {
+      if (!editLocalPath.trim()) {
+        alert('Please enter a local video file path.');
+        return;
+      }
+      localPathVal = editLocalPath.trim();
+    }
 
     await db.customGuides.update(editingVideo.id, {
       title: editTitle,
       desc: editDesc,
       youtubeId: ytId,
+      localPath: localPathVal,
       tag: editTag
     });
 
@@ -171,29 +218,58 @@ export default function ProGuidesSubscreen({ lang }) {
           </h4>
           
           <form onSubmit={handleAddVideo} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div>
-              <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('videoTitle', lang)}</label>
-              <input 
-                type="text" 
-                placeholder="e.g. Anterior Crown Placement Video" 
-                value={newTitle} 
-                onChange={(e) => setNewTitle(e.target.value)} 
-                required
-                style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
-              />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ flex: 2 }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('videoTitle', lang)}</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Anterior Crown Placement Video" 
+                  value={newTitle} 
+                  onChange={(e) => setNewTitle(e.target.value)} 
+                  required
+                  style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Source Type</label>
+                <PremiumSelect 
+                  value={newSourceType} 
+                  onChange={(e) => setNewSourceType(e.target.value)}
+                  style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+                >
+                  <option value="youtube">YouTube Link</option>
+                  <option value="local">Local Video File</option>
+                </PremiumSelect>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
               <div style={{ flex: 2 }}>
-                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('youtubeUrl', lang)}</label>
-                <input 
-                  type="text" 
-                  placeholder="https://youtube.com/watch?v=..." 
-                  value={newUrl} 
-                  onChange={(e) => setNewUrl(e.target.value)} 
-                  required
-                  style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
-                />
+                {newSourceType === 'youtube' ? (
+                  <>
+                    <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('youtubeUrl', lang)}</label>
+                    <input 
+                      type="text" 
+                      placeholder="https://youtube.com/watch?v=..." 
+                      value={newUrl} 
+                      onChange={(e) => setNewUrl(e.target.value)} 
+                      required
+                      style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Local File Path (inside public/)</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. /videos/my_video.mp4" 
+                      value={newLocalPath} 
+                      onChange={(e) => setNewLocalPath(e.target.value)} 
+                      required
+                      style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
+                    />
+                  </>
+                )}
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('category', lang)}</label>
@@ -239,10 +315,19 @@ export default function ProGuidesSubscreen({ lang }) {
               <div 
                 onClick={() => setSelectedVideo(video)}
                 style={{
-                  position: 'relative', height: '140px', borderRadius: '10px',
-                  background: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.6)), url('https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg') center/cover`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                  boxShadow: 'inset 0 0 30px rgba(0,0,0,0.1)'
+                  position: 'relative', 
+                  height: '140px', 
+                  borderRadius: '10px',
+                  background: video.localPath 
+                    ? 'linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.85)), #0f172a'
+                    : `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.6)), url('https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg') center/cover`,
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  cursor: 'pointer',
+                  boxShadow: 'inset 0 0 30px rgba(0,0,0,0.1)',
+                  overflow: 'hidden',
+                  border: '1.5px solid hsl(var(--border-color))'
                 }}
               >
                 {/* Play Button Glow Icon */}
@@ -418,7 +503,7 @@ export default function ProGuidesSubscreen({ lang }) {
       {/* Video Modal Player (using portal so it overlays the entire app frame) */}
       {selectedVideo && createPortal(
         <div className="modal-overlay-container" style={{ zIndex: 9999 }}>
-          <div className="modal-content-card animate-fade-in">
+          <div className="modal-content-card guides-modal-player animate-fade-in" style={{ maxWidth: '820px', width: '90%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(var(--border-color))', paddingBottom: '8px' }}>
               <h3 style={{ fontSize: '0.85rem', fontWeight: '800', color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>
                 {selectedVideo.title}
@@ -431,34 +516,45 @@ export default function ProGuidesSubscreen({ lang }) {
               </button>
             </div>
 
-            {/* Video Iframe */}
-            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, borderRadius: '12px', overflow: 'hidden', border: '1px solid hsl(var(--border-color))' }}>
-              <iframe 
-                src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1`}
-                title={selectedVideo.title}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-              />
+            {/* Video Iframe / Local Video Tag */}
+            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, borderRadius: '12px', overflow: 'hidden', border: '1px solid hsl(var(--border-color))', background: '#000' }}>
+              {selectedVideo.localPath ? (
+                <video 
+                  src={`${import.meta.env.BASE_URL || ''}${selectedVideo.localPath.replace(/^\//, '')}`}
+                  controls
+                  autoPlay
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              ) : (
+                <iframe 
+                  src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1`}
+                  title={selectedVideo.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                />
+              )}
             </div>
 
-            <button 
-              onClick={() => window.open(`https://youtube.com/watch?v=${selectedVideo.youtubeId}`, '_blank')}
-              className="btn-primary"
-              style={{ fontSize: '0.75rem', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontFamily: 'Outfit' }}
-            >
-              {t('openInYt', lang)} <ExternalLink size={14} />
-            </button>
+            {!selectedVideo.localPath && (
+              <button 
+                onClick={() => window.open(`https://youtube.com/watch?v=${selectedVideo.youtubeId}`, '_blank')}
+                className="btn-primary"
+                style={{ fontSize: '0.75rem', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontFamily: 'Outfit' }}
+              >
+                {t('openInYt', lang)} <ExternalLink size={14} />
+              </button>
+            )}
           </div>
         </div>,
         document.body
       )}
 
       {/* Edit Video Modal Overlay */}
-      {editingVideo && (
+      {editingVideo && createPortal(
         <div className="modal-overlay-container" style={{ zIndex: 9999 }}>
-          <div className="modal-content-card animate-fade-in">
+          <div className="modal-content-card animate-fade-in" style={{ minHeight: 'auto', height: 'auto', maxHeight: '90vh', padding: '24px', paddingBottom: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(var(--border-color))', paddingBottom: '8px' }}>
               <h3 style={{ fontSize: '0.9rem', fontWeight: '800', color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>
                 ✏️ {t('editGuideTitle', lang)}
@@ -469,17 +565,37 @@ export default function ProGuidesSubscreen({ lang }) {
             </div>
 
             <form onSubmit={handleUpdateVideo} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 'bold' }}>{t('videoTitle', lang)}</label>
-                <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required
-                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 2 }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 'bold' }}>{t('videoTitle', lang)}</label>
+                  <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 'bold' }}>Source Type</label>
+                  <PremiumSelect value={editSourceType} onChange={(e) => setEditSourceType(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                    <option value="youtube">YouTube Link</option>
+                    <option value="local">Local Video File</option>
+                  </PremiumSelect>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 2 }}>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 'bold' }}>{t('youtubeUrl', lang)}</label>
-                  <input type="text" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} required
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                  {editSourceType === 'youtube' ? (
+                    <>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 'bold' }}>{t('youtubeUrl', lang)}</label>
+                      <input type="text" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} required
+                        style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                    </>
+                  ) : (
+                    <>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 'bold' }}>Local File Path (inside public/)</label>
+                      <input type="text" value={editLocalPath} onChange={(e) => setEditLocalPath(e.target.value)} required
+                        style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                    </>
+                  )}
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '0.72rem', fontWeight: 'bold' }}>{t('category', lang)}</label>
@@ -505,7 +621,8 @@ export default function ProGuidesSubscreen({ lang }) {
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

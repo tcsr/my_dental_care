@@ -320,8 +320,9 @@ export async function seedDemoData() {
 
     // 6. Seed Custom Guides
     await db.customGuides.bulkAdd([
-      { title: 'Dental Implant Surgery Guide', desc: 'Step-by-step clinical walkthrough of titanium fixture surgical placement, drills, and osseointegration.', youtubeId: '4iIGfd5IasY', tag: 'Surgical' },
-      { title: 'Abutment & Healing Phase Procedure', desc: 'Clinical overview of healing abutment connections, soft tissue conditioning, and preparation for loading.', youtubeId: 'k3D37F026aE', tag: 'Abutment' },
+      { title: 'Single Piece Implant (BCS) Clinical Placement Guide', desc: 'Clinical video demonstration showing immediate loading placement of single-piece BCS implants locking into cortical bone.', localPath: '/videos/single_piece_bcs.mp4', tag: 'Implant' },
+      { title: 'Two Piece Implant Surgical Placement Walkthrough', desc: 'Step-by-step 3D surgical placement walkthrough of a two-piece implant structure, illustrating bone preparation and fixture loading.', localPath: '/videos/two_piece.mp4', tag: 'Surgical' },
+      { title: 'Abutment & Healing Phase Connection Procedure', desc: 'Clinical overview of healing abutment connections, soft tissue conditioning, and preparation for prosthetic crowns.', youtubeId: 'k3D37F026aE', tag: 'Abutment' },
       { title: 'Order Placement & Discount System Tutorial', desc: 'System training video on managing sales, placing custom orders, and setting client discount tiers.', youtubeId: 'Zf8S1PzD1_A', tag: 'System Guide' }
     ]);
 

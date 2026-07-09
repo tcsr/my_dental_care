@@ -25,7 +25,9 @@ export default function AiAssistant({ lang, isOpen, onClose }) {
     { q: t('faqQ1', lang), a: t('faqA1', lang) },
     { q: t('faqQ2', lang), a: t('faqA2', lang) },
     { q: t('faqQ3', lang), a: t('faqA3', lang) },
-    { q: t('faqQ4', lang), a: t('faqA4', lang) }
+    { q: t('faqQ4', lang), a: t('faqA4', lang) },
+    { q: "Tell me about Single piece implant BCS procedure", a: "The Single Piece Implant BCS (Basal Cortical Screw) is designed for immediate loading. It bypasses bone-grafted areas and locks directly into the high-density cortical bone. Clinical videos are available in the 'Guides' tab." },
+    { q: "Explain Two piece implant surgical procedure", a: "Two Piece implants involve a distinct surgical fixture phase (placed in bone for osseointegration) followed by a healing abutment placement phase. See detailed steps and 3D videos in the 'Guides' tab." }
   ];
 
   const handleSend = (text) => {
@@ -76,16 +78,25 @@ export default function AiAssistant({ lang, isOpen, onClose }) {
           const completed = cases.filter(c => c.stage === 'Completed').length;
           replyText = `Live Implant Pipelines: Tracking ${cases.length} cases. Pipeline Breakdown - Planning: ${planning}, Surgical (Fixture): ${surgical}, Healing (Abutment): ${healing}, Prosthetic (Crown): ${prosthetic}, Completed: ${completed}.`;
         }
+        else if (query.includes('bcs') || query.includes('single piece') || query.includes('single-piece')) {
+          replyText = "Single Piece Implant (BCS) Procedure: Designed for cortical anchorage and immediate loading without bone grafting. You can find surgical walkthrough training videos under the 'Guides' section of your sidebar dashboard.";
+        }
+        else if (query.includes('two piece') || query.includes('two-piece')) {
+          replyText = "Two Piece Implant Procedure: Placed in a two-stage process (surgical fixture followed by healing abutment connection). Step-by-step clinical placement and guides can be viewed in the 'Guides' tab.";
+        }
+        else if (query.includes('video') || query.includes('procedure') || query.includes('placement') || query.includes('guide')) {
+          replyText = "I have loaded implant training procedures. You can play them in the 'Guides' tab: \n- 'Single Piece Implant (BCS) Clinical Placement Guide'\n- 'Two Piece Surgical Placement Walkthrough'\n- 'Abutment & Healing Phase Connection Procedure'";
+        }
         else {
           const matchedFaq = faqs.find(f => f.q.toLowerCase().includes(query) || query.includes(f.q.toLowerCase()));
           if (matchedFaq) {
             replyText = matchedFaq.a;
           } else {
             replyText = `I am your Simple Implant AI assistant, connected to your live local B2B database. You can ask me queries like:
-- "Show me outstanding sales and unpaid invoices"
+- "Explain Single piece implant BCS procedure"
+- "Explain Two piece implant surgical procedure"
 - "Are there any low stock inventory items?"
-- "What is the status of patient implant cases?"
-- "List our registered doctor clinics count"`;
+- "Show me outstanding sales and unpaid invoices"`;
           }
         }
       } catch (err) {
@@ -233,18 +244,18 @@ export default function AiAssistant({ lang, isOpen, onClose }) {
             </div>
           </div>
 
-          {/* Form Input Footer */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend(inputVal);
-            }}
+          <div
             style={{
-              padding: '10px 12px',
+              padding: '12px 14px',
               background: 'hsl(var(--bg-card))',
               borderTop: '1px solid hsl(var(--border-color))',
               display: 'flex',
-              gap: '8px'
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px',
+              width: '100%',
+              boxSizing: 'border-box'
             }}
           >
             <input
@@ -252,22 +263,34 @@ export default function AiAssistant({ lang, isOpen, onClose }) {
               placeholder={t('aiAskPlaceholder', lang)}
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSend(inputVal);
+                }
+              }}
               style={{
                 flex: 1,
+                width: '100%',
                 padding: '10px 14px',
                 fontSize: '0.78rem',
                 borderRadius: '12px',
                 border: '1px solid hsl(var(--border-color))',
                 background: 'hsl(var(--bg-dark))',
                 outline: 'none',
-                color: 'hsl(var(--text-primary))'
+                color: 'hsl(var(--text-primary))',
+                boxSizing: 'border-box'
               }}
             />
             <button
-              type="submit"
+              type="button"
+              onClick={() => handleSend(inputVal)}
+              className="ai-send-btn"
               style={{
                 width: '38px',
                 height: '38px',
+                minWidth: '38px',
+                maxWidth: '38px',
                 borderRadius: '10px',
                 background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, #0284c7 100%)',
                 color: '#fff',
@@ -276,12 +299,15 @@ export default function AiAssistant({ lang, isOpen, onClose }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 10px rgba(139, 92, 246, 0.2)'
+                boxShadow: '0 4px 10px rgba(139, 92, 246, 0.2)',
+                margin: 0,
+                alignSelf: 'center',
+                flexShrink: 0
               }}
             >
               <Send size={15} />
             </button>
-          </form>
+          </div>
           </div>
         </div>
       )}

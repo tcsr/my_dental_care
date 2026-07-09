@@ -410,7 +410,7 @@ export default function App() {
           setActiveAlarmClient(null);
         } else if (isAiOpen) {
           setIsAiOpen(false);
-        } else if (isSidebarOpen) {
+        } else if (isSidebarOpen && window.innerWidth < 1024) {
           setIsSidebarOpen(false);
         }
       }
