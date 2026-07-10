@@ -644,7 +644,7 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
 
             <div>
               <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                <User size={12} /> Full Name
+                <User size={12} /> Full Name <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>
               </label>
               <input 
                 type="text" required value={userName} onChange={(e) => setUserName(e.target.value)}
@@ -654,7 +654,7 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
 
             <div>
               <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                <Briefcase size={12} /> Role / Title
+                <Briefcase size={12} /> Role / Title <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>
               </label>
               <input 
                 type="text" required value={role} onChange={(e) => setRole(e.target.value)}
@@ -664,7 +664,7 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
 
             <div>
               <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                <Mail size={12} /> Email
+                <Mail size={12} /> Email <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>
               </label>
               <input 
                 type="email" required value={userEmail} onChange={(e) => setUserEmail(e.target.value)}
@@ -673,7 +673,7 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
             </div>
             <div>
               <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                <Phone size={12} /> Phone
+                <Phone size={12} /> Phone <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>
               </label>
               <input 
                 type="text" required value={userPhone} onChange={(e) => setUserPhone(e.target.value)}
@@ -683,7 +683,7 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
 
             <div>
               <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                <Building size={12} /> Clinic / Distributor Name
+                <Building size={12} /> Clinic / Distributor Name <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>
               </label>
               <input 
                 type="text" required value={clinicName} onChange={(e) => setClinicName(e.target.value)}
@@ -693,7 +693,7 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
 
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                <MapPin size={12} /> Clinic / Distributor Address
+                <MapPin size={12} /> Clinic / Distributor Address <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>
               </label>
               <input 
                 type="text" required value={clinicAddress} onChange={(e) => setClinicAddress(e.target.value)}
@@ -703,7 +703,7 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
 
             <div>
               <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                <Shield size={12} /> GSTIN (GST Number)
+                <Shield size={12} /> GSTIN (GST Number) <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>
               </label>
               <input 
                 type="text" required value={gstNumber} onChange={(e) => setGstNumber(e.target.value)}

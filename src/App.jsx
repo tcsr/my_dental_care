@@ -98,6 +98,18 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [postLoginAction, setPostLoginAction] = useState(null); // callback to run after login
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Load/merge cart from Dexie IndexedDB based on auth user
   useEffect(() => {
@@ -579,6 +591,16 @@ export default function App() {
 
   const cartCount = Object.values(cart || {}).reduce((s, i) => s + i.qty, 0);
 
+  const [cartBouncing, setCartBouncing] = useState(false);
+
+  useEffect(() => {
+    if (cartCount > 0) {
+      setCartBouncing(true);
+      const timer = setTimeout(() => setCartBouncing(false), 450);
+      return () => clearTimeout(timer);
+    }
+  }, [cartCount]);
+
 
   const splashLoader = (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: 'linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 50%, #f0fdf4 100%)' }}>
@@ -629,7 +651,7 @@ export default function App() {
           {/* Compact user card */}
           {isLoggedIn ? (
             <div
-              onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}
+              onClick={() => handleNav('profile')}
               style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 marginTop: '14px', padding: '10px 12px', flexShrink: 0,
@@ -861,7 +883,7 @@ export default function App() {
               <Menu size={15} />
             </button>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'hsl(var(--primary))', flexShrink: 0 }}>
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="hsl(var(--primary) / 15%)"/>
               <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" stroke="currentColor" fill="none"/>
@@ -881,11 +903,39 @@ export default function App() {
 
         {/* Premium Globe i18n Dropdown & Profile Icon */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Online/Offline Status Indicator */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            padding: '4px 10px',
+            borderRadius: '12px',
+            fontSize: '0.62rem',
+            fontWeight: '800',
+            fontFamily: 'Outfit',
+            background: isOnline ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+            border: isOnline ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(239, 68, 68, 0.2)',
+            color: isOnline ? '#10b981' : '#ef4444',
+            marginRight: '6px',
+            transition: 'all 0.3s ease',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em'
+          }} title={isOnline ? 'Online - Database synchronized' : 'Offline Mode - Saving modifications locally'}>
+            <span style={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              background: isOnline ? '#10b981' : '#ef4444',
+              animation: isOnline ? 'none' : 'dotPulse 1.5s infinite'
+            }} />
+            {isOnline ? 'Online' : 'Offline'}
+          </div>
+
           {/* AI Support Chat Button */}
           <button 
             onClick={() => setIsAiOpen(true)}
             className="header-btn header-btn-ai"
-            title="AI Assistant"
+            title="AI Assistant (Ctrl + /)"
           >
             <MessageSquare size={15} />
           </button>
@@ -897,7 +947,7 @@ export default function App() {
               setActiveTab('catalog');
               setIsCartOpen(true);
             }}
-            className="header-btn header-btn-cart"
+            className={`header-btn header-btn-cart ${cartBouncing ? 'cart-pop-bounce' : ''}`}
             style={{ 
               border: isCartOpen ? '1.5px solid hsl(var(--primary))' : '1.5px solid hsl(var(--border-color))', 
               color: isCartOpen ? 'hsl(var(--primary))' : 'hsl(var(--text-muted))'

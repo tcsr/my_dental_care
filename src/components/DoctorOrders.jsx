@@ -11,7 +11,8 @@ import {
   TrendingUp,
   CreditCard,
   Check,
-  XCircle
+  XCircle,
+  Copy
 } from 'lucide-react';
 import EmptyStateCard from './EmptyStateCard';
 import PremiumLoader from './ui/PremiumLoader';
@@ -83,7 +84,7 @@ function StatCard({ title, value, icon, color }) {
 }
 
 // ── SUB-COMPONENT: ORDER CARD ──
-function OrderCard({ order, formatCurrency, onCancel }) {
+function OrderCard({ order, formatCurrency, onCancel, copiedOrderId, onCopy }) {
   const [hovered, setHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -125,8 +126,19 @@ function OrderCard({ order, formatCurrency, onCancel }) {
       {/* Card Header: Reference & Badges */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6 }}>
             ORDER #{order.id.slice(-8).toUpperCase()}
+            <button 
+              onClick={(e) => { e.stopPropagation(); onCopy(order.id); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', padding: '2px', color: 'hsl(var(--text-dim))', transition: 'color 0.2s' }}
+              title="Copy Full Order ID"
+            >
+              {copiedOrderId === order.id ? (
+                <Check size={11} color="#10b981" />
+              ) : (
+                <Copy size={11} />
+              )}
+            </button>
           </div>
           <div style={{ fontSize: '0.74rem', color: 'hsl(var(--text-muted))', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
             <Calendar size={12} color="hsl(var(--text-dim))" />
@@ -313,7 +325,10 @@ function OrderCard({ order, formatCurrency, onCancel }) {
               {order.order_items.map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.74rem', color: 'hsl(var(--text-muted))', padding: '10px 0', borderTop: i > 0 ? '1px solid hsl(var(--border-color) / 40%)' : 'none' }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontWeight: 800, color: 'hsl(var(--text-primary))' }}>{item.product?.name || 'Product'}</span>
+                    <span style={{ fontWeight: 800, color: 'hsl(var(--text-primary))' }}>
+                      {item.product?.name || 'Product'}
+                      {item.size && <span style={{ color: '#0ea5e9', fontWeight: 800, fontSize: '0.68rem', marginLeft: 6 }}>({item.size})</span>}
+                    </span>
                     <span style={{ fontSize: '0.64rem', color: 'hsl(var(--text-dim))', marginTop: 2 }}>
                       Qty: {item.qty} · Category: {item.product?.category || 'General'}
                     </span>
@@ -408,13 +423,20 @@ function OrderCard({ order, formatCurrency, onCancel }) {
 export default function DoctorOrders({ authUser, onGoToCatalog }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [copiedOrderId, setCopiedOrderId] = useState(null);
+
+  const handleCopy = (id) => {
+    navigator.clipboard.writeText(id);
+    setCopiedOrderId(id);
+    setTimeout(() => setCopiedOrderId(null), 1500);
+  };
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
       const { data } = await supabase
         .from('orders')
-        .select('*, order_items(qty, unit_price, product:products(name, category))')
+        .select('*, order_items(qty, unit_price, size, product:products(name, category))')
         .eq('doctor_id', authUser.user.id)
         .order('created_at', { ascending: false });
       setOrders(data || []);
@@ -561,6 +583,8 @@ export default function DoctorOrders({ authUser, onGoToCatalog }) {
               order={order} 
               formatCurrency={formatCurrency}
               onCancel={fetchOrders}
+              copiedOrderId={copiedOrderId}
+              onCopy={handleCopy}
             />
           ))}
         </div>

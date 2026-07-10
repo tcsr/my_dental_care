@@ -426,7 +426,7 @@ function PremiumInput({ icon, label, required, type = 'text', placeholder, value
   return (
     <div style={{ textAlign: 'left' }}>
       <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6, letterSpacing: '0.02em' }}>
-        {label}{required && <span style={{ color: '#0ea5e9', marginLeft: 2 }}>*</span>}
+        {label}{required && <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>}
       </label>
       <div className="premium-input-container" style={{
         display: 'flex', alignItems: 'center', gap: 10,

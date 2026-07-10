@@ -112,6 +112,16 @@ export default function ProductCatalog({
   const [orderDone, setOrderDone] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [selectedSize, setSelectedSize] = useState(null);
+
+  useEffect(() => {
+    if (selectedProduct) {
+      const sizeList = selectedProduct.sizes ? selectedProduct.sizes.split(',').map(s => s.trim()).filter(Boolean) : [];
+      setSelectedSize(sizeList.length > 0 ? sizeList[0] : null);
+    } else {
+      setSelectedSize(null);
+    }
+  }, [selectedProduct]);
 
   useEffect(() => {
     if (categories && categories.length > 0) {
@@ -138,10 +148,11 @@ export default function ProductCatalog({
   const cartCount = cartItems.reduce((s, i) => s + (i?.qty || 0), 0);
   const cartTotal = cartItems.reduce((s, i) => s + (i?.qty || 0) * (i?.product?.price || 0), 0);
 
-  const addToCart = (product) => {
+  const addToCart = (product, size = null) => {
     if (!product) return;
+    const cartKey = size ? `${product.id}_${size}` : product.id;
     const safeCart = cart || {};
-    const currentQty = safeCart[product.id]?.qty || 0;
+    const currentQty = safeCart[cartKey]?.qty || 0;
     if (product.stock_qty !== null && product.stock_qty !== undefined && currentQty >= product.stock_qty) {
       alert(`Cannot add more. Only ${product.stock_qty} items in stock.`);
       return;
@@ -150,21 +161,22 @@ export default function ProductCatalog({
       const safePrev = prev && typeof prev === 'object' ? prev : {};
       return {
         ...safePrev,
-        [product.id]: safePrev[product.id]
-          ? { ...safePrev[product.id], qty: safePrev[product.id].qty + 1 }
-          : { product, qty: 1 },
+        [cartKey]: safePrev[cartKey]
+          ? { ...safePrev[cartKey], qty: safePrev[cartKey].qty + 1 }
+          : { product, qty: 1, size },
       };
     });
   };
 
-  const removeFromCart = (productId) => {
+  const removeFromCart = (productId, size = null) => {
     if (!productId) return;
+    const cartKey = size ? `${productId}_${size}` : productId;
     onCartChange(prev => {
       const safePrev = prev && typeof prev === 'object' ? prev : {};
       const next = { ...safePrev };
-      if (!next[productId]) return next;
-      if (next[productId].qty <= 1) delete next[productId];
-      else next[productId] = { ...next[productId], qty: next[productId].qty - 1 };
+      if (!next[cartKey]) return next;
+      if (next[cartKey].qty <= 1) delete next[cartKey];
+      else next[cartKey] = { ...next[cartKey], qty: next[cartKey].qty - 1 };
       return next;
     });
   };
@@ -194,7 +206,13 @@ export default function ProductCatalog({
     }
 
     await supabase.from('order_items').insert(
-      cartItems.map(i => ({ order_id: order.id, product_id: i.product.id, qty: i.qty, unit_price: i.product.price }))
+      cartItems.map(i => ({ 
+        order_id: order.id, 
+        product_id: i.product.id, 
+        qty: i.qty, 
+        unit_price: i.product.price,
+        size: i.size || null
+      }))
     );
 
     for (const { product, qty } of cartItems) {
@@ -499,6 +517,25 @@ export default function ProductCatalog({
           icon={Package}
           title="No Products Found"
           message="Try a different search or category to find what you're looking for."
+          action={(search || category !== 'All') && (
+            <button
+              onClick={() => { setSearch(''); setCategory('All'); }}
+              style={{
+                background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                color: '#fff',
+                border: 'none',
+                padding: '8px 18px',
+                borderRadius: '10px',
+                fontSize: '0.74rem',
+                fontWeight: '800',
+                fontFamily: 'Outfit',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(14,165,233,0.2)'
+              }}
+            >
+              Clear Search & Filter
+            </button>
+          )}
         />
       ) : (
         <div className="product-catalog-grid">
@@ -569,6 +606,10 @@ export default function ProductCatalog({
                 <div style={{ padding: '0 14px 14px', display: 'flex', justifyContent: 'flex-end' }}>
                   {outOfStock ? (
                     <div style={{ width: '100%', textAlign: 'center', fontSize: '0.66rem', color: 'hsl(var(--text-dim))', padding: '10px 0', borderTop: '1px solid hsl(var(--border-color))', fontWeight: 700 }}>Currently unavailable</div>
+                  ) : (p.sizes && p.sizes.trim()) ? (
+                    <button onClick={(e) => { e.stopPropagation(); setSelectedProduct(p); setCarouselIndex(0); }} style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 12px rgba(14,165,233,0.25)', transition: 'all 0.2s ease' }}>
+                      Select Size / Options
+                    </button>
                   ) : inCart ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.12)', borderRadius: 12, padding: '5px 6px', width: '100%' }}>
                       <button
@@ -703,28 +744,31 @@ export default function ProductCatalog({
                   <p style={{ fontSize: '0.72rem', margin: 0, maxWidth: '220px', lineHeight: 1.5 }}>Please add some products from the catalog first.</p>
                 </div>
               ) : (
-                cartItems.map(({ product: p, qty }) => {
+                cartItems.map(({ product: p, qty, size }) => {
                   const cs = catConfig[p.category] || DEFAULT_CAT;
                   return (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'hsl(var(--bg-dark))', borderRadius: 'var(--radius-md)', border: '1px solid hsl(var(--border-color))' }}>
+                    <div key={`${p.id}_${size || ''}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'hsl(var(--bg-dark))', borderRadius: 'var(--radius-md)', border: '1px solid hsl(var(--border-color))' }}>
                       <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: cs.bg, color: cs.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
                         {typeof cs.icon === 'string' ? cs.icon : <cs.icon size={17} />}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'hsl(var(--text-primary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'hsl(var(--text-primary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.name}
+                          {size && <span style={{ color: '#0ea5e9', fontSize: '0.7rem', fontWeight: 800, marginLeft: 6 }}>({size})</span>}
+                        </div>
                         <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', marginTop: 1 }}>₹{p.price?.toLocaleString('en-IN')}</div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                         <button
                           className="qty-btn"
-                          onClick={() => removeFromCart(p.id)}
+                          onClick={() => removeFromCart(p.id, size)}
                         >
                           <Minus size={11} strokeWidth={2.5} />
                         </button>
                         <span style={{ fontSize: '0.85rem', fontWeight: 800, minWidth: 16, textAlign: 'center', fontFamily: 'Outfit' }}>{qty}</span>
                         <button
                           className="qty-btn"
-                          onClick={() => addToCart(p)}
+                          onClick={() => addToCart(p, size)}
                           disabled={p.stock_qty !== null && p.stock_qty !== undefined && qty >= p.stock_qty}
                         >
                           <Plus size={11} strokeWidth={2.5} />
@@ -777,7 +821,8 @@ export default function ProductCatalog({
       {/* Product Detail Modal */}
       {selectedProduct && (() => {
         const images = getProductImages(selectedProduct);
-        const inCart = (cart || {})[selectedProduct.id];
+        const cartKey = selectedSize ? `${selectedProduct.id}_${selectedSize}` : selectedProduct.id;
+        const inCart = (cart || {})[cartKey];
         const outOfStock = selectedProduct.stock_qty === null || selectedProduct.stock_qty === undefined || selectedProduct.stock_qty <= 0;
         const lowStock = !outOfStock && selectedProduct.stock_qty <= 5;
         const cs = catConfig[selectedProduct.category] || DEFAULT_CAT;
@@ -920,6 +965,38 @@ export default function ProductCatalog({
                   )}
                 </div>
 
+                {/* Sizes Selector */}
+                {selectedProduct.sizes && selectedProduct.sizes.trim() && (
+                  <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: 12 }}>
+                    <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px 0' }}>Select Size / Option</h4>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {selectedProduct.sizes.split(',').map(s => s.trim()).filter(Boolean).map(size => {
+                        const isSelected = selectedSize === size;
+                        return (
+                          <button
+                            key={size}
+                            onClick={() => setSelectedSize(size)}
+                            style={{
+                              padding: '8px 14px',
+                              borderRadius: 10,
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              fontFamily: 'Outfit',
+                              cursor: 'pointer',
+                              border: isSelected ? '1.5px solid #0ea5e9' : '1px solid hsl(var(--border-color))',
+                              background: isSelected ? 'rgba(14,165,233,0.08)' : 'transparent',
+                              color: isSelected ? '#0ea5e9' : 'hsl(var(--text-primary))',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {size}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Premium Specifications Grid */}
                 <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: 12 }}>
                   <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px 0' }}>Product Details</h4>
@@ -994,7 +1071,7 @@ export default function ProductCatalog({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.08)', borderRadius: 14, padding: '8px 12px', border: '1.5px solid #0ea5e9', width: '100%' }}>
                       <button
                         className="qty-btn"
-                        onClick={() => removeFromCart(selectedProduct.id)}
+                        onClick={() => removeFromCart(selectedProduct.id, selectedSize)}
                       >
                         <Minus size={14} strokeWidth={2.5} />
                       </button>
@@ -1008,7 +1085,7 @@ export default function ProductCatalog({
                       </div>
                       <button
                         className="qty-btn"
-                        onClick={() => addToCart(selectedProduct)}
+                        onClick={() => addToCart(selectedProduct, selectedSize)}
                         disabled={selectedProduct.stock_qty !== null && selectedProduct.stock_qty !== undefined && inCart.qty >= selectedProduct.stock_qty}
                       >
                         <Plus size={14} strokeWidth={2.5} />
@@ -1016,7 +1093,7 @@ export default function ProductCatalog({
                     </div>
                   ) : (
                     <button
-                      onClick={() => addToCart(selectedProduct)}
+                      onClick={() => addToCart(selectedProduct, selectedSize)}
                       style={{ padding: '14px 28px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 16px rgba(14,165,233,0.3)', letterSpacing: '0.02em', marginLeft: 'auto' }}
                     >
                       <Plus size={16} /> Add to Cart

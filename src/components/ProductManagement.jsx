@@ -84,13 +84,18 @@ const uploadImage = async (file) => {
 
 const B2B_CATEGORIES = ['Implant', 'Abutment', 'Crown', 'Bridge', 'Surgical Tool'];
 const EMPTY_B2C = { name: '', category: 'Implants', price: '', stock_qty: '', description: '', active: true, image_url: '' };
-const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0' };
+const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0', sizes: '' };
 const STERILIZATION_METHODS = ['ETO', 'Autoclave', 'Gamma'];
 
 function Field({ label, children }) {
+  const hasAsterisk = typeof label === 'string' && label.endsWith('*');
+  const cleanLabel = hasAsterisk ? label.slice(0, -1).trim() : label;
+
   return (
     <div>
-      <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>{label}</label>
+      <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+        {cleanLabel} {hasAsterisk && <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>}
+      </label>
       {children}
     </div>
   );
@@ -188,7 +193,8 @@ export default function ProductManagement() {
         finish: p.finish || '',
         sterilization: p.sterilization || 'ETO',
         warrantyPct: p.warrantyPct ?? '100',
-        bendableAngle: p.bendableAngle ?? '0'
+        bendableAngle: p.bendableAngle ?? '0',
+        sizes: p.sizes || ''
       });
     } else {
       setForm({
@@ -224,7 +230,8 @@ export default function ProductManagement() {
         purchase_cost: costNum,
         is_serialized: form.isSerialized,
         image_url: form.image || '',
-        active: true
+        active: true,
+        sizes: form.sizes?.trim() || ''
       };
 
       if (modal === 'add') {
@@ -247,6 +254,7 @@ export default function ProductManagement() {
           sterilization: form.sterilization || 'ETO',
           warrantyPct: parseFloat(form.warrantyPct) || 0,
           bendableAngle: parseFloat(form.bendableAngle) || 0,
+          sizes: form.sizes?.trim() || '',
           batches: [
             {
               batchNo: finalBatchNo,
@@ -280,7 +288,8 @@ export default function ProductManagement() {
           finish: form.finish?.trim() || '',
           sterilization: form.sterilization || 'ETO',
           warrantyPct: parseFloat(form.warrantyPct) || 0,
-          bendableAngle: parseFloat(form.bendableAngle) || 0
+          bendableAngle: parseFloat(form.bendableAngle) || 0,
+          sizes: form.sizes?.trim() || ''
         });
         const localProd = await db.b2bProducts.get(modal.id);
         try {
@@ -402,9 +411,33 @@ export default function ProductManagement() {
       <div style={{ position: 'relative', marginBottom: 16 }}>
         <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-dim))', pointerEvents: 'none' }} />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..."
-          style={{ ...inputStyle, paddingLeft: 34, background: 'hsl(var(--bg-card))', border: '1.5px solid hsl(var(--border-color))' }}
+          style={{ ...inputStyle, paddingLeft: 34, paddingRight: 38, background: 'hsl(var(--bg-card))', border: '1.5px solid hsl(var(--border-color))' }}
           onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 3px rgba(14, 165, 233, 0.15)'; }}
           onBlur={e => { e.target.style.borderColor = 'hsl(var(--border-color))'; e.target.style.boxShadow = 'none'; }} />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="search-clear-btn"
+            style={{ 
+              position: 'absolute', 
+              right: 12, 
+              top: '50%', 
+              transform: 'translateY(-50%)', 
+              background: 'rgba(239, 68, 68, 0.1)', 
+              border: 'none', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              color: '#ef4444',
+              padding: '6px',
+              borderRadius: '8px',
+              transition: 'all 0.2s'
+            }}
+          >
+            <X size={12} strokeWidth={2.5} />
+          </button>
+        )}
       </div>
 
       {/* Product list */}
@@ -416,9 +449,42 @@ export default function ProductManagement() {
           title="No Products Found" 
           message="There are no products matching your search criteria."
           action={
-            <button onClick={openAdd} style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit' }}>
-              Add First Product
-            </button>
+            searchQuery ? (
+              <button 
+                onClick={() => setSearchQuery('')} 
+                style={{ 
+                  padding: '9px 18px', 
+                  borderRadius: 12, 
+                  border: 'none', 
+                  background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', 
+                  color: '#fff', 
+                  fontSize: '0.74rem', 
+                  fontWeight: 800, 
+                  cursor: 'pointer', 
+                  fontFamily: 'Outfit',
+                  boxShadow: '0 4px 12px rgba(14,165,233,0.2)'
+                }}
+              >
+                Clear Search Query
+              </button>
+            ) : (
+              <button 
+                onClick={openAdd} 
+                style={{ 
+                  padding: '10px 20px', 
+                  borderRadius: 12, 
+                  border: 'none', 
+                  background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', 
+                  color: '#fff', 
+                  fontSize: '0.78rem', 
+                  fontWeight: 700, 
+                  cursor: 'pointer', 
+                  fontFamily: 'Outfit' 
+                }}
+              >
+                Add First Product
+              </button>
+            )
           }
         />
       ) : (
@@ -510,10 +576,10 @@ export default function ProductManagement() {
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
                   <button 
                     onClick={(e) => { e.stopPropagation(); openEdit(p); }} 
-                    style={{ padding: '8px', borderRadius: 8, border: '1px solid hsl(var(--border-color))', background: 'hsl(var(--bg-dark))', cursor: 'pointer', color: 'hsl(var(--text-muted))', display: 'flex' }} 
+                    className="prod-action-btn edit-btn" 
                     title="Edit"
                   >
                     <Edit3 size={13} />
@@ -521,8 +587,9 @@ export default function ProductManagement() {
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }} 
                     disabled={deleting === p.id} 
-                    style={{ padding: '8px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', cursor: 'pointer', color: '#ef4444', display: 'flex', opacity: deleting === p.id ? 0.5 : 1 }} 
+                    className="prod-action-btn delete-btn" 
                     title="Delete"
+                    style={{ opacity: deleting === p.id ? 0.5 : 1 }}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -539,10 +606,10 @@ export default function ProductManagement() {
         const isDisabled = saving || !form.name.trim() || !form.price || (isB2b && !form.sku.trim()) || (isB2b && modal === 'add' && !form.stock);
 
         return (
-          <div className="modal-overlay-container" style={{ zIndex: 5000 }}>
+          <div className="modal-overlay-container top-aligned-modal" style={{ zIndex: 5000 }}>
             <div onClick={() => setModal(null)} style={{ position: 'absolute', inset: 0 }} />
-            <div className="modal-content-card animate-fade-in" style={{ padding: '24px 20px', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <div className="modal-content-card animate-fade-in" style={{ padding: 0, maxWidth: 460, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 14px', borderBottom: '1px solid hsl(var(--border-color))' }}>
                 <h3 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.15rem', color: 'hsl(var(--text-primary))', margin: 0 }}>
                   {modal === 'add' ? 'Add Product' : 'Edit Product'}
                 </h3>
@@ -554,7 +621,7 @@ export default function ProductManagement() {
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <Field label="Product Name *">
                   <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Straumann BLT Implant 4.1mm" className="form-input" />
                 </Field>
@@ -649,6 +716,9 @@ export default function ProductManagement() {
                 {isB2b && (
                   <div style={{ background: 'hsl(var(--border-color) / 10%)', padding: 12, borderRadius: 12, border: '1px solid hsl(var(--border-color))', display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <h4 style={{ fontSize: '0.72rem', fontWeight: 800, margin: 0, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>Technical Spec Sheet (Optional)</h4>
+                    <Field label="Available Sizes / Variants">
+                      <input value={form.sizes} onChange={e => setForm(f => ({ ...f, sizes: e.target.value }))} placeholder="e.g. 3.5 x 10mm, 4.0 x 12mm, 4.5 x 14mm (comma separated)" className="form-input" />
+                    </Field>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                       <Field label="Material">
                         <input value={form.material} onChange={e => setForm(f => ({ ...f, material: e.target.value }))} placeholder="e.g. Titanium Gr5 (Ti6Al4V)" className="form-input" />
@@ -780,8 +850,11 @@ export default function ProductManagement() {
                   </div>
                 )}
 
+              </div>
+
+              <div style={{ padding: '14px 20px 20px', borderTop: '1px solid hsl(var(--border-color))', background: 'hsl(var(--bg-card))', display: 'flex', justifyContent: 'flex-end' }}>
                 <button onClick={handleSave} disabled={isDisabled}
-                  style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: isDisabled ? 'hsl(var(--border-color))' : 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: isDisabled ? 'hsl(var(--text-dim))' : '#fff', fontSize: '0.9rem', fontWeight: 800, cursor: isDisabled ? 'not-allowed' : 'pointer', fontFamily: 'Outfit', boxShadow: isDisabled ? 'none' : '0 6px 20px rgba(14,165,233,0.25)', transition: 'all 0.2s' }}>
+                  style={{ padding: '12px 28px', borderRadius: 14, border: 'none', background: isDisabled ? 'hsl(var(--border-color))' : 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: isDisabled ? 'hsl(var(--text-dim))' : '#fff', fontSize: '0.9rem', fontWeight: 800, cursor: isDisabled ? 'not-allowed' : 'pointer', fontFamily: 'Outfit', boxShadow: isDisabled ? 'none' : '0 6px 20px rgba(14,165,233,0.25)', transition: 'all 0.2s' }}>
                   {saving ? 'Saving...' : modal === 'add' ? '+ Add Product' : '✓ Save Changes'}
                 </button>
               </div>
@@ -804,7 +877,7 @@ export default function ProductManagement() {
         const cs = CAT_CONFIG[catKey] || DEFAULT_CAT_CONFIG;
 
         return (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, boxSizing: 'border-box' }}>
+          <div className="modal-overlay-container top-aligned-modal" style={{ zIndex: 4000 }}>
             <style>{`
               @keyframes fadeIn {
                 from { opacity: 0; }
@@ -821,9 +894,22 @@ export default function ProductManagement() {
               style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', animation: 'fadeIn 0.2s ease-out' }} 
             />
             
-            <div style={{ position: 'relative', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', borderRadius: 24, width: '100%', maxWidth: 440, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 64px rgba(15, 23, 42, 0.25)', animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)', zIndex: 1 }}>
+            <div style={{ position: 'relative', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', borderRadius: 24, width: '100%', maxWidth: 460, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 64px rgba(15, 23, 42, 0.25)', animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)', zIndex: 1 }}>
               
-              {/* Image Carousel */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 14px', borderBottom: '1px solid hsl(var(--border-color))' }}>
+                <h3 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.15rem', color: 'hsl(var(--text-primary))', margin: 0 }}>
+                  Product Details
+                </h3>
+                <button 
+                  className="modal-close-btn light-bg" 
+                  onClick={() => { setSelectedProductPreview(null); setCarouselIndex(0); }} 
+                >
+                  <X size={15} strokeWidth={2.5} />
+                </button>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                {/* Image Carousel */}
               <div style={{ position: 'relative', width: '100%', height: 260, background: 'hsl(var(--bg-dark))', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {images.length > 0 ? (
                   <img 
@@ -838,20 +924,6 @@ export default function ProductManagement() {
                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'hsl(var(--text-muted))', fontFamily: 'Outfit' }}>No images uploaded</span>
                   </div>
                 )}
-
-                {/* Close Button overlay */}
-                <button 
-                  className="modal-close-btn dark-overlay"
-                  onClick={() => { setSelectedProductPreview(null); setCarouselIndex(0); }} 
-                  style={{ 
-                    position: 'absolute', 
-                    top: 14, 
-                    right: 14, 
-                    zIndex: 10
-                  }}
-                >
-                  <X size={15} strokeWidth={2.5} />
-                </button>
 
                 {/* Left/Right nav buttons — only when multiple images exist */}
                 {images.length > 1 && (
@@ -894,7 +966,7 @@ export default function ProductManagement() {
               </div>
 
               {/* Product Info */}
-              <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                   <div>
                     <span style={{ fontSize: '0.6rem', fontWeight: 800, color: cs.color, background: cs.bg, padding: '3px 8px', borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'inline-block', marginBottom: 6 }}>
@@ -1105,35 +1177,36 @@ export default function ProductManagement() {
                     </p>
                   </div>
                 )}
-
-                {/* Action Footer */}
-                <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: 16, marginTop: 4, display: 'flex', gap: 10 }}>
-                  <button 
-                    onClick={() => {
-                      const prod = selectedProductPreview;
-                      setSelectedProductPreview(null);
-                      openEdit(prod);
-                    }}
-                    style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 14px rgba(14,165,233,0.25)' }}
-                  >
-                    <Edit3 size={15} /> Edit Product Details
-                  </button>
-                  <button 
-                    onClick={() => {
-                      const id = selectedProductPreview.id;
-                      setSelectedProductPreview(null);
-                      handleDelete(id);
-                    }}
-                    style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', color: '#ef4444', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit' }}
-                  >
-                    Delete
-                  </button>
-                </div>
               </div>
             </div>
+
+            {/* Action Footer */}
+            <div style={{ padding: '14px 20px 20px', borderTop: '1px solid hsl(var(--border-color))', background: 'hsl(var(--bg-card))', display: 'flex', gap: 10 }}>
+              <button 
+                onClick={() => {
+                  const prod = selectedProductPreview;
+                  setSelectedProductPreview(null);
+                  openEdit(prod);
+                }}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 14px rgba(14,165,233,0.25)' }}
+              >
+                <Edit3 size={15} /> Edit Product Details
+              </button>
+              <button 
+                onClick={() => {
+                  const id = selectedProductPreview.id;
+                  setSelectedProductPreview(null);
+                  handleDelete(id);
+                }}
+                style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', color: '#ef4444', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit' }}
+              >
+                Delete
+              </button>
+            </div>
           </div>
-        );
-      })()}
+        </div>
+      );
+    })()}
     </div>
   );
 }

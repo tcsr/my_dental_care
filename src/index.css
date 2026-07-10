@@ -746,21 +746,17 @@ button {
   transform: translateY(-1px);
 }
 
-/* Sidebar sliding & fade-in items */
+/* Sidebar items transitions */
 .sidebar-link {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sidebar-link:hover {
-  padding-left: 20px; /* shift right slightly on hover */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-link svg {
-  transition: transform 0.25s ease;
+  transition: all 0.2s ease;
 }
 
 .sidebar-link:hover svg {
-  transform: scale(1.15) rotate(5deg);
+  color: hsl(var(--primary));
 }
 
 /* AI Chat Styling */
@@ -1219,8 +1215,7 @@ button {
   body.is-browser .sidebar-link:hover:not(.active) {
     background: hsla(205, 85%, 50%, 0.06) !important;
     color: hsl(var(--primary)) !important;
-    transform: translateX(4px) !important;
-    border-color: hsla(205, 85%, 50%, 0.1) !important;
+    border-color: hsla(205, 85%, 50%, 0.15) !important;
   }
 
   /* Premium Card Enhancements for Desktop Grid */
@@ -1882,6 +1877,84 @@ body.is-browser .modal-content-card form > div {
   background: linear-gradient(90deg, hsl(var(--border-color)/30%) 25%, hsl(var(--border-color)/60%) 37%, hsl(var(--border-color)/30%) 63%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s infinite linear;
+}
+
+body.is-browser .modal-overlay-container.top-aligned-modal {
+  align-items: flex-start !important;
+  padding-top: 5vh !important;
+}
+
+/* Product list action buttons styling and micro-animations */
+.prod-action-btn {
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.prod-action-btn.edit-btn {
+  border: 1px solid hsl(var(--border-color));
+  background: hsl(var(--bg-dark));
+  color: hsl(var(--text-muted));
+}
+
+.prod-action-btn.edit-btn:hover {
+  background: rgba(14, 165, 233, 0.08);
+  border-color: rgba(14, 165, 233, 0.3);
+  color: #0ea5e9;
+  transform: translateY(-1px) scale(1.05);
+}
+
+.prod-action-btn.edit-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.prod-action-btn.delete-btn {
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.05);
+  color: #ef4444;
+}
+
+.prod-action-btn.delete-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+}
+
+.prod-action-btn.delete-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.95);
+}
+
+/* Hide top navbar logo and brand name on desktop screen sizes */
+@media (min-width: 992px) {
+  body.is-browser .navbar-brand {
+    display: none !important;
+  }
+}
+
+/* Micro-interaction animation for cart indicator addition triggers */
+@keyframes cartPopBounce {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.22) translateY(-3px);
+  }
+  65% {
+    transform: scale(0.92) translateY(1px);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.cart-pop-bounce {
+  animation: cartPopBounce 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 

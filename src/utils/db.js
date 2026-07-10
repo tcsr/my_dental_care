@@ -41,7 +41,8 @@ const B2B_PRODUCTS_SEED = [
     finish: 'SLA',
     sterilization: 'Gamma',
     warrantyPct: 100,
-    bendableAngle: 0
+    bendableAngle: 0,
+    sizes: '3.5 x 10mm, 4.0 x 12mm, 4.5 x 14mm'
   },
   {
     name: 'Abutment',
@@ -60,7 +61,8 @@ const B2B_PRODUCTS_SEED = [
     finish: 'Polished',
     sterilization: 'ETO',
     warrantyPct: 100,
-    bendableAngle: 0
+    bendableAngle: 0,
+    sizes: 'Straight, Angled 15°, Angled 25°'
   },
   {
     name: 'Two Piece Implant Kit (ApexKonnect)',
@@ -147,7 +149,8 @@ const B2B_PRODUCTS_SEED = [
     image: '/products/lance-drill.jpeg',
     batches: [
       { batchNo: 'B-LNC-01', expiryDate: Date.now() + 365 * 24 * 60 * 60 * 1000, stock: 20, location: 'Main Warehouse' }
-    ]
+    ],
+    sizes: '2.0mm, 2.8mm'
   },
   {
     name: 'Dental Bone Plate (Assorted Shapes)',
@@ -233,7 +236,8 @@ export async function seedDemoData() {
           purchase_cost: p.purchaseCost,
           is_serialized: p.isSerialized,
           image_url: p.image,
-          active: true
+          active: true,
+          sizes: p.sizes || ''
         }));
         const { data: insertedList, error: insertError } = await supabase.from('products').insert(supabasePayload).select();
         if (!insertError && insertedList) {

@@ -13,7 +13,9 @@ import {
   TrendingUp,
   ChevronRight,
   Phone,
-  Trash2
+  Trash2,
+  Copy,
+  Check
 } from 'lucide-react';
 import PremiumLoader from './ui/PremiumLoader';
 import EmptyStateCard from './EmptyStateCard';
@@ -60,6 +62,14 @@ export default function OrderManagement() {
   const [tab, setTab] = useState('all');
   const [updating, setUpdating] = useState(null);
   const [expanded, setExpanded] = useState(null);
+  const [copiedOrderId, setCopiedOrderId] = useState(null);
+
+  const handleCopy = (id) => {
+    navigator.clipboard.writeText(id);
+    setCopiedOrderId(id);
+    setTimeout(() => setCopiedOrderId(null), 1500);
+  };
+
   const [dispatchModal, setDispatchModal] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -119,6 +129,24 @@ export default function OrderManagement() {
       setOrders(allOrders);
     } catch (error) {
       console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      if (refreshGlobalData) {
+        await Promise.all([
+          refreshGlobalData('orders'),
+          refreshGlobalData('profiles'),
+          refreshGlobalData('products')
+        ]);
+      }
+      await fetchOrders();
+    } catch (error) {
+      console.error('Error manual refresh:', error);
     } finally {
       setLoading(false);
     }
@@ -230,7 +258,7 @@ export default function OrderManagement() {
           </p>
         </div>
         <button 
-          onClick={() => fetchOrders(true)} 
+          onClick={handleRefresh} 
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -466,8 +494,20 @@ export default function OrderManagement() {
                         {getInitials(doctor?.name)}
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          ID: #{order.id.slice(-8).toUpperCase()} · {new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          ID: #{order.id.slice(-8).toUpperCase()}
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleCopy(order.id); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', padding: '1px', color: 'hsl(var(--text-dim))', transition: 'color 0.2s' }}
+                            title="Copy Full Order ID"
+                          >
+                            {copiedOrderId === order.id ? (
+                              <Check size={10} color="#10b981" />
+                            ) : (
+                              <Copy size={10} />
+                            )}
+                          </button>
+                          · {new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                         </div>
                         <div style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '0.98rem', color: 'hsl(var(--text-primary))', marginTop: 1 }}>
                           {doctor?.name || 'Doctor Client'}
@@ -685,7 +725,10 @@ export default function OrderManagement() {
                           {order.order_items.map((item, i) => (
                             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'hsl(var(--text-muted))', padding: '8px 0', borderTop: i > 0 ? '1px solid hsl(var(--border-color) / 40%)' : 'none' }}>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontWeight: 700, color: 'hsl(var(--text-primary))' }}>{item.product?.name || 'Product Item'}</span>
+                                <span style={{ fontWeight: 700, color: 'hsl(var(--text-primary))' }}>
+                                  {item.product?.name || 'Product Item'}
+                                  {item.size && <span style={{ color: '#0ea5e9', fontWeight: 800, fontSize: '0.68rem', marginLeft: 6 }}>({item.size})</span>}
+                                </span>
                                 <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))', marginTop: 1 }}>
                                   Category: {item.product?.category || 'General'} · Qty: {item.qty}
                                 </span>

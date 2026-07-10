@@ -25,7 +25,7 @@ export const useStore = create((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('*, order_items(qty, unit_price, product_id, product:products(name, category))')
+        .select('*, order_items(qty, unit_price, size, product_id, product:products(name, category))')
         .order('created_at', { ascending: false });
       if (!error && data) set({ orders: data });
     } catch (e) {
