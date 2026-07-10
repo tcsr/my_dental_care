@@ -449,9 +449,9 @@ export default function ProductManagement() {
           title="No Products Found" 
           message="There are no products matching your search criteria."
           action={
-            searchQuery ? (
+            search ? (
               <button 
-                onClick={() => setSearchQuery('')} 
+                onClick={() => setSearch('')} 
                 style={{ 
                   padding: '9px 18px', 
                   borderRadius: 12, 
