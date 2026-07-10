@@ -480,7 +480,7 @@ export default function ProductCatalog({
         />
         {search && (
           <button
-            onClick={() => setSearch('')}
+            onClick={() => { setSearch(''); setCategory('All'); }}
             className="search-clear-btn"
             style={{ 
               position: 'absolute', 
@@ -783,37 +783,45 @@ export default function ProductCatalog({
               )}
             </div>
 
-            {cartItems.length > 0 && (
-              <div style={{ padding: '16px 20px 20px', borderTop: '1px solid hsl(var(--border-color))', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', background: 'hsl(var(--bg-dark))' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Amount</span>
-                  <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.3rem', color: 'hsl(var(--primary))' }}>₹{(cartTotal * 1.12).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                  <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))' }}>Incl. 12% GST</span>
+              <div style={{ padding: '16px 20px 20px', borderTop: '1px solid hsl(var(--border-color))', display: 'flex', flexDirection: 'column', gap: 10, background: 'hsl(var(--bg-dark))' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Amount</span>
+                    <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.3rem', color: 'hsl(var(--primary))' }}>₹{(cartTotal * 1.12).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))' }}>Incl. 12% GST</span>
+                  </div>
+                  <button
+                    onClick={placeOrder} disabled={placing}
+                    style={{
+                      padding: '12px 22px',
+                      borderRadius: 12,
+                      border: 'none',
+                      background: placing ? 'hsl(var(--border-color))' : 'linear-gradient(135deg, hsl(var(--primary)), #6366f1)',
+                      color: '#fff',
+                      fontSize: '0.85rem',
+                      fontWeight: 800,
+                      cursor: placing ? 'not-allowed' : 'pointer',
+                      fontFamily: 'Outfit',
+                      boxShadow: placing ? 'none' : '0 6px 18px rgba(14,165,233,0.3)',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    {placing ? 'Placing...' : 'Place Order'}
+                    <ChevronRight size={14} strokeWidth={2.5} />
+                  </button>
                 </div>
                 <button
-                  onClick={placeOrder} disabled={placing}
-                  style={{
-                    padding: '12px 22px',
-                    borderRadius: 12,
-                    border: 'none',
-                    background: placing ? 'hsl(var(--border-color))' : 'linear-gradient(135deg, hsl(var(--primary)), #6366f1)',
-                    color: '#fff',
-                    fontSize: '0.85rem',
-                    fontWeight: 800,
-                    cursor: placing ? 'not-allowed' : 'pointer',
-                    fontFamily: 'Outfit',
-                    boxShadow: placing ? 'none' : '0 6px 18px rgba(14,165,233,0.3)',
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
+                  onClick={() => setCartOpen(false)}
+                  style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-muted))', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit', transition: 'all 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'hsl(var(--bg-card))'; e.currentTarget.style.color = 'hsl(var(--text-primary))'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'hsl(var(--text-muted))'; }}
                 >
-                  {placing ? 'Placing...' : 'Place Order'}
-                  <ChevronRight size={14} strokeWidth={2.5} />
+                  ← Continue Shopping
                 </button>
               </div>
-            )}
           </div>
         </div>
       )}

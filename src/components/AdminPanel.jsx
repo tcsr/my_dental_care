@@ -9,6 +9,7 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [tab, setTab] = useState('pending');
+  const [confirmRejectId, setConfirmRejectId] = useState(null);
 
   const fetchDoctors = async () => {
     setLoading(true);
@@ -20,7 +21,7 @@ export default function AdminPanel() {
 
     if (error) {
       console.error('Error fetching doctors from Supabase:', error);
-      alert('Error fetching profiles: ' + error.message);
+      if (window.__triggerToast) window.__triggerToast('Error fetching profiles: ' + error.message, 'error');
     }
 
     if (data) {
@@ -50,7 +51,7 @@ export default function AdminPanel() {
   };
 
   const handleReject = async (id) => {
-    if (!(await confirm('Reject and delete this registration? The user will be removed from the system and their email will be freed.'))) return;
+    setConfirmRejectId(null);
     setActionLoading(id + '_reject');
     try {
       // 1. Delete auth user via Edge Function (removes from auth.users & frees the email)
@@ -149,6 +150,9 @@ export default function AdminPanel() {
               onReject={() => handleReject(doc.id)}
               approveLoading={actionLoading === doc.id + '_approve'}
               rejectLoading={actionLoading === doc.id + '_reject'}
+              confirmingReject={confirmRejectId === doc.id}
+              onRequestReject={() => setConfirmRejectId(doc.id)}
+              onCancelReject={() => setConfirmRejectId(null)}
             />
           ))}
         </div>
@@ -157,7 +161,7 @@ export default function AdminPanel() {
   );
 }
 
-function DoctorCard({ doc, isPending, onApprove, onReject, approveLoading, rejectLoading }) {
+function DoctorCard({ doc, isPending, onApprove, onReject, approveLoading, rejectLoading, confirmingReject, onRequestReject, onCancelReject }) {
   return (
     <div className="glass-card animate-fade-in" style={{ 
       display: 'flex', flexDirection: 'column', height: '100%',
@@ -201,43 +205,73 @@ function DoctorCard({ doc, isPending, onApprove, onReject, approveLoading, rejec
 
       {/* Actions */}
       {isPending && (
-        <div style={{ marginTop: 'auto', display: 'flex', gap: 12, borderTop: '1px solid hsl(var(--border-color) / 10%)', paddingTop: '14px' }}>
-          <button
-            onClick={onReject}
-            disabled={rejectLoading}
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(239,68,68,0.2)',
-              background: 'rgba(239,68,68,0.04)', color: '#ef4444',
-              fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Outfit', cursor: 'pointer',
-              opacity: rejectLoading ? 0.6 : 1, transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => { if (!rejectLoading) e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
-            onMouseLeave={(e) => { if (!rejectLoading) e.currentTarget.style.background = 'rgba(239,68,68,0.04)'; }}
-            >
-            <XCircle size={14} /> {rejectLoading ? 'Rejecting...' : 'Reject Application'}
-          </button>
-          <button
-            onClick={onApprove}
-            disabled={approveLoading}
-            style={{
-              flex: 1.8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '10px', borderRadius: 'var(--radius-md)', border: 'none',
-              background: 'linear-gradient(135deg, #10b981, #0ea5e9)',
-              color: '#fff', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Outfit',
-              cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.2)',
-              opacity: approveLoading ? 0.7 : 1, transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => { if (!approveLoading) { e.currentTarget.style.boxShadow = '0 6px 16px rgba(16,185,129,0.3)'; e.currentTarget.style.opacity = '0.95'; } }}
-            onMouseLeave={(e) => { if (!approveLoading) { e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.2)'; e.currentTarget.style.opacity = '1'; } }}
-            >
-            <CheckCircle size={14} /> {approveLoading ? 'Approving...' : 'Verify & Approve'}
-          </button>
+        <div style={{ marginTop: 'auto', borderTop: '1px solid hsl(var(--border-color) / 10%)', paddingTop: '14px' }}>
+          {confirmingReject ? (
+            // Inline confirmation UI — no native dialog
+            <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontSize: '0.74rem', fontWeight: 700, color: '#ef4444', margin: 0, lineHeight: 1.5 }}>
+                ⚠️ This will permanently delete the registration and free their email. This cannot be undone.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={onCancelReject}
+                  style={{ flex: 1, padding: '8px', borderRadius: 10, border: '1px solid hsl(var(--border-color))', background: 'hsl(var(--bg-card))', color: 'hsl(var(--text-muted))', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onReject}
+                  disabled={rejectLoading}
+                  style={{ flex: 1.5, padding: '8px', borderRadius: 10, border: 'none', background: '#ef4444', color: '#fff', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', opacity: rejectLoading ? 0.7 : 1 }}
+                >
+                  <XCircle size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                  {rejectLoading ? 'Rejecting...' : 'Yes, Reject'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={onRequestReject}
+                disabled={rejectLoading}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(239,68,68,0.2)',
+                  background: 'rgba(239,68,68,0.04)', color: '#ef4444',
+                  fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Outfit', cursor: 'pointer',
+                  opacity: rejectLoading ? 0.6 : 1, transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { if (!rejectLoading) e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+                onMouseLeave={(e) => { if (!rejectLoading) e.currentTarget.style.background = 'rgba(239,68,68,0.04)'; }}
+                >
+                <XCircle size={14} /> Reject Application
+              </button>
+              <button
+                onClick={onApprove}
+                disabled={approveLoading}
+                style={{
+                  flex: 1.8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '10px', borderRadius: 'var(--radius-md)', border: 'none',
+                  background: 'linear-gradient(135deg, #10b981, #0ea5e9)',
+                  color: '#fff', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Outfit',
+                  cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.2)',
+                  opacity: approveLoading ? 0.7 : 1, transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { if (!approveLoading) { e.currentTarget.style.boxShadow = '0 6px 16px rgba(16,185,129,0.3)'; e.currentTarget.style.opacity = '0.95'; } }}
+                onMouseLeave={(e) => { if (!approveLoading) { e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.2)'; e.currentTarget.style.opacity = '1'; } }}
+                >
+                <CheckCircle size={14} /> {approveLoading ? 'Approving...' : 'Verify & Approve'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
+
+
+
 
 function StatCard({ icon, label, value, color, border }) {
   return (

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, X, Bot, Sparkles } from 'lucide-react';
+import { Send, X, Bot, Sparkles, Trash2 } from 'lucide-react';
 import { t } from '../utils/i18n';
 import { db } from '../utils/db';
 
@@ -15,6 +15,11 @@ export default function AiAssistant({ lang, isOpen, onClose }) {
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef(null);
   const idRef = useRef(2);
+
+  const clearChat = () => {
+    idRef.current = 2;
+    setMessages([{ id: 1, sender: 'bot', text: t('aiWelcome', lang) }]);
+  };
 
   // Scroll to bottom
   useEffect(() => {
@@ -141,9 +146,22 @@ export default function AiAssistant({ lang, isOpen, onClose }) {
                 </span>
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
-              <X size={16} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {messages.length > 1 && (
+                <button
+                  onClick={clearChat}
+                  title="Clear conversation"
+                  style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: 8, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.65rem', fontWeight: 700, fontFamily: 'Outfit', opacity: 0.85, transition: 'opacity 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '0.85'}
+                >
+                  <Trash2 size={11} /> Clear
+                </button>
+              )}
+              <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
           {/* Messages List Area */}

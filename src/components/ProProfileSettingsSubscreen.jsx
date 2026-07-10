@@ -135,10 +135,10 @@ export default function ProProfileSettingsSubscreen({ lang, profile = {}, authUs
         }
       }
 
-      alert('Profile and Access Role updated successfully!');
+      window.__triggerToast?.('Profile and Access Role updated successfully!', 'success');
     } catch (err) {
       console.error(err);
-      alert('Failed to save profile details.');
+      window.__triggerToast?.('Failed to save profile details. Please try again.', 'error');
     }
   };
 

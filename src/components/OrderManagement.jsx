@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import { db } from '../utils/db';
-import { 
-  RefreshCw, 
-  Package, 
-  ChevronDown, 
-  Search, 
-  X, 
-  Clock, 
-  Truck, 
+import {
+  RefreshCw,
+  Package,
+  ChevronDown,
+  Search,
+  X,
+  Clock,
+  Truck,
   MapPin,
   TrendingUp,
   ChevronRight,
@@ -25,11 +25,11 @@ import { useStore } from '../utils/store';
 const STATUSES = ['all', 'pending', 'confirmed', 'dispatched', 'delivered'];
 
 const STATUS_CFG = {
-  pending:    { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  label: 'Pending',    next: 'confirmed',  action: 'Confirm Order',  gradient: 'linear-gradient(135deg, #f59e0b, #ea580c)' },
-  confirmed:  { color: '#0ea5e9', bg: 'rgba(14,165,233,0.08)', label: 'Confirmed',  next: 'dispatched', action: 'Ship Order',     gradient: 'linear-gradient(135deg, #0ea5e9, #6366f1)' },
-  dispatched: { color: '#6366f1', bg: 'rgba(99,102,241,0.08)', label: 'Dispatched', next: 'delivered',  action: 'Deliver Order',  gradient: 'linear-gradient(135deg, #6366f1, #10b981)' },
-  delivered:  { color: '#10b981', bg: 'rgba(16,185,129,0.08)', label: 'Delivered',  next: null,         action: null,             gradient: null },
-  cancelled:  { color: '#ef4444', bg: 'rgba(239,68,68,0.08)',  label: 'Cancelled',  next: null,         action: null,             gradient: null },
+  pending: { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', label: 'Pending', next: 'confirmed', action: 'Confirm Order', gradient: 'linear-gradient(135deg, #f59e0b, #ea580c)' },
+  confirmed: { color: '#0ea5e9', bg: 'rgba(14,165,233,0.08)', label: 'Confirmed', next: 'dispatched', action: 'Ship Order', gradient: 'linear-gradient(135deg, #0ea5e9, #6366f1)' },
+  dispatched: { color: '#6366f1', bg: 'rgba(99,102,241,0.08)', label: 'Dispatched', next: 'delivered', action: 'Deliver Order', gradient: 'linear-gradient(135deg, #6366f1, #10b981)' },
+  delivered: { color: '#10b981', bg: 'rgba(16,185,129,0.08)', label: 'Delivered', next: null, action: null, gradient: null },
+  cancelled: { color: '#ef4444', bg: 'rgba(239,68,68,0.08)', label: 'Cancelled', next: null, action: null, gradient: null },
 };
 
 const STEP_LABELS = {
@@ -54,7 +54,7 @@ export default function OrderManagement() {
   const propOrders = useStore(state => state.orders);
   const propProfiles = useStore(state => state.profiles);
   const propProducts = useStore(state => state.products);
-  const refreshGlobalData = (table) => useStore.getState().refresh(table);
+  const refresh = useStore.getState().refresh;
 
   const [orders, setOrders] = useState([]);
   const [profiles, setProfiles] = useState({});
@@ -137,11 +137,11 @@ export default function OrderManagement() {
   const handleRefresh = async () => {
     setLoading(true);
     try {
-      if (refreshGlobalData) {
+      if (refresh) {
         await Promise.all([
-          refreshGlobalData('orders'),
-          refreshGlobalData('profiles'),
-          refreshGlobalData('products')
+          refresh('orders'),
+          refresh('profiles'),
+          refresh('products')
         ]);
       }
       await fetchOrders();
@@ -164,7 +164,7 @@ export default function OrderManagement() {
       await fetchOrders();
     } else {
       await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
-      if (refreshGlobalData) await refreshGlobalData('orders');
+      if (refresh) await refresh('orders');
     }
     setUpdating(null);
   };
@@ -180,7 +180,7 @@ export default function OrderManagement() {
       } else {
         const { error } = await supabase.from('orders').delete().eq('id', orderId);
         if (error) throw error;
-        if (refreshGlobalData) await refreshGlobalData('orders');
+        if (refresh) await refresh('orders');
       }
     } catch (e) {
       console.error('Error deleting order:', e);
@@ -222,7 +222,7 @@ export default function OrderManagement() {
     const clinicName = (doctor.clinic_name || '').toLowerCase();
     const orderId = order.id.toLowerCase();
     const shortId = order.id.slice(-8).toLowerCase();
-    
+
     return (
       doctorName.includes(query) ||
       clinicName.includes(query) ||
@@ -237,16 +237,16 @@ export default function OrderManagement() {
   }, {});
 
   const filterOptions = [
-    { key: 'all',        label: 'All',        color: '#64748b', count: orders.length },
-    { key: 'pending',    label: 'Pending',    color: STATUS_CFG.pending.color,    count: counts.pending    || 0 },
-    { key: 'confirmed',  label: 'Confirmed',  color: STATUS_CFG.confirmed.color,  count: counts.confirmed  || 0 },
+    { key: 'all', label: 'All', color: '#64748b', count: orders.length },
+    { key: 'pending', label: 'Pending', color: STATUS_CFG.pending.color, count: counts.pending || 0 },
+    { key: 'confirmed', label: 'Confirmed', color: STATUS_CFG.confirmed.color, count: counts.confirmed || 0 },
     { key: 'dispatched', label: 'Dispatched', color: STATUS_CFG.dispatched.color, count: counts.dispatched || 0 },
-    { key: 'delivered',  label: 'Delivered',  color: STATUS_CFG.delivered.color,  count: counts.delivered  || 0 },
+    { key: 'delivered', label: 'Delivered', color: STATUS_CFG.delivered.color, count: counts.delivered || 0 },
   ];
 
   return (
     <div style={{ paddingBottom: 24, maxWidth: '1000px', margin: '0 auto' }}>
-      
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
@@ -257,20 +257,20 @@ export default function OrderManagement() {
             Manage & track doctor orders
           </p>
         </div>
-        <button 
-          onClick={handleRefresh} 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 6, 
-            padding: '8px 14px', 
-            borderRadius: 12, 
-            border: '1px solid hsl(var(--border-color))', 
-            background: 'hsl(var(--bg-card))', 
-            color: 'hsl(var(--text-muted))', 
-            fontSize: '0.74rem', 
-            fontWeight: 700, 
-            cursor: 'pointer', 
+        <button
+          onClick={handleRefresh}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '8px 14px',
+            borderRadius: 12,
+            border: '1px solid hsl(var(--border-color))',
+            background: 'hsl(var(--bg-card))',
+            color: 'hsl(var(--text-muted))',
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            cursor: 'pointer',
             fontFamily: 'Outfit',
             boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
             transition: 'all 0.2s ease'
@@ -278,7 +278,7 @@ export default function OrderManagement() {
           onMouseEnter={(e) => e.currentTarget.style.borderColor = 'hsl(var(--primary) / 30%)'}
           onMouseLeave={(e) => e.currentTarget.style.borderColor = 'hsl(var(--border-color))'}
         >
-          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> 
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
           Refresh
         </button>
       </div>
@@ -286,7 +286,7 @@ export default function OrderManagement() {
       {/* Premium Statistics Overview Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
         {/* Active Stats */}
-        <div style={{ 
+        <div style={{
           background: 'hsl(var(--bg-card))', borderRadius: 'var(--radius-lg)', padding: '20px',
           border: '1px solid hsl(var(--border-color))', borderTop: '4px solid #f59e0b',
           boxShadow: 'var(--shadow-xs)', display: 'flex', flexDirection: 'column',
@@ -301,7 +301,7 @@ export default function OrderManagement() {
         </div>
 
         {/* Shipped Stats */}
-        <div style={{ 
+        <div style={{
           background: 'hsl(var(--bg-card))', borderRadius: 'var(--radius-lg)', padding: '20px',
           border: '1px solid hsl(var(--border-color))', borderTop: '4px solid #6366f1',
           boxShadow: 'var(--shadow-xs)', display: 'flex', flexDirection: 'column',
@@ -316,7 +316,7 @@ export default function OrderManagement() {
         </div>
 
         {/* Revenue Stats */}
-        <div style={{ 
+        <div style={{
           background: 'hsl(var(--bg-card))', borderRadius: 'var(--radius-lg)', padding: '20px',
           border: '1px solid hsl(var(--border-color))', borderTop: '4px solid #10b981',
           boxShadow: 'var(--shadow-xs)', display: 'flex', flexDirection: 'column',
@@ -334,8 +334,8 @@ export default function OrderManagement() {
       </div>
 
       {/* Search Input Box */}
-      <div style={{ 
-        position: 'relative', 
+      <div style={{
+        position: 'relative',
         marginBottom: 16,
         transition: 'all 0.3s ease'
       }}>
@@ -363,21 +363,21 @@ export default function OrderManagement() {
           }}
         />
         {searchQuery && (
-          <button 
-            onClick={() => setSearchQuery('')} 
-            style={{ 
-              position: 'absolute', 
-              right: 12, 
-              top: '50%', 
-              transform: 'translateY(-50%)', 
-              background: 'hsl(var(--border-color) / 40%)', 
-              border: 'none', 
-              cursor: 'pointer', 
-              borderRadius: '50%', 
-              width: 20, 
-              height: 20, 
-              display: 'flex', 
-              alignItems: 'center', 
+          <button
+            onClick={() => setSearchQuery('')}
+            style={{
+              position: 'absolute',
+              right: 12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'hsl(var(--border-color) / 40%)',
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: '50%',
+              width: 20,
+              height: 20,
+              display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
               padding: 0
             }}
@@ -393,22 +393,22 @@ export default function OrderManagement() {
         {filterOptions.map(({ key, label, color, count }) => {
           const active = tab === key;
           return (
-            <button 
-              key={key} 
+            <button
+              key={key}
               className="tab-btn"
-              onClick={() => setTab(key)} 
+              onClick={() => setTab(key)}
               style={{
-                flexShrink: 0, 
-                display: 'flex', 
-                alignItems: 'center', 
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
                 gap: 7,
-                padding: '8px 16px', 
+                padding: '8px 16px',
                 borderRadius: 22,
                 border: active ? `1.5px solid ${color}` : '1.5px solid hsl(var(--border-color))',
                 background: active ? `${color}15` : 'hsl(var(--bg-card))',
                 color: active ? color : 'hsl(var(--text-muted))',
-                cursor: 'pointer', 
-                fontFamily: 'Outfit', 
+                cursor: 'pointer',
+                fontFamily: 'Outfit',
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                 boxShadow: active ? `0 4px 12px ${color}15` : '0 2px 4px rgba(0,0,0,0.01)',
                 fontWeight: 700
@@ -423,11 +423,11 @@ export default function OrderManagement() {
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
               <span style={{ fontSize: '0.74rem', letterSpacing: '0.01em' }}>{label}</span>
               <span style={{
-                fontSize: '0.62rem', 
-                fontWeight: 800, 
-                padding: '2px 7px', 
-                borderRadius: 10, 
-                minWidth: 18, 
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                padding: '2px 7px',
+                borderRadius: 10,
+                minWidth: 18,
                 textAlign: 'center',
                 background: active ? `${color}25` : 'hsl(var(--border-color) / 50%)',
                 color: active ? color : 'hsl(var(--text-muted))',
@@ -441,10 +441,10 @@ export default function OrderManagement() {
       {loading ? (
         <PremiumLoader text="Retrieving dental orders..." />
       ) : filtered.length === 0 ? (
-        <EmptyStateCard 
-          icon={Package} 
-          title="No Orders Found" 
-          message={searchQuery ? `No orders match "${searchQuery}". Try editing the keyword.` : `No orders in status tab "${tab}".`} 
+        <EmptyStateCard
+          icon={Package}
+          title="No Orders Found"
+          message={searchQuery ? `No orders match "${searchQuery}". Try editing the keyword.` : `No orders in status tab "${tab}".`}
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -460,20 +460,20 @@ export default function OrderManagement() {
             const currentIdx = steps.indexOf(order.status);
 
             return (
-              <div 
-                key={order.id} 
-                className="glass-card" 
-                style={{ 
-                  margin: 0, 
-                  padding: 0, 
-                  borderLeft: `4.5px solid ${cfg.color}`, 
-                  overflow: 'hidden', 
+              <div
+                key={order.id}
+                className="glass-card"
+                style={{
+                  margin: 0,
+                  padding: 0,
+                  borderLeft: `4.5px solid ${cfg.color}`,
+                  overflow: 'hidden',
                   boxShadow: '0 4px 20px rgba(15,23,42,0.02)',
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
               >
                 <div style={{ padding: '16px 20px' }}>
-                  
+
                   {/* Card Header: Doctor Info & Status Badge */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -496,7 +496,7 @@ export default function OrderManagement() {
                       <div>
                         <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 5 }}>
                           ID: #{order.id.slice(-8).toUpperCase()}
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); handleCopy(order.id); }}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', padding: '1px', color: 'hsl(var(--text-dim))', transition: 'color 0.2s' }}
                             title="Copy Full Order ID"
@@ -522,15 +522,15 @@ export default function OrderManagement() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                      <span style={{ 
-                        fontSize: '0.58rem', 
-                        fontWeight: 800, 
-                        color: cfg.color, 
-                        background: cfg.bg, 
-                        padding: '4px 10px', 
-                        borderRadius: 8, 
-                        textTransform: 'uppercase', 
-                        letterSpacing: '0.06em', 
+                      <span style={{
+                        fontSize: '0.58rem',
+                        fontWeight: 800,
+                        color: cfg.color,
+                        background: cfg.bg,
+                        padding: '4px 10px',
+                        borderRadius: 8,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 4
@@ -548,24 +548,24 @@ export default function OrderManagement() {
 
                   {/* Stepper tracking progress bar inside each card (Visual & Interactive!) */}
                   {order.status !== 'cancelled' && (
-                    <div style={{ 
+                    <div style={{
                       background: 'hsl(var(--bg-dark) / 50%)',
                       borderRadius: 'var(--radius-md)',
                       padding: '12px 14px',
-                      margin: '14px 0', 
-                      border: '1px solid hsl(var(--border-color) / 40%)' 
+                      margin: '14px 0',
+                      border: '1px solid hsl(var(--border-color) / 40%)'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
                         {/* Connecting Line */}
                         <div style={{ position: 'absolute', top: 10, left: '6%', right: '6%', height: 3, background: 'hsl(var(--border-color))', zIndex: 1 }} />
                         {currentIdx > 0 && (
-                          <div style={{ 
-                            position: 'absolute', 
-                            top: 10, 
-                            left: '6%', 
-                            width: `${(currentIdx / 3) * 88}%`, 
-                            height: 3, 
-                            background: 'linear-gradient(90deg, #f59e0b, #6366f1)', 
+                          <div style={{
+                            position: 'absolute',
+                            top: 10,
+                            left: '6%',
+                            width: `${(currentIdx / 3) * 88}%`,
+                            height: 3,
+                            background: 'linear-gradient(90deg, #f59e0b, #6366f1)',
                             zIndex: 2,
                             transition: 'width 0.3s ease'
                           }} />
@@ -575,13 +575,13 @@ export default function OrderManagement() {
                           const active = idx <= currentIdx;
                           const isCurrent = idx === currentIdx;
                           const stepColor = STATUS_CFG[step]?.color || '#cbd5e1';
-                          
+
                           // Determine if this step is clickable
                           const isClickable = idx === currentIdx + 1 || (idx < currentIdx && step !== 'pending');
 
                           return (
-                            <div 
-                              key={step} 
+                            <div
+                              key={step}
                               onClick={async () => {
                                 if (isUpdating) return;
                                 if (idx === currentIdx + 1) {
@@ -598,51 +598,51 @@ export default function OrderManagement() {
                                   }
                                 }
                               }}
-                              style={{ 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                alignItems: 'center', 
-                                zIndex: 3, 
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                zIndex: 3,
                                 cursor: isClickable ? 'pointer' : 'default',
                                 flex: 1
                               }}
                             >
-                              <div style={{ 
-                                width: 20, 
-                                height: 20, 
-                                borderRadius: '50%', 
-                                background: isCurrent ? stepColor : active ? '#4f46e5' : 'hsl(var(--bg-card))', 
+                              <div style={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: '50%',
+                                background: isCurrent ? stepColor : active ? '#4f46e5' : 'hsl(var(--bg-card))',
                                 border: active ? 'none' : '2px solid hsl(var(--border-color))',
                                 color: active ? '#fff' : 'hsl(var(--text-dim))',
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
-                                fontSize: '0.6rem', 
-                                fontWeight: 900, 
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.6rem',
+                                fontWeight: 900,
                                 fontFamily: 'Outfit',
                                 boxShadow: isCurrent ? `0 0 10px ${stepColor}80` : 'none',
                                 transition: 'all 0.2s ease',
                               }}
-                              onMouseEnter={(e) => {
-                                if (isClickable) {
-                                  e.currentTarget.style.transform = 'scale(1.2)';
-                                  e.currentTarget.style.boxShadow = `0 0 8px ${stepColor}`;
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                if (isClickable) {
-                                  e.currentTarget.style.transform = 'scale(1)';
-                                  e.currentTarget.style.boxShadow = isCurrent ? `0 0 10px ${stepColor}80` : 'none';
-                                }
-                              }}
+                                onMouseEnter={(e) => {
+                                  if (isClickable) {
+                                    e.currentTarget.style.transform = 'scale(1.2)';
+                                    e.currentTarget.style.boxShadow = `0 0 8px ${stepColor}`;
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (isClickable) {
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                    e.currentTarget.style.boxShadow = isCurrent ? `0 0 10px ${stepColor}80` : 'none';
+                                  }
+                                }}
                               >
                                 {active ? '✓' : idx + 1}
                               </div>
-                              <span style={{ 
-                                fontSize: '0.56rem', 
-                                fontWeight: active ? 800 : 500, 
-                                color: active ? 'hsl(var(--text-primary))' : 'hsl(var(--text-dim))', 
-                                marginTop: 5, 
+                              <span style={{
+                                fontSize: '0.56rem',
+                                fontWeight: active ? 800 : 500,
+                                color: active ? 'hsl(var(--text-primary))' : 'hsl(var(--text-dim))',
+                                marginTop: 5,
                                 fontFamily: 'Outfit',
                                 textTransform: 'capitalize'
                               }}>
@@ -657,15 +657,15 @@ export default function OrderManagement() {
 
                   {/* Tracking info if dispatched or delivered */}
                   {tracking && (
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 10, 
-                      background: 'linear-gradient(135deg, hsl(var(--bg-dark)) 0%, hsl(var(--border-color)/15%) 100%)', 
-                      borderRadius: 12, 
-                      padding: '10px 14px', 
-                      border: '1px dashed hsl(var(--border-color))', 
-                      marginBottom: 12 
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      background: 'linear-gradient(135deg, hsl(var(--bg-dark)) 0%, hsl(var(--border-color)/15%) 100%)',
+                      borderRadius: 12,
+                      padding: '10px 14px',
+                      border: '1px dashed hsl(var(--border-color))',
+                      marginBottom: 12
                     }}>
                       <Truck size={14} color="#6366f1" style={{ flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -682,18 +682,18 @@ export default function OrderManagement() {
                   {/* Expandable Order Items list */}
                   {order.order_items?.length > 0 && (
                     <div style={{ marginBottom: 12 }}>
-                      <button 
-                        onClick={() => setExpanded(isExpanded ? null : order.id)} 
-                        style={{ 
-                          width: '100%', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'space-between', 
-                          background: 'hsl(var(--bg-dark) / 40%)', 
-                          border: '1px solid hsl(var(--border-color))', 
-                          borderRadius: 10, 
-                          padding: '8px 14px', 
-                          cursor: 'pointer', 
+                      <button
+                        onClick={() => setExpanded(isExpanded ? null : order.id)}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: 'hsl(var(--bg-dark) / 40%)',
+                          border: '1px solid hsl(var(--border-color))',
+                          borderRadius: 10,
+                          padding: '8px 14px',
+                          cursor: 'pointer',
                           fontFamily: 'Outfit',
                           transition: 'all 0.2s'
                         }}
@@ -713,12 +713,12 @@ export default function OrderManagement() {
                       </button>
 
                       {isExpanded && (
-                        <div style={{ 
-                          background: 'hsl(var(--bg-dark) / 15%)', 
-                          borderRadius: '0 0 10px 10px', 
-                          padding: '6px 14px 10px', 
-                          marginTop: -2, 
-                          border: '1px solid hsl(var(--border-color))', 
+                        <div style={{
+                          background: 'hsl(var(--bg-dark) / 15%)',
+                          borderRadius: '0 0 10px 10px',
+                          padding: '6px 14px 10px',
+                          marginTop: -2,
+                          border: '1px solid hsl(var(--border-color))',
                           borderTop: 'none',
                           animation: 'animate-fade-in 0.25s ease-out'
                         }}>
@@ -800,18 +800,18 @@ export default function OrderManagement() {
                             }
                           }}
                           disabled={isUpdating}
-                          style={{ 
-                            padding: '9px 18px', 
-                            borderRadius: 12, 
-                            border: 'none', 
-                            background: cfg.gradient || '#0ea5e9', 
-                            color: '#fff', 
-                            fontSize: '0.74rem', 
-                            fontWeight: 700, 
-                            cursor: isUpdating ? 'not-allowed' : 'pointer', 
-                            fontFamily: 'Outfit', 
-                            opacity: isUpdating ? 0.7 : 1, 
-                            boxShadow: `0 4px 12px ${cfg.color}35`, 
+                          style={{
+                            padding: '9px 18px',
+                            borderRadius: 12,
+                            border: 'none',
+                            background: cfg.gradient || '#0ea5e9',
+                            color: '#fff',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            cursor: isUpdating ? 'not-allowed' : 'pointer',
+                            fontFamily: 'Outfit',
+                            opacity: isUpdating ? 0.7 : 1,
+                            boxShadow: `0 4px 12px ${cfg.color}35`,
                             transition: 'all 0.2s ease',
                             display: 'flex',
                             alignItems: 'center',
@@ -838,7 +838,7 @@ export default function OrderManagement() {
       {dispatchModal && (
         <div className="modal-overlay-container animate-fade-in" style={{ zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', position: 'fixed', inset: 0 }}>
           <div onClick={() => setDispatchModal(null)} style={{ position: 'absolute', inset: 0 }} />
-          
+
           <div className="confirm-dialog-card" style={{
             background: 'hsl(var(--bg-card) / 92%)',
             backdropFilter: 'blur(20px)',
@@ -853,7 +853,7 @@ export default function OrderManagement() {
             zIndex: 100001,
             animation: 'fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
-            
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
               <div>
                 <h3 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.15rem', color: 'hsl(var(--text-primary))', margin: 0 }}>
@@ -875,16 +875,16 @@ export default function OrderManagement() {
                 </label>
                 <div style={{ position: 'relative' }}>
                   <Truck size={14} color="hsl(var(--text-dim))" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     id="courier-input"
-                    placeholder="e.g. BlueDart, FedEx, DHL" 
+                    placeholder="e.g. BlueDart, FedEx, DHL"
                     className="form-input"
-                    style={{ 
-                      width: '100%', 
-                      padding: '10px 12px 10px 34px', 
-                      borderRadius: 10, 
-                      fontSize: '0.8rem', 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px 10px 34px',
+                      borderRadius: 10,
+                      fontSize: '0.8rem',
                       border: '1px solid hsl(var(--border-color))',
                       background: '#fff',
                       fontFamily: 'Outfit',
@@ -893,23 +893,23 @@ export default function OrderManagement() {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', display: 'block', marginBottom: 5, letterSpacing: '0.03em' }}>
                   Tracking Reference ID / AWB *
                 </label>
                 <div style={{ position: 'relative' }}>
                   <Package size={14} color="hsl(var(--text-dim))" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     id="tracking-input"
-                    placeholder="e.g. BD-8928839" 
+                    placeholder="e.g. BD-8928839"
                     className="form-input"
-                    style={{ 
-                      width: '100%', 
-                      padding: '10px 12px 10px 34px', 
-                      borderRadius: 10, 
-                      fontSize: '0.8rem', 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px 10px 34px',
+                      borderRadius: 10,
+                      fontSize: '0.8rem',
                       border: '1px solid hsl(var(--border-color))',
                       background: '#fff',
                       fontFamily: 'Outfit',
@@ -921,18 +921,18 @@ export default function OrderManagement() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, width: '100%' }}>
-              <button 
-                onClick={() => setDispatchModal(null)} 
-                style={{ 
-                  flex: 1, 
-                  padding: '10px', 
-                  fontSize: '0.78rem', 
-                  fontWeight: 700, 
-                  fontFamily: 'Outfit', 
-                  background: 'transparent', 
-                  border: '1px solid hsl(var(--border-color))', 
-                  cursor: 'pointer', 
-                  color: 'hsl(var(--text-primary))', 
+              <button
+                onClick={() => setDispatchModal(null)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  fontFamily: 'Outfit',
+                  background: 'transparent',
+                  border: '1px solid hsl(var(--border-color))',
+                  cursor: 'pointer',
+                  color: 'hsl(var(--text-primary))',
                   borderRadius: 12,
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'hsl(var(--bg-dark))'}
@@ -940,8 +940,8 @@ export default function OrderManagement() {
               >
                 Cancel
               </button>
-              
-              <button 
+
+              <button
                 onClick={async () => {
                   const courierName = document.getElementById('courier-input')?.value?.trim();
                   const trackingNumber = document.getElementById('tracking-input')?.value?.trim();
@@ -951,29 +951,29 @@ export default function OrderManagement() {
                   }
                   const finalNotes = `[TRACKING] Courier: ${courierName} | Tracking: ${trackingNumber}`;
                   setUpdating(dispatchModal.orderId);
-                  
+
                   if (String(dispatchModal.orderId).startsWith('local-')) {
                     const idStr = String(dispatchModal.orderId).replace('local-', '');
                     await db.b2bOrders.update(parseInt(idStr), { status: 'Dispatched', notes: finalNotes });
                   } else {
                     await supabase.from('orders').update({ status: 'dispatched', notes: finalNotes }).eq('id', dispatchModal.orderId);
                   }
-                  
+
                   setDispatchModal(null);
                   await fetchOrders();
                   setUpdating(null);
-                }} 
+                }}
                 className="btn-primary"
-                style={{ 
-                  flex: 1, 
-                  padding: '10px', 
-                  fontSize: '0.78rem', 
-                  fontWeight: 700, 
-                  fontFamily: 'Outfit', 
-                  background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', 
-                  border: 'none', 
-                  color: '#fff', 
-                  cursor: 'pointer', 
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  fontFamily: 'Outfit',
+                  background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
                   borderRadius: 12,
                   boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)'
                 }}

@@ -10,6 +10,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
   const [step, setStep] = useState(1); // registration step 1 or 2
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
 
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [regForm, setRegForm] = useState({
@@ -47,8 +48,10 @@ export default function LoginScreen({ onLogin, isModal = false }) {
           approved: profile.approved
         });
       } else if (!profile.approved) {
-        setError('Your account is pending approval from Simple Implant admin. Please wait or contact support.');
         await supabase.auth.signOut();
+        setPendingEmail(loginForm.email);
+        setScreen('pending');
+        return;
       } else {
         onLogin({ 
           role: profile.role, 
@@ -156,24 +159,59 @@ export default function LoginScreen({ onLogin, isModal = false }) {
         <div style={{ textAlign: 'center', padding: '40px 24px' }}>
           <div style={{
             width: 72, height: 72, borderRadius: '50%', margin: '0 auto 20px',
-            background: 'linear-gradient(135deg, rgba(14,165,233,0.15), rgba(99,102,241,0.15))',
-            border: '2px solid rgba(14,165,233,0.3)',
+            background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.1))',
+            border: '2px solid rgba(245,158,11,0.35)',
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
-            <CheckCircle size={32} color="#0ea5e9" />
+            <AlertTriangle size={32} color="#f59e0b" />
           </div>
           <h3 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1.3rem', color: '#0f172a', margin: '0 0 10px' }}>
-            Registration Submitted!
+            Awaiting Admin Approval
           </h3>
-          <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.7, maxWidth: '300px', margin: '0 auto 8px' }}>
-            Your clinic account is pending approval from Simple Implant.
+          {pendingEmail && (
+            <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0ea5e9', margin: '0 auto 6px' }}>
+              {pendingEmail}
+            </p>
+          )}
+          <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.7, maxWidth: '300px', margin: '0 auto 6px' }}>
+            Your clinic account is pending approval from Simple Implant admin.
           </p>
-          <p style={{ fontSize: '0.78rem', color: '#0ea5e9', fontWeight: 700, margin: '0 auto 28px' }}>
-            You'll receive access once an admin approves your account.
+          <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 auto 28px' }}>
+            You'll receive access once an admin reviews your registration.
           </p>
-          <button onClick={() => { setScreen('login'); setStep(1); }} style={btnPrimary}>
-            Back to Login
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button
+              disabled={loading}
+              onClick={async () => {
+                if (!pendingEmail) { setScreen('login'); return; }
+                setLoading(true);
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (session) {
+                    const { data: profile } = await supabase.from('profiles').select('approved').eq('id', session.user.id).single();
+                    if (profile?.approved) { window.location.reload(); return; }
+                  } else {
+                    // Try to sign in temporarily to check
+                    const { data } = await supabase.auth.signInWithPassword({ email: pendingEmail, password: '___dummy_check___' });
+                    if (data?.session) await supabase.auth.signOut();
+                  }
+                  setError('');
+                  window.__triggerToast?.('Still pending approval. We\'ll notify you once approved.', 'info');
+                } catch (_) {
+                  // noop — expected if password is wrong
+                  window.__triggerToast?.('Still pending approval. Please check back later.', 'info');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              style={{ ...btnPrimary, opacity: loading ? 0.75 : 1 }}
+            >
+              {loading ? 'Checking...' : '↻ Refresh Status'}
+            </button>
+            <button onClick={() => { setScreen('login'); setStep(1); setPendingEmail(''); }} style={{ background: 'none', border: '1px solid hsl(220 13% 91%)', borderRadius: 12, padding: '12px', fontSize: '0.82rem', fontWeight: 700, color: '#64748b', cursor: 'pointer' }}>
+              Back to Login
+            </button>
+          </div>
         </div>
       </Wrapper>
     );

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import { useStore } from '../utils/store';
+import { db } from '../utils/db';
+import { useLiveQuery } from 'dexie-react-hooks';
 import {
   TrendingUp, Users, AlertTriangle,
   Clock, Truck, Package, Flame
@@ -12,13 +14,13 @@ export default function DashboardScreen({ authUser, onNavigate }) {
   const products = useStore(state => state.products);
   const orders = useStore(state => state.orders);
   const profiles = useStore(state => state.profiles);
+  const b2bProducts = useLiveQuery(() => db.b2bProducts.toArray()) || [];
 
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [lowStock, setLowStock] = useState([]);
 
   useEffect(() => {
-    const activeProducts = products.filter(p => p.active === true || p.active === null);
     const filteredProfiles = profiles.filter(p => p.role !== 'admin');
 
     const totalRevenue = orders
@@ -30,7 +32,8 @@ export default function DashboardScreen({ authUser, onNavigate }) {
     const totalOrders = orders.length;
     const approvedDoctors = filteredProfiles.filter(p => p.approved).length;
     const pendingDoctors = filteredProfiles.filter(p => !p.approved).length;
-    const totalProducts = activeProducts.length;
+    // Count both B2B (IndexedDB rep catalog) and B2C (Supabase doctor catalog) products
+    const totalProducts = b2bProducts.length + products.length;
 
     // Last 7 days daily revenue calculation
     const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -63,7 +66,7 @@ export default function DashboardScreen({ authUser, onNavigate }) {
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 4);
 
-    const low = activeProducts.filter(p => (p.stock_qty ?? p.stock) <= 5);
+    const low = products.filter(p => (p.stock_qty ?? p.stock) <= 5);
 
     setStats({
       totalRevenue,
@@ -78,7 +81,7 @@ export default function DashboardScreen({ authUser, onNavigate }) {
     });
     setRecentOrders(orders.slice(0, 5));
     setLowStock(low);
-  }, [products, orders, profiles]);
+  }, [products, b2bProducts, orders, profiles]);
 
   if (!stats) {
     return (
@@ -264,8 +267,8 @@ export default function DashboardScreen({ authUser, onNavigate }) {
       {/* Stat grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 16 }}>
         <StatCard icon={<Clock size={14} />} label="Pending Orders" value={stats.pendingOrders} color="#f59e0b" alert={stats.pendingOrders > 0} onClick={() => onNavigate?.('orders')} />
-        <StatCard icon={<Truck size={14} />} label="Dispatched" value={stats.dispatchedOrders} color="#0ea5e9" />
-        <StatCard icon={<Users size={14} />} label="Active Doctors" value={stats.approvedDoctors} color="#6366f1" />
+        <StatCard icon={<Truck size={14} />} label="Dispatched" value={stats.dispatchedOrders} color="#0ea5e9" onClick={() => onNavigate?.('orders')} />
+        <StatCard icon={<Users size={14} />} label="Active Doctors" value={stats.approvedDoctors} color="#6366f1" onClick={() => onNavigate?.('admin')} />
         <StatCard icon={<AlertTriangle size={14} />} label="Pending Signups" value={stats.pendingDoctors} color="#ef4444" alert={stats.pendingDoctors > 0} onClick={() => onNavigate?.('admin')} />
         <StatCard icon={<Package size={14} />} label="Total Products" value={stats.totalProducts} color="#ec4899" onClick={() => onNavigate?.('products')} />
       </div>
@@ -313,7 +316,13 @@ export default function DashboardScreen({ authUser, onNavigate }) {
           />
         ) : (
           recentOrders.map(order => (
-            <div key={order.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid hsl(var(--border-color))' }}>
+            <div
+              key={order.id}
+              onClick={() => onNavigate?.('orders')}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid hsl(var(--border-color))', cursor: 'pointer', transition: 'opacity 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.75'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
               <div>
                 <p style={{ fontSize: '0.75rem', fontWeight: 750, color: 'hsl(var(--text-primary))', margin: '0 0 2px' }}>
                   Order #{order.id.slice(-6).toUpperCase()}
@@ -343,37 +352,76 @@ function StatCard({ icon, label, value, color, alert, onClick }) {
       onClick={onClick}
       style={{
         margin: 0,
-        padding: '16px',
+        padding: '16px 16px 14px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 10,
+        justifyContent: 'space-between',
+        gap: 12,
         position: 'relative',
         overflow: 'hidden',
-        borderLeft: `4px solid ${color}`,
-        background: `linear-gradient(135deg, hsl(var(--bg-card)) 0%, ${color}04 100%)`,
-        transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+        borderBottom: `3px solid ${color}`,
+        background: `linear-gradient(160deg, hsl(var(--bg-card)) 0%, ${color}08 100%)`,
+        transition: 'all 0.28s cubic-bezier(0.25, 0.8, 0.25, 1)',
         cursor: onClick ? 'pointer' : 'default',
+        minHeight: 110,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)';
-        e.currentTarget.style.boxShadow = `0 12px 28px ${color}12, 0 2px 8px rgba(0, 0, 0, 0.01)`;
-        e.currentTarget.style.borderColor = `${color}40`;
+        e.currentTarget.style.boxShadow = `0 14px 32px ${color}20, 0 2px 8px rgba(0,0,0,0.04)`;
       }}
       onMouseLeave={e => {
         e.currentTarget.style.transform = 'none';
         e.currentTarget.style.boxShadow = 'var(--shadow-xs)';
-        e.currentTarget.style.borderColor = 'hsl(var(--border-color))';
       }}
     >
+      {/* Decorative background circle */}
+      <div style={{
+        position: 'absolute', bottom: -18, right: -18,
+        width: 72, height: 72, borderRadius: '50%',
+        background: `${color}10`, pointerEvents: 'none'
+      }} />
+
+      {/* Alert dot */}
       {alert && value > 0 && (
-        <span style={{ position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` }} />
+        <span style={{
+          position: 'absolute', top: 10, right: 10,
+          width: 8, height: 8, borderRadius: '50%',
+          background: color, boxShadow: `0 0 6px ${color}`
+        }} />
       )}
-      <div style={{ color, display: 'flex', background: `${color}12`, width: 28, height: 28, borderRadius: 'var(--radius-xs)', alignItems: 'center', justifyContent: 'center' }}>
-        {icon}
+
+      {/* Top row: icon + label */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{
+          color, display: 'flex',
+          background: `linear-gradient(135deg, ${color}22, ${color}10)`,
+          width: 32, height: 32, borderRadius: 10,
+          alignItems: 'center', justifyContent: 'center',
+          boxShadow: `0 2px 8px ${color}20`, flexShrink: 0
+        }}>
+          {icon}
+        </div>
+        <span style={{
+          fontSize: '0.62rem', color: 'hsl(var(--text-muted))',
+          fontWeight: 800, textTransform: 'uppercase',
+          letterSpacing: '0.06em', lineHeight: 1.3, flex: 1
+        }}>
+          {label}
+        </span>
+        {onClick && (
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        )}
       </div>
-      <div>
-        <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.5rem', color: 'hsl(var(--text-primary))', lineHeight: 1 }}>{value}</div>
-        <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', fontWeight: 700, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{label}</div>
+
+      {/* Bottom: count */}
+      <div style={{
+        fontFamily: 'Outfit', fontWeight: 900,
+        fontSize: '2rem', color: 'hsl(var(--text-primary))',
+        lineHeight: 1, letterSpacing: '-0.03em'
+      }}>
+        {value}
       </div>
     </div>
   );
