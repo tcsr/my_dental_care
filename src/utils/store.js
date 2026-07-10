@@ -74,6 +74,6 @@ export const useStore = create((set, get) => ({
   },
 
   clearData: () => {
-    set({ products: [], orders: [], profiles: [], categories: [] });
+    set({ orders: [], profiles: [] });
   }
 }));

@@ -1930,9 +1930,9 @@ body.is-browser .modal-overlay-container.top-aligned-modal {
   transform: translateY(0) scale(0.95);
 }
 
-/* Hide top navbar logo and brand name on desktop screen sizes */
+/* Hide top navbar logo and brand name on desktop screen sizes only when sidebar is open */
 @media (min-width: 992px) {
-  body.is-browser .navbar-brand {
+  body.is-browser .sidebar-drawer.open ~ .main-layout-container .navbar-brand {
     display: none !important;
   }
 }
