@@ -479,7 +479,7 @@ function PremiumInput({ icon, label, required, type = 'text', placeholder, value
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           style={{
             flex: 1, border: 'none', background: 'transparent', outline: 'none',
-            fontSize: '0.82rem', color: '#0f172a', padding: '11px 0',
+            fontSize: '0.82rem', color: '#0f172a', padding: '11px 0 11px 8px',
             fontFamily: 'Inter, sans-serif'
           }}
         />

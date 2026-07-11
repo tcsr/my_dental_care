@@ -90,7 +90,7 @@ export default function ProductCatalog({
   const dbProducts = useLiveQuery(() => db.b2bProducts.toArray()) || [];
 
   const products = useMemo(() => {
-    if (storeProducts && storeProducts.length > 0 && storeProducts.some(p => p.sku && p.sku.startsWith('INST-'))) {
+    if (storeProducts && storeProducts.length >= dbProducts.length && storeProducts.some(p => p.sku && p.sku.startsWith('INST-'))) {
       return storeProducts;
     }
     return dbProducts.map(p => ({
