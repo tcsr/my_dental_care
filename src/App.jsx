@@ -817,6 +817,9 @@ export default function App() {
                     <span>Product Catalog</span>
                     {cartCount > 0 && <span style={{ marginLeft: 'auto', background: '#0ea5e9', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: 10, minWidth: 18, textAlign: 'center' }}>{cartCount}</span>}
                   </button>
+                  <button className={`sidebar-link ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => handleNav('guides')}>
+                    <Film size={16} /><span>Guides & Videos</span>
+                  </button>
                   <button className="sidebar-link" onClick={() => { setIsSidebarOpen(false); setTimeout(() => setShowLoginModal(true), 150); }} style={{ color: 'hsl(var(--primary))' }}>
                     <LogIn size={16} /><span>Log In / Register</span>
                   </button>
@@ -957,25 +960,23 @@ export default function App() {
         {/* Main Premium Layout Wrapper */}
         <div className="app-header" style={{ borderBottom: '1px solid hsl(var(--border-color))' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {isLoggedIn && (
-              <button
-                onClick={() => setIsSidebarOpen(prev => {
-                  const next = !prev;
-                  try {
-                    localStorage.setItem('dental_sidebar_collapsed', String(!next));
-                  } catch (e) { }
-                  return next;
-                })}
-                className="header-btn"
-                style={{
-                  border: isSidebarOpen ? '1.5px solid hsl(var(--primary))' : '1.5px solid hsl(var(--border-color))',
-                  color: isSidebarOpen ? 'hsl(var(--primary))' : 'hsl(var(--text-primary))'
-                }}
-                title="Toggle Menu"
-              >
-                <Menu size={15} />
-              </button>
-            )}
+            <button
+              onClick={() => setIsSidebarOpen(prev => {
+                const next = !prev;
+                try {
+                  localStorage.setItem('dental_sidebar_collapsed', String(!next));
+                } catch (e) { }
+                return next;
+              })}
+              className="header-btn"
+              style={{
+                border: isSidebarOpen ? '1.5px solid hsl(var(--primary))' : '1.5px solid hsl(var(--border-color))',
+                color: isSidebarOpen ? 'hsl(var(--primary))' : 'hsl(var(--text-primary))'
+              }}
+              title="Toggle Menu"
+            >
+              <Menu size={15} />
+            </button>
             <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'hsl(var(--primary))', flexShrink: 0 }}>
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="hsl(var(--primary) / 15%)" />
@@ -1175,7 +1176,7 @@ export default function App() {
                   <Route path="/inventory" element={<ProInventorySubscreen lang={lang} profile={profile} />} />
                   <Route path="/reminders" element={<ProRemindersSubscreen lang={lang} profile={profile} />} />
                   <Route path="/marketing" element={<ProMarketingSubscreen lang={lang} profile={profile} />} />
-                  <Route path="/guides" element={<ProGuidesSubscreen lang={lang} profile={profile} />} />
+                  <Route path="/guides" element={<ProGuidesSubscreen lang={lang} profile={profile} isLoggedIn={true} />} />
                   <Route path="/master" element={<ProMasterDataSubscreen lang={lang} profile={profile} authUser={authUser} />} />
                   <Route path="/profile" element={<ProProfileSettingsSubscreen lang={lang} profile={profile} authUser={authUser} isAdmin={isAdmin} />} />
                   <Route path="/admin" element={<AdminPanel />} />
@@ -1199,6 +1200,7 @@ export default function App() {
                       }}
                     />
                   } />
+                  <Route path="/guides" element={<ProGuidesSubscreen lang={lang} isLoggedIn={false} />} />
                   <Route path="*" element={<Navigate to="/catalog" replace />} />
                 </>
               )}
@@ -1207,13 +1209,16 @@ export default function App() {
         </main>
 
         {/* Bottom Premium Nav Bar */}
-        <div className="bottom-nav" style={{ gridTemplateColumns: `repeat(${!isLoggedIn ? 2 : (isAdmin ? 5 : 4)}, 1fr)` }}>
+        <div className="bottom-nav" style={{ gridTemplateColumns: `repeat(${!isLoggedIn ? 3 : (isAdmin ? 5 : 4)}, 1fr)` }}>
           {!isLoggedIn ? (
             <>
               <button className={`nav-item ${activeTab === 'catalog' ? 'active' : ''}`} onClick={() => setActiveTab('catalog')} style={{ position: 'relative' }}>
                 <Store />
                 {cartCount > 0 && <span style={{ position: 'absolute', top: 4, right: '50%', transform: 'translateX(10px)', background: '#ef4444', color: '#fff', fontSize: '0.5rem', fontWeight: 800, padding: '1px 4px', borderRadius: 8, minWidth: 14, textAlign: 'center' }}>{cartCount}</span>}
                 <span>Catalog</span>
+              </button>
+              <button className={`nav-item ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => setActiveTab('guides')}>
+                <Film /><span>Videos</span>
               </button>
               <button className="nav-item" onClick={() => { setIsSidebarOpen(false); setTimeout(() => setShowLoginModal(true), 150); }}>
                 <User /><span>Log In</span>

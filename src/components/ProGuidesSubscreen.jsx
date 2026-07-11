@@ -7,7 +7,7 @@ import PremiumSelect from './ui/PremiumSelect';
 import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
 
-export default function ProGuidesSubscreen({ lang }) {
+export default function ProGuidesSubscreen({ lang, isLoggedIn = true }) {
   const guides = useLiveQuery(() => db.customGuides.toArray()) || [];
   const [guideSubTab, setGuideSubTab] = useState('video'); // 'video' | 'written'
   const [expandedSection, setExpandedSection] = useState(null);
@@ -164,7 +164,7 @@ export default function ProGuidesSubscreen({ lang }) {
           </div>
         </div>
 
-        {guideSubTab === 'video' && (
+        {guideSubTab === 'video' && isLoggedIn && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
             <button 
               onClick={() => setShowAddForm(!showAddForm)}
@@ -358,14 +358,16 @@ export default function ProGuidesSubscreen({ lang }) {
                   </p>
                 </div>
   
-                <div style={{ display: 'flex', gap: '6px', marginLeft: '8px' }}>
-                  <button onClick={() => handleStartEdit(video)} style={{ background: 'none', border: 'none', color: 'hsl(var(--primary))', cursor: 'pointer' }} title="Edit Video">
-                    <Edit3 size={14} />
-                  </button>
-                  <button onClick={() => handleDeleteVideo(video.id)} style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer' }} title="Delete Video">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+                {isLoggedIn && (
+                  <div style={{ display: 'flex', gap: '6px', marginLeft: '8px' }}>
+                    <button onClick={() => handleStartEdit(video)} style={{ background: 'none', border: 'none', color: 'hsl(var(--primary))', cursor: 'pointer' }} title="Edit Video">
+                      <Edit3 size={14} />
+                    </button>
+                    <button onClick={() => handleDeleteVideo(video.id)} style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer' }} title="Delete Video">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
