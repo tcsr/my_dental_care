@@ -725,13 +725,13 @@ export default function App() {
 
       {/* Sidebar Drawer */}
       <div className={`sidebar-drawer ${isSidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', width: '100%', height: '7rem', position: 'relative' }}>
+        <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', width: '100%', height: '81px', position: 'relative' }}>
           <img
             src={`${import.meta.env.BASE_URL || '/'}logo.png`}
             alt="Simple Implants"
             className="sidebar-logo-animated"
             style={{
-              height: '6.2rem',
+              height: '90px',
               width: 'auto',
               filter: 'drop-shadow(0 8px 24px rgba(2, 132, 199, 0.25))',
               objectFit: 'contain'
@@ -981,15 +981,13 @@ export default function App() {
               <img
                 src={`${import.meta.env.BASE_URL || '/'}logo.png`}
                 alt="Simple Implants"
+                className="sidebar-logo-animated"
                 style={{
-                  height: '52px',
+                  height: '90px',
                   width: 'auto',
                   filter: 'drop-shadow(0 4px 12px rgba(2, 132, 199, 0.15))',
-                  objectFit: 'contain',
-                  transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                  objectFit: 'contain'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
               />
               {isDoctorMode && (
                 <span style={{ fontSize: '0.55rem', background: 'hsl(var(--secondary) / 12%)', color: 'hsl(var(--secondary))', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>

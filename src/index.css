@@ -1134,7 +1134,7 @@ button {
   }
 
   body.is-browser .sidebar-header {
-    height: 7rem !important;
+    height: 81px !important;
     margin: 0 !important;
     padding: 0 16px !important;
     display: flex !important;
@@ -1145,7 +1145,7 @@ button {
   }
 
   body.is-browser .app-header {
-    height: 65px !important;
+    height: 81px !important;
     padding: 0 24px !important;
     box-sizing: border-box !important;
     background: hsl(var(--bg-card) / 75%) !important;
@@ -1969,9 +1969,9 @@ body.is-browser .modal-overlay-container.top-aligned-modal {
 
 /* Premium sidebar brand logo hover & float animations */
 @keyframes logoFloat {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-  100% { transform: translateY(0); }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.025); }
+  100% { transform: scale(1); }
 }
 
 .sidebar-logo-animated {
@@ -1982,7 +1982,7 @@ body.is-browser .modal-overlay-container.top-aligned-modal {
 
 .sidebar-logo-animated:hover {
   animation-play-state: paused;
-  transform: scale(1.08) translateY(-4px) !important;
+  transform: scale(1.05) !important;
 }
 
 
