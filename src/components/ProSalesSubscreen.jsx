@@ -2470,7 +2470,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.7rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
                 <div>
                   <strong style={{ color: '#475569', textTransform: 'uppercase', fontSize: '0.6rem' }}>{t('invoiceShipFrom', lang)}</strong>
-                  <p style={{ fontWeight: 'bold', margin: '2px 0 0' }}>{profile?.clinicName || 'Simple Implant Ltd.'}</p>
+                  <p style={{ fontWeight: 'bold', margin: '2px 0 0' }}>{profile?.clinicName || 'Simple Implants Ltd.'}</p>
                   <p style={{ margin: 0, color: '#64748b' }}>{profile?.clinicAddress || 'Hitech City, Hyderabad, 500081'}</p>
                 </div>
                 <div>
@@ -2633,7 +2633,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.7rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginTop: '10px' }}>
                 <div>
                   <strong style={{ color: '#475569', textTransform: 'uppercase', fontSize: '0.6rem' }}>Sender (Dispatch From)</strong>
-                  <p style={{ fontWeight: 'bold', margin: '2px 0 0' }}>{profile?.clinicName || 'Simple Implant Ltd.'}</p>
+                  <p style={{ fontWeight: 'bold', margin: '2px 0 0' }}>{profile?.clinicName || 'Simple Implants Ltd.'}</p>
                   <p style={{ margin: 0, color: '#64748b' }}>{profile?.clinicAddress || 'Hitech City, Hyderabad, 500081'}</p>
                 </div>
                 <div>
@@ -2686,7 +2686,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                   <span style={{ display: 'block', marginTop: '4px', color: '#64748b' }}>Receiver's Signature</span>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontWeight: 'bold', display: 'block' }}>For {profile?.clinicName || 'Simple Implant Ltd.'}</span>
+                  <span style={{ fontWeight: 'bold', display: 'block' }}>For {profile?.clinicName || 'Simple Implants Ltd.'}</span>
                   <div style={{ width: '150px', height: '24px' }}></div>
                   <span style={{ display: 'block', marginTop: '4px', color: '#64748b' }}>Authorized Signatory</span>
                 </div>

@@ -1,7 +1,7 @@
 const translations = {
   en: {
     // App & Nav
-    portalTitle: 'Simple Implant',
+    portalTitle: 'Simple Implants',
     navSales: 'Sales',
     navImplants: 'Implants',
     navInventory: 'Inventory',
@@ -95,11 +95,11 @@ const translations = {
     editGuideTitle: 'Edit Training Guide Details',
     noGuides: 'No training video guides found. Click Add Link to register custom guides!',
     openInYt: 'Open in YouTube',
-    aiAssistantTitle: 'Simple Implant AI Assistant',
+    aiAssistantTitle: 'Simple Implants AI Assistant',
     aiAssistantDesc: 'Ask questions about orders, implants, catalog stock levels, or alerts.',
     aiAskPlaceholder: 'Ask anything...',
     aiSuggestedQueries: 'Suggested FAQs:',
-    aiWelcome: 'Hello! I am your Simple Implant assistant. Click on any suggested question below or type your own to get instant help.',
+    aiWelcome: 'Hello! I am your Simple Implants assistant. Click on any suggested question below or type your own to get instant help.',
     faqQ1: 'How to register a new clinic?',
     faqA1: 'Navigate to the "Sales" tab, select "Manage Clients", fill in the clinic info, and click "Register Client". This lets you assign custom discount tiers.',
     faqQ2: 'What are the discount tiers?',
@@ -108,7 +108,7 @@ const translations = {
     faqA3: 'Go to the "Implants" tab and locate the active patient. Click "Next Stage" or "Prev Stage" to update their clinical healing progress.',
     faqQ4: 'How does the automated reminder scanner work?',
     faqA4: 'The Auto-Alerts Engine replaces manual follow-ups. Clicking "Run Scan" scans unpaid sales invoices, implant checkups, and low stock to log SMS/Email alerts.',
-    aiFallbackText: "I'm your Simple Implant Assistant. For specific answers, please tap on the suggested B2B FAQ prompts above or ask about registering clinics, orders, inventory, or implant checkups.",
+    aiFallbackText: "I'm your Simple Implants Assistant. For specific answers, please tap on the suggested B2B FAQ prompts above or ask about registering clinics, orders, inventory, or implant checkups.",
     kpiTotalSales: 'Total Revenue (₹)',
     kpiPendingCollections: 'Pending Invoices',
     kpiActiveCases: 'Active Cases',

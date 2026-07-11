@@ -725,17 +725,34 @@ export default function App() {
 
       {/* Sidebar Drawer */}
       <div className={`sidebar-drawer ${isSidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: '#0ea5e9' }}>
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(14, 165, 233, 0.15)" />
-              <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" stroke="currentColor" fill="none" />
-            </svg>
-            <span className="gradient-text app-title" style={{ fontFamily: 'Outfit', fontWeight: '800', fontSize: '1.15rem', letterSpacing: '-0.01em', lineHeight: 1.1 }}>
-              {t('portalTitle', lang)}
-            </span>
-          </h2>
-          <button onClick={() => setIsSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}>
+        <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', width: '100%', height: '7rem', position: 'relative' }}>
+          <img
+            src={`${import.meta.env.BASE_URL || '/'}logo.png`}
+            alt="Simple Implants"
+            className="sidebar-logo-animated"
+            style={{
+              height: '6.2rem',
+              width: 'auto',
+              filter: 'drop-shadow(0 8px 24px rgba(2, 132, 199, 0.25))',
+              objectFit: 'contain'
+            }}
+          />
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            style={{
+              position: 'absolute',
+              right: '16px',
+              top: '16px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'hsl(var(--text-muted))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px'
+            }}
+          >
             <X size={20} />
           </button>
         </div>
@@ -959,7 +976,27 @@ export default function App() {
       <div className="main-layout-container">
         {/* Main Premium Layout Wrapper */}
         <div className="app-header" style={{ borderBottom: '1px solid hsl(var(--border-color))' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <img
+                src={`${import.meta.env.BASE_URL || '/'}logo.png`}
+                alt="Simple Implants"
+                style={{
+                  height: '52px',
+                  width: 'auto',
+                  filter: 'drop-shadow(0 4px 12px rgba(2, 132, 199, 0.15))',
+                  objectFit: 'contain',
+                  transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+              />
+              {isDoctorMode && (
+                <span style={{ fontSize: '0.55rem', background: 'hsl(var(--secondary) / 12%)', color: 'hsl(var(--secondary))', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Doctor Portal
+                </span>
+              )}
+            </div>
             <button
               onClick={() => setIsSidebarOpen(prev => {
                 const next = !prev;
@@ -977,44 +1014,30 @@ export default function App() {
             >
               <Menu size={15} />
             </button>
-            <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'hsl(var(--primary))', flexShrink: 0 }}>
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="hsl(var(--primary) / 15%)" />
-                <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" stroke="currentColor" fill="none" />
-              </svg>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <span className="gradient-text app-title" style={{ fontFamily: 'Outfit', fontWeight: '800', fontSize: '1.05rem', letterSpacing: '-0.01em', lineHeight: 1.1 }}>
-                  {t('portalTitle', lang)}
-                </span>
-                {isDoctorMode && (
-                  <span style={{ fontSize: '0.55rem', background: 'hsl(var(--secondary) / 12%)', color: 'hsl(var(--secondary))', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', marginTop: '1px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Doctor Portal
-                  </span>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* Premium Globe i18n Dropdown & Profile Icon */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Online/Offline Status Indicator */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              padding: '4px 10px',
-              borderRadius: '12px',
-              fontSize: '0.62rem',
-              fontWeight: '800',
-              fontFamily: 'Outfit',
-              background: isOnline ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-              border: isOnline ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(239, 68, 68, 0.2)',
-              color: isOnline ? '#10b981' : '#ef4444',
-              marginRight: '6px',
-              transition: 'all 0.3s ease',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em'
-            }} title={isOnline ? 'Online - Database synchronized' : 'Offline Mode - Saving modifications locally'}>
+            <div
+              className="header-status-indicator"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                borderRadius: '12px',
+                fontSize: '0.62rem',
+                fontWeight: '800',
+                fontFamily: 'Outfit',
+                background: isOnline ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                border: isOnline ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(239, 68, 68, 0.2)',
+                color: isOnline ? '#10b981' : '#ef4444',
+                marginRight: '6px',
+                transition: 'all 0.3s ease',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em'
+              }} title={isOnline ? 'Online - Database synchronized' : 'Offline Mode - Saving modifications locally'}
+            >
               <span style={{
                 width: 5,
                 height: 5,
@@ -1075,7 +1098,7 @@ export default function App() {
               </button>
             )}
 
-            <div className="header-select-wrapper" style={{ width: 140 }}>
+            <div className="header-select-wrapper" style={{ width: 105 }}>
               <PremiumSelect
                 value={lang}
                 onChange={handleLangChange}
@@ -1282,6 +1305,40 @@ export default function App() {
         >
           <ArrowDown size={16} />
         </button>
+        <a
+          href="https://wa.me/919444126926?text=Hello,%20I%20have%20a%20query%20about%20Simple%20Implant."
+          target="_blank"
+          rel="noopener noreferrer"
+          className="scroll-btn"
+          title="Chat on WhatsApp"
+          style={{
+            background: '#25D366',
+            color: '#fff',
+            borderColor: '#25D366',
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(37, 211, 102, 0.35)',
+            border: 'none',
+            textDecoration: 'none',
+            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px) scale(1.15)';
+            e.currentTarget.style.boxShadow = '0 8px 20px rgba(37, 211, 102, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'none';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 211, 102, 0.35)';
+          }}
+        >
+          <svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor">
+            <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232" />
+          </svg>
+        </a>
       </div>
 
       {/* Full height Localized AI FAQ Assistant */}

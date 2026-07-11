@@ -194,6 +194,11 @@ db.version(8).stores({
   syncQueue: '++id, table, action, payload, timestamp'
 });
 
+// v9: productFeedback table for offline feedback caching
+db.version(9).stores({
+  productFeedback: '++id, productId, userId, rating, comment, createdAt'
+});
+
 // Idempotent Basal implant SKU seed — called on every app boot (not tied to the version(7)
 // upgrade transaction, since Dexie skips .upgrade() callbacks entirely for brand-new databases).
 export async function seedBasalImplants() {
@@ -287,7 +292,7 @@ export async function seedDemoData() {
     if (isSeeded) return;
 
     await db.userProfile.bulkPut([
-      { key: 'userName', value: 'Chandra (Simple Implant)' },
+      { key: 'userName', value: 'Chandra (Simple Implants)' },
       { key: 'role', value: 'B2B Sales Representative' },
       { key: 'gstRates', value: [5, 12, 18, 28] },
       { key: 'defaultGstRate', value: 12 },
@@ -378,7 +383,7 @@ export async function enqueueSync(table, action, payload) {
 // Process all queued sync operations sequentially when online
 export async function processSyncQueue() {
   if (!navigator.onLine) return;
-  
+
   try {
     const queue = await db.syncQueue.orderBy('timestamp').toArray();
     if (!queue.length) return;
@@ -387,7 +392,7 @@ export async function processSyncQueue() {
       let success = false;
       try {
         const { table, action, payload } = item;
-        
+
         if (table === 'gst_rates') {
           if (action === 'insert') {
             const { error } = await supabase.from('gst_rates').insert(payload);

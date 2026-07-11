@@ -7,6 +7,7 @@ export const useStore = create((set, get) => ({
   profiles: [],
   categories: [],
   loading: false,
+  feedback: {},
 
   fetchProducts: async () => {
     try {
@@ -48,6 +49,58 @@ export const useStore = create((set, get) => ({
       if (!error && data) set({ categories: data });
     } catch (e) {
       console.warn('Zustand: fetch categories failed:', e);
+    }
+  },
+
+  fetchFeedback: async (productId) => {
+    try {
+      const { data, error } = await supabase
+        .from('product_feedback')
+        .select('*, profiles(name)')
+        .eq('product_id', productId)
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        set(state => ({
+          feedback: {
+            ...state.feedback,
+            [productId]: data
+          }
+        }));
+      }
+    } catch (e) {
+      console.warn('Zustand: fetch feedback failed:', e);
+    }
+  },
+
+  submitFeedback: async (productId, rating, comment, userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('product_feedback')
+        .insert({
+          product_id: productId,
+          user_id: userId,
+          rating,
+          comment
+        })
+        .select('*, profiles(name)');
+      if (error) {
+        throw error;
+      }
+      if (data && data[0]) {
+        set(state => {
+          const currentList = state.feedback[productId] || [];
+          return {
+            feedback: {
+              ...state.feedback,
+              [productId]: [data[0], ...currentList]
+            }
+          };
+        });
+        return { success: true };
+      }
+    } catch (e) {
+      console.warn('Zustand: submit feedback failed:', e);
+      return { success: false, error: e.message || e };
     }
   },
 

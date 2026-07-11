@@ -37,9 +37,9 @@ export default function LoginScreen({ onLogin, isModal = false }) {
       if (profileErr) throw profileErr;
 
       if (profile.role === 'admin') {
-        onLogin({ 
-          role: 'admin', 
-          name: profile.name, 
+        onLogin({
+          role: 'admin',
+          name: profile.name,
           user: data.user,
           clinicName: profile.clinic_name,
           phone: profile.phone,
@@ -53,9 +53,9 @@ export default function LoginScreen({ onLogin, isModal = false }) {
         setScreen('pending');
         return;
       } else {
-        onLogin({ 
-          role: profile.role, 
-          name: profile.name, 
+        onLogin({
+          role: profile.role,
+          name: profile.name,
           user: data.user,
           clinicName: profile.clinic_name,
           phone: profile.phone,
@@ -174,7 +174,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
             </p>
           )}
           <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.7, maxWidth: '300px', margin: '0 auto 6px' }}>
-            Your clinic account is pending approval from Simple Implant admin.
+            Your clinic account is pending approval from Simple Implants admin.
           </p>
           <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 auto 28px' }}>
             You'll receive access once an admin reviews your registration.
@@ -271,7 +271,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
           </button>
           <div>
             <h2 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1.3rem', color: '#0f172a', margin: 0 }}>Create Account</h2>
-            <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '2px 0 0' }}>Register your clinic on Simple Implant</p>
+            <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '2px 0 0' }}>Register your clinic on Simple Implants</p>
           </div>
         </div>
 
@@ -365,20 +365,17 @@ export default function LoginScreen({ onLogin, isModal = false }) {
     <Wrapper isModal={isModal}>
       {/* Brand */}
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <div style={{
-          width: 68, height: 68, borderRadius: 20, margin: '0 auto 14px',
-          background: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 12px 32px rgba(14,165,233,0.35)',
-        }}>
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(255,255,255,0.2)"/>
-            <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" stroke="#fff" fill="none"/>
-          </svg>
-        </div>
-        <h1 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.65rem', background: 'linear-gradient(135deg, #0284c7, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '0 0 6px' }}>
-          Simple Implant
-        </h1>
+        <img
+          src={`${import.meta.env.BASE_URL || '/'}logo.png`}
+          alt="Simple Implants Logo"
+          style={{
+            width: 140,
+            height: 'auto',
+            margin: '0 auto 14px',
+            display: 'block',
+            filter: 'drop-shadow(0 8px 24px rgba(2, 132, 199, 0.2))',
+          }}
+        />
         <p style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>
           B2B Dental Implant & Order Management
         </p>
@@ -417,7 +414,7 @@ export default function LoginScreen({ onLogin, isModal = false }) {
 
       <div style={{ marginTop: 16, padding: '16px', background: 'rgba(14,165,233,0.04)', borderRadius: 12, border: '1px solid rgba(14,165,233,0.1)', textAlign: 'center' }}>
         <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 10px', fontWeight: 500 }}>
-          New to Simple Implant?
+          New to Simple Implants?
         </p>
         <button onClick={() => { setScreen('register'); setError(''); }} style={btnOutline}>
           Register your Clinic

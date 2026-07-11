@@ -6,6 +6,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import PremiumLoader from './ui/PremiumLoader';
 import EmptyStateCard from './EmptyStateCard';
+import StarRating from './ui/StarRating';
 
 const CATEGORIES = ['All', 'Implants', 'Instruments', 'Materials', 'PPE', 'Equipment', 'Consumables'];
 
@@ -114,14 +115,31 @@ export default function ProductCatalog({
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState(null);
 
+  // Ratings & Feedback form states
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState('');
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
+
+  const fetchFeedback = useStore(state => state.fetchFeedback);
+  const submitFeedback = useStore(state => state.submitFeedback);
+  const refresh = useStore(state => state.refresh);
+  const feedback = useStore(state => state.feedback);
+  const feedbackList = selectedProduct ? (feedback[selectedProduct.id] || []) : [];
+
+  const hasReviewed = useMemo(() => {
+    return feedbackList.some(item => item.user_id === authUser?.user?.id);
+  }, [feedbackList, authUser]);
+
   useEffect(() => {
     if (selectedProduct) {
       const sizeList = selectedProduct.sizes ? selectedProduct.sizes.split(',').map(s => s.trim()).filter(Boolean) : [];
       setSelectedSize(sizeList.length > 0 ? sizeList[0] : null);
+      fetchFeedback(selectedProduct.id);
     } else {
       setSelectedSize(null);
     }
-  }, [selectedProduct]);
+  }, [selectedProduct, fetchFeedback]);
 
   useEffect(() => {
     if (categories && categories.length > 0) {
@@ -206,10 +224,10 @@ export default function ProductCatalog({
     }
 
     await supabase.from('order_items').insert(
-      cartItems.map(i => ({ 
-        order_id: order.id, 
-        product_id: i.product.id, 
-        qty: i.qty, 
+      cartItems.map(i => ({
+        order_id: order.id,
+        product_id: i.product.id,
+        qty: i.qty,
         unit_price: i.product.price,
         size: i.size || null
       }))
@@ -278,7 +296,7 @@ export default function ProductCatalog({
         key: rzpKey,
         amount: orderData.amount,
         currency: orderData.currency || 'INR',
-        name: 'Simple Implant',
+        name: 'Simple Implants',
         description: 'Clinic Case Order Payment',
         image: 'https://cdn-icons-png.flaticon.com/512/3482/3482200.png',
         order_id: orderData.order_id,
@@ -355,6 +373,22 @@ export default function ProductCatalog({
       return;
     }
     await triggerRazorpayPayment(authUser);
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!newRating) return;
+    setSubmittingFeedback(true);
+    setFeedbackError('');
+    const result = await submitFeedback(selectedProduct.id, newRating, newComment, authUser.user.id);
+    setSubmittingFeedback(false);
+    if (result.success) {
+      setNewComment('');
+      setNewRating(5);
+      await refresh('products');
+    } else {
+      setFeedbackError(result.error || 'Failed to submit review');
+    }
   };
 
   if (loading) return (
@@ -482,17 +516,17 @@ export default function ProductCatalog({
           <button
             onClick={() => { setSearch(''); setCategory('All'); }}
             className="search-clear-btn"
-            style={{ 
-              position: 'absolute', 
-              right: 12, 
-              top: '50%', 
-              transform: 'translateY(-50%)', 
-              background: 'rgba(239, 68, 68, 0.1)', 
-              border: 'none', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
+            style={{
+              position: 'absolute',
+              right: 12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               color: '#ef4444'
             }}
           >
@@ -593,6 +627,23 @@ export default function ProductCatalog({
                     </div>
                   )}
 
+                  {/* Rating Stars on Card */}
+                  {p.rating_count > 0 ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                      <StarRating rating={Number(p.rating_avg)} size={11} />
+                      <span style={{ fontSize: '0.66rem', fontWeight: 800, color: 'hsl(var(--text-muted))', fontFamily: 'Outfit' }}>
+                        {Number(p.rating_avg).toFixed(1)} ({p.rating_count})
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                      <StarRating rating={0} size={11} />
+                      <span style={{ fontSize: '0.66rem', fontWeight: 500, color: 'hsl(var(--text-dim))', fontFamily: 'Outfit' }}>
+                        No reviews
+                      </span>
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 6 }}>
                     <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.08rem', color: 'hsl(var(--text-primary))' }}>
                       <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'hsl(var(--text-muted))', marginRight: 2 }}>₹</span>{p.price?.toLocaleString('en-IN')}
@@ -647,25 +698,25 @@ export default function ProductCatalog({
       {cartCount > 0 && !cartOpen && (
         <button
           onClick={() => setCartOpen(true)}
-          style={{ 
-            position: 'fixed', 
-            bottom: 30, 
-            left: '50%', 
-            transform: 'translateX(-50%)', 
-            zIndex: 1000, 
-            background: 'linear-gradient(135deg, #0f172a, #1e293b)', 
-            color: '#fff', 
-            border: '1.5px solid rgba(14, 165, 233, 0.4)', 
-            borderRadius: 30, 
-            padding: '14px 28px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 12, 
-            fontSize: '0.88rem', 
-            fontWeight: 800, 
-            fontFamily: 'Outfit', 
-            cursor: 'pointer', 
-            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.35), 0 0 15px rgba(14, 165, 233, 0.15)', 
+          style={{
+            position: 'fixed',
+            bottom: 30,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+            color: '#fff',
+            border: '1.5px solid rgba(14, 165, 233, 0.4)',
+            borderRadius: 30,
+            padding: '14px 28px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            fontSize: '0.88rem',
+            fontWeight: 800,
+            fontFamily: 'Outfit',
+            cursor: 'pointer',
+            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.35), 0 0 15px rgba(14, 165, 233, 0.15)',
             whiteSpace: 'nowrap',
             transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
@@ -783,13 +834,14 @@ export default function ProductCatalog({
               )}
             </div>
 
-              <div style={{ padding: '16px 20px 20px', borderTop: '1px solid hsl(var(--border-color))', display: 'flex', flexDirection: 'column', gap: 10, background: 'hsl(var(--bg-dark))' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Amount</span>
-                    <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.3rem', color: 'hsl(var(--primary))' }}>₹{(cartTotal * 1.12).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))' }}>Incl. 12% GST</span>
-                  </div>
+            <div style={{ padding: '16px 20px 20px', borderTop: '1px solid hsl(var(--border-color))', display: 'flex', flexDirection: 'column', gap: 10, background: 'hsl(var(--bg-dark))' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Amount</span>
+                  <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.3rem', color: 'hsl(var(--primary))' }}>₹{(cartTotal * 1.12).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))' }}>Incl. 12% GST</span>
+                </div>
+                {cartItems.length > 0 ? (
                   <button
                     onClick={placeOrder} disabled={placing}
                     style={{
@@ -812,7 +864,33 @@ export default function ProductCatalog({
                     {placing ? 'Placing...' : 'Place Order'}
                     <ChevronRight size={14} strokeWidth={2.5} />
                   </button>
-                </div>
+                ) : (
+                  <button
+                    onClick={() => setCartOpen(false)}
+                    style={{
+                      padding: '12px 22px',
+                      borderRadius: 12,
+                      border: 'none',
+                      background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                      color: '#fff',
+                      fontSize: '0.85rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      fontFamily: 'Outfit',
+                      boxShadow: '0 6px 18px rgba(14,165,233,0.25)',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(14,165,233,0.35)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(14,165,233,0.25)'; }}
+                  >
+                    ← Continue Shopping
+                  </button>
+                )}
+              </div>
+              {cartItems.length > 0 && (
                 <button
                   onClick={() => setCartOpen(false)}
                   style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-muted))', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit', transition: 'all 0.2s' }}
@@ -821,7 +899,8 @@ export default function ProductCatalog({
                 >
                   ← Continue Shopping
                 </button>
-              </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -856,13 +935,13 @@ export default function ProductCatalog({
             <div style={{ position: 'relative', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', borderRadius: 28, width: '100%', maxWidth: 600, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 32px 80px rgba(15, 23, 42, 0.3)', animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)', zIndex: 1 }}>
 
               {/* Close Button directly on modal container */}
-              <button 
-                onClick={() => { setSelectedProduct(null); setCarouselIndex(0); }} 
+              <button
+                onClick={() => { setSelectedProduct(null); setCarouselIndex(0); }}
                 className="modal-close-btn-premium"
-                style={{ 
-                  position: 'absolute', 
-                  top: 16, 
-                  right: 16, 
+                style={{
+                  position: 'absolute',
+                  top: 16,
+                  right: 16,
                   zIndex: 100,
                   background: 'rgba(255, 255, 255, 0.9)',
                   color: '#0f172a',
@@ -1067,46 +1146,143 @@ export default function ProductCatalog({
                     </p>
                   </div>
                 )}
+
+                {/* Ratings & Feedback Section */}
+                <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: 12 }}>
+                  <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px 0' }}>Reviews & Ratings</h4>
+
+                  {/* Reviews List */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+                    {feedbackList.length === 0 ? (
+                      <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-dim))', fontStyle: 'italic', padding: '6px 0' }}>
+                        No reviews yet. Be the first to review this product!
+                      </div>
+                    ) : (
+                      feedbackList.map((item) => (
+                        <div key={item.id} style={{ background: 'hsl(var(--bg-dark))', padding: '10px 12px', borderRadius: 12, border: '1px solid hsl(var(--border-color))' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'hsl(var(--text-primary))' }}>
+                              {item.profiles?.name || 'Anonymous Doctor'}
+                            </span>
+                            <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))' }}>
+                              {item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}
+                            </span>
+                          </div>
+                          <div style={{ marginTop: 2 }}>
+                            <StarRating rating={item.rating} size={10} />
+                          </div>
+                          {item.comment && (
+                            <p style={{ fontSize: '0.72rem', color: 'hsl(var(--text-muted))', margin: '6px 0 0 0', lineHeight: 1.4 }}>
+                              {item.comment}
+                            </p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Submission Form */}
+                  {authUser && !hasReviewed ? (
+                    <form onSubmit={handleReviewSubmit} style={{ borderTop: '1px dotted hsl(var(--border-color))', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <h5 style={{ fontSize: '0.72rem', fontWeight: 700, color: 'hsl(var(--text-primary))', margin: 0 }}>Add Your Review</h5>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))' }}>Your Rating:</span>
+                        <StarRating rating={newRating} onRatingChange={setNewRating} editable size={16} />
+                      </div>
+
+                      <textarea
+                        value={newComment}
+                        onChange={e => setNewComment(e.target.value)}
+                        placeholder="Write your feedback..."
+                        rows={2}
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          fontSize: '0.75rem',
+                          borderRadius: 8,
+                          border: '1px solid hsl(var(--border-color))',
+                          background: 'transparent',
+                          color: 'hsl(var(--text-primary))',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+
+                      {feedbackError && (
+                        <div style={{ fontSize: '0.68rem', color: '#ef4444' }}>{feedbackError}</div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={submittingFeedback}
+                        style={{
+                          alignSelf: 'flex-end',
+                          padding: '6px 14px',
+                          borderRadius: 8,
+                          border: 'none',
+                          background: submittingFeedback ? 'hsl(var(--border-color))' : 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                          color: '#fff',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          cursor: submittingFeedback ? 'not-allowed' : 'pointer',
+                          fontFamily: 'Outfit'
+                        }}
+                      >
+                        {submittingFeedback ? 'Submitting...' : 'Submit Review'}
+                      </button>
+                    </form>
+                  ) : authUser && hasReviewed ? (
+                    <div style={{ fontSize: '0.68rem', color: 'hsl(var(--text-dim))', fontStyle: 'italic', padding: '6px 0', borderTop: '1px dotted hsl(var(--border-color))' }}>
+                      You have already submitted a review for this product.
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.68rem', color: 'hsl(var(--text-dim))', fontStyle: 'italic', padding: '6px 0', borderTop: '1px dotted hsl(var(--border-color))' }}>
+                      Please log in to leave a review.
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Sticky Action Footer */}
               <div className="detail-modal-footer">
-                  {outOfStock ? (
-                    <div style={{ width: '100%', padding: '12px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 12, color: '#ef4444', fontSize: '0.78rem', textAlign: 'center', fontWeight: 800, fontFamily: 'Outfit' }}>
-                      🚫 Currently Out of Stock
-                    </div>
-                  ) : inCart ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.08)', borderRadius: 14, padding: '8px 12px', border: '1.5px solid #0ea5e9', width: '100%' }}>
-                      <button
-                        className="qty-btn"
-                        onClick={() => removeFromCart(selectedProduct.id, selectedSize)}
-                      >
-                        <Minus size={14} strokeWidth={2.5} />
-                      </button>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <span
-                          onClick={() => { setSelectedProduct(null); setCartOpen(true); }}
-                          style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 8px', borderRadius: 'var(--radius-xs)', transition: 'background 0.15s' }}
-                          title="View Cart"
-                        >{inCart.qty}</span>
-                        <span style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>IN CART</span>
-                      </div>
-                      <button
-                        className="qty-btn"
-                        onClick={() => addToCart(selectedProduct, selectedSize)}
-                        disabled={selectedProduct.stock_qty !== null && selectedProduct.stock_qty !== undefined && inCart.qty >= selectedProduct.stock_qty}
-                      >
-                        <Plus size={14} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  ) : (
+                {outOfStock ? (
+                  <div style={{ width: '100%', padding: '12px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 12, color: '#ef4444', fontSize: '0.78rem', textAlign: 'center', fontWeight: 800, fontFamily: 'Outfit' }}>
+                    🚫 Currently Out of Stock
+                  </div>
+                ) : inCart ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.08)', borderRadius: 14, padding: '8px 12px', border: '1.5px solid #0ea5e9', width: '100%' }}>
                     <button
-                      onClick={() => addToCart(selectedProduct, selectedSize)}
-                      style={{ padding: '14px 28px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 16px rgba(14,165,233,0.3)', letterSpacing: '0.02em', marginLeft: 'auto' }}
+                      className="qty-btn"
+                      onClick={() => removeFromCart(selectedProduct.id, selectedSize)}
                     >
-                      <Plus size={16} /> Add to Cart
+                      <Minus size={14} strokeWidth={2.5} />
                     </button>
-                  )}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span
+                        onClick={() => { setSelectedProduct(null); setCartOpen(true); }}
+                        style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 8px', borderRadius: 'var(--radius-xs)', transition: 'background 0.15s' }}
+                        title="View Cart"
+                      >{inCart.qty}</span>
+                      <span style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>IN CART</span>
+                    </div>
+                    <button
+                      className="qty-btn"
+                      onClick={() => addToCart(selectedProduct, selectedSize)}
+                      disabled={selectedProduct.stock_qty !== null && selectedProduct.stock_qty !== undefined && inCart.qty >= selectedProduct.stock_qty}
+                    >
+                      <Plus size={14} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => addToCart(selectedProduct, selectedSize)}
+                    style={{ padding: '14px 28px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 16px rgba(14,165,233,0.3)', letterSpacing: '0.02em', marginLeft: 'auto' }}
+                  >
+                    <Plus size={16} /> Add to Cart
+                  </button>
+                )}
               </div>
             </div>
           </div>

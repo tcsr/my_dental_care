@@ -18,7 +18,7 @@ export default function ProRemindersSubscreen({ lang }) {
 
   const [isScanning, setIsScanning] = useState(false);
   const [selectedWhatsappReminder, setSelectedWhatsappReminder] = useState(null);
-  
+
   const [subTab, setSubTab] = useState('automated'); // 'automated' | 'tracker'
 
   // Custom reminder scheduler form state
@@ -40,7 +40,7 @@ export default function ProRemindersSubscreen({ lang }) {
     try {
       const scheduledDateTimeStr = `${customDate}T${customTime}:00`;
       const dateScheduled = new Date(scheduledDateTimeStr).getTime();
-      
+
       if (isNaN(dateScheduled)) {
         alert('Invalid Date/Time configuration');
         return;
@@ -65,7 +65,7 @@ export default function ProRemindersSubscreen({ lang }) {
       setCustomPriority('Medium');
       setCustomMessage('');
       setCustomChannels(['Alarm']);
-      
+
       alert('Custom Alarm Reminder Scheduled Successfully!');
     } catch (err) {
       console.error(err);
@@ -94,7 +94,7 @@ export default function ProRemindersSubscreen({ lang }) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return;
       const ctx = new AudioContext();
-      
+
       const playTone = (freq, time, dur) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -249,7 +249,7 @@ export default function ProRemindersSubscreen({ lang }) {
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '30px' }}>
-      
+
       {/* Sub Tab Switcher */}
       <div className="tab-group">
         <button
@@ -275,20 +275,20 @@ export default function ProRemindersSubscreen({ lang }) {
           {/* Simulation Trigger Card */}
           <div className="glass-card" style={{ padding: '18px 20px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'linear-gradient(135deg, hsl(var(--primary-glow)), hsl(var(--secondary-glow)))', border: '1px solid hsl(var(--border-color))' }}>
             <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ padding: '6px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
-                <Bell size={16} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <div style={{ padding: '6px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
+                  <Bell size={16} />
+                </div>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: 'hsl(var(--primary))', fontFamily: 'Outfit', margin: 0 }}>
+                  {t('reminderEngine', lang) || 'Reminder Engine'}
+                </h3>
               </div>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: 'hsl(var(--primary))', fontFamily: 'Outfit', margin: 0 }}>
-                {t('reminderEngine', lang) || 'Reminder Engine'}
-              </h3>
-            </div>
               <p style={{ fontSize: '0.72rem', color: 'hsl(var(--text-muted))', marginTop: '4px', lineHeight: 1.4 }}>
                 {t('reminderEngineDesc', lang) || 'Scan pending items'}
               </p>
             </div>
 
-            <button 
+            <button
               onClick={triggerAutoReminders}
               disabled={isScanning}
               style={{
@@ -320,7 +320,7 @@ export default function ProRemindersSubscreen({ lang }) {
               </div>
               <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', fontWeight: '800', fontFamily: 'Outfit', margin: 0 }}>{t('reminderLogs', lang) || 'Reminder Logs'}</h3>
             </div>
-            
+
             {automatedList.length > 0 && (
               <button onClick={handleClearReminders} style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'Outfit', fontWeight: 'bold' }}>
                 <Trash2 size={13} /> {t('clearLogs', lang) || 'Clear Logs'}
@@ -333,7 +333,7 @@ export default function ProRemindersSubscreen({ lang }) {
             {automatedList.length > 0 ? (
               automatedList.map(log => {
                 const clientName = log.recipientId === 0 ? 'Sales Office / Reps' : clients.find(c => c.id === log.recipientId)?.name || 'Doctor Clinic';
-                
+
                 return (
                   <div key={log.id} className="glass-card" style={{ padding: '12px 14px', border: '1px solid hsl(var(--border-color))' }}>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
@@ -391,10 +391,10 @@ export default function ProRemindersSubscreen({ lang }) {
                 );
               })
             ) : (
-              <EmptyStateCard 
-                icon={Bell} 
-                title="No Automation Alerts" 
-                message={t('noReminders', lang) || 'No Alerts'} 
+              <EmptyStateCard
+                icon={Bell}
+                title="No Automation Alerts"
+                message={t('noReminders', lang) || 'No Alerts'}
               />
             )}
           </div>
@@ -693,8 +693,8 @@ function WhatsappSimulatorModal({ reminder, onClose, orders }) {
     } else if (action === 'ai') {
       setMessages(prev => [
         ...prev,
-        { sender: 'them', text: 'Connect me to Simple Implant AI support.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
-        { sender: 'us', text: `Simple Implant Bot: Hello Doctor, I am the Simple Implant virtual assistant. You can check invoices, update implant casing checkups, and request stock reconciliations directly from the portal dashboards.`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+        { sender: 'them', text: 'Connect me to Simple Implants AI support.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+        { sender: 'us', text: `Simple Implants Bot: Hello Doctor, I am the Simple Implants virtual assistant. You can check invoices, update implant casing checkups, and request stock reconciliations directly from the portal dashboards.`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
       ]);
     }
   };

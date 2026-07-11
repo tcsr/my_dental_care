@@ -1134,9 +1134,9 @@ button {
   }
 
   body.is-browser .sidebar-header {
-    height: 65px !important;
+    height: 7rem !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 0 16px !important;
     display: flex !important;
     align-items: center !important;
     border-bottom: 1px solid hsl(var(--border-color)) !important;
@@ -1146,7 +1146,7 @@ button {
 
   body.is-browser .app-header {
     height: 65px !important;
-    padding: 0 32px !important;
+    padding: 0 24px !important;
     box-sizing: border-box !important;
     background: hsl(var(--bg-card) / 75%) !important;
     backdrop-filter: blur(20px) !important;
@@ -1166,9 +1166,8 @@ button {
     display: none !important; /* Hide bottom nav on desktop */
   }
 
-  /* Make sure main content is roomy on desktop */
   body.is-browser main {
-    padding: 32px 48px !important;
+    padding: 32px 24px !important;
     box-sizing: border-box !important;
     max-width: 1400px;
     margin: 0 auto;
@@ -1955,6 +1954,35 @@ body.is-browser .modal-overlay-container.top-aligned-modal {
 
 .cart-pop-bounce {
   animation: cartPopBounce 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Hide online indicator on mobile, show on desktop */
+.header-status-indicator {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  .header-status-indicator {
+    display: flex !important;
+  }
+}
+
+/* Premium sidebar brand logo hover & float animations */
+@keyframes logoFloat {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0); }
+}
+
+.sidebar-logo-animated {
+  animation: logoFloat 4s ease-in-out infinite;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease !important;
+  transform-origin: center center;
+}
+
+.sidebar-logo-animated:hover {
+  animation-play-state: paused;
+  transform: scale(1.08) translateY(-4px) !important;
 }
 
 
