@@ -527,7 +527,7 @@ export default function ProductCatalog({
       )}
 
       {/* Catalog Intro & Contact Us Banner */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: 'linear-gradient(135deg, hsl(var(--bg-card)), hsl(var(--bg-dark)))', padding: '16px 20px', borderRadius: '16px', border: '1px solid hsl(var(--border-color))' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: 'linear-gradient(135deg, hsl(var(--bg-card)), hsl(var(--bg-dark)))', padding: '16px 20px', borderRadius: '16px', border: '1px solid hsl(var(--border-color))', boxSizing: 'border-box', width: '100%', overflow: 'hidden' }}>
         <div style={{ flex: '1 1 300px' }}>
           <h1 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.25rem', color: 'hsl(var(--text-primary))', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             Premium Dental Catalog
@@ -591,7 +591,7 @@ export default function ProductCatalog({
                 onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
                 onMouseLeave={e => e.currentTarget.style.transform = 'none'}
               >
-                <PhoneCall size={10} /> Call Lal
+                <PhoneCall size={10} /> Call Support
               </a>
               <a
                 href="mailto:simpleimplants@gmail.com"
@@ -816,13 +816,14 @@ export default function ProductCatalog({
         </div>
       )}
 
-      {/* Floating cart pill */}
-      {cartCount > 0 && !cartOpen && !isAdmin && (
+      {/* Floating cart pill — rendered via portal so position:fixed anchors to viewport, not the animated ancestor */}
+      {cartCount > 0 && !cartOpen && !isAdmin && createPortal(
         <button
           onClick={() => setCartOpen(true)}
+          className="floating-cart-pill"
           style={{
             position: 'fixed',
-            bottom: 30,
+            bottom: 'calc(72px + 10px)',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1000,
@@ -842,22 +843,13 @@ export default function ProductCatalog({
             whiteSpace: 'nowrap',
             transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateX(-50%) translateY(-2px)';
-            e.currentTarget.style.borderColor = '#0ea5e9';
-            e.currentTarget.style.boxShadow = '0 24px 48px rgba(15, 23, 42, 0.45), 0 0 20px rgba(14, 165, 233, 0.3)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateX(-50%)';
-            e.currentTarget.style.borderColor = 'rgba(14, 165, 233, 0.4)';
-            e.currentTarget.style.boxShadow = '0 20px 40px rgba(15, 23, 42, 0.35), 0 0 15px rgba(14, 165, 233, 0.15)';
-          }}
         >
           <ShoppingCart size={18} strokeWidth={2.5} style={{ color: '#0ea5e9' }} />
           <span style={{ letterSpacing: '0.01em' }}>{cartCount} item{cartCount !== 1 ? 's' : ''}</span>
           <span style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.15)' }} />
           <span style={{ color: '#0ea5e9', fontWeight: 900 }}>₹{cartTotal.toLocaleString('en-IN')}</span>
-        </button>
+        </button>,
+        document.body
       )}
 
       {/* Cart drawer */}
