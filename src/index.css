@@ -1446,7 +1446,7 @@ button {
   /* Make buttons smaller on desktop browser and prevent stretching */
   body.is-browser .btn-primary,
   body.is-browser .btn-secondary,
-  body.is-browser main button:not(.tab-btn):not(.sidebar-link):not(.sidebar-header button):not(.app-header button):not(.qty-btn):not(.modal-close-btn):not(.carousel-nav-btn):not(.carousel-control-btn):not(.premium-select-btn):not(.cat-chip):not(.search-clear-btn):not(.modal-close-btn-premium):not(.ai-send-btn) {
+  body.is-browser main button:not(.tab-btn):not(.sidebar-link):not(.sidebar-header button):not(.app-header button):not(.qty-btn):not(.modal-close-btn):not(.carousel-nav-btn):not(.carousel-control-btn):not(.premium-select-btn):not(.cat-chip):not(.search-clear-btn):not(.modal-close-btn-premium):not(.ai-send-btn):not(.hero-btn-secondary) {
     width: auto !important;
     min-width: unset !important;
     max-width: 320px !important;
@@ -2516,23 +2516,41 @@ body.is-browser .floating-cart-pill:hover {
 /* Guest Navigation Styles */
 .guest-header {
   height: 76px !important;
-  background: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.96) 0%,
-      rgba(240, 249, 255, 0.93) 50%,
-      rgba(224, 242, 254, 0.90) 100%) !important;
-  backdrop-filter: blur(24px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   position: sticky;
   top: 0;
   z-index: 1000;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 260% at 12% -60%, rgba(14, 165, 233, 0.16), transparent 55%),
+    radial-gradient(100% 220% at 88% 160%, rgba(99, 102, 241, 0.14), transparent 55%),
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.97) 0%,
+      rgba(240, 249, 255, 0.94) 50%,
+      rgba(224, 242, 254, 0.92) 100%) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
   border-bottom: 1px solid rgba(14, 165, 233, 0.16) !important;
   box-shadow: 0 4px 32px rgba(14, 165, 233, 0.08), 0 1px 4px rgba(15, 23, 42, 0.03) !important;
 }
 
+.guest-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.55) 25%, rgba(99, 102, 241, 0.55) 75%, transparent);
+  pointer-events: none;
+}
+
 .guest-header.scrolled {
   height: 64px !important;
-  background: linear-gradient(135deg,
+  background:
+    radial-gradient(120% 260% at 12% -60%, rgba(14, 165, 233, 0.20), transparent 55%),
+    radial-gradient(100% 220% at 88% 160%, rgba(99, 102, 241, 0.18), transparent 55%),
+    linear-gradient(135deg,
       rgba(255, 255, 255, 0.99) 0%,
       rgba(240, 249, 255, 0.97) 50%,
       rgba(224, 242, 254, 0.95) 100%) !important;
@@ -2553,13 +2571,42 @@ body.is-browser .floating-cart-pill:hover {
 .guest-brand-wrapper {
   display: flex;
   align-items: center;
+  gap: 6px;
   justify-content: flex-start;
+}
+
+@media (min-width: 769px) {
+
+  .sidebar-overlay.guest-only-mobile,
+  .sidebar-drawer.guest-only-mobile {
+    display: none !important;
+  }
+}
+
+.guest-hamburger-btn {
+  display: none !important;
+  width: 36px !important;
+  height: 36px !important;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .guest-hamburger-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .guest-right-nav {
+    display: none !important;
+  }
 }
 
 .guest-right-nav {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
 }
 
 .guest-header-actions {
@@ -2638,11 +2685,22 @@ body.is-browser .floating-cart-pill:hover {
 @media (max-width: 768px) {
   .guest-nav-links {
     gap: 4px;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .guest-nav-links::-webkit-scrollbar {
+    display: none;
   }
 
   .guest-nav-link {
     font-size: 0.76rem;
     padding: 6px 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .guest-header-inner {
@@ -2666,6 +2724,7 @@ body.is-browser .floating-cart-pill:hover {
 
   .guest-header-inner {
     padding: 0 12px !important;
+    grid-template-columns: auto 1fr auto !important;
   }
 }
 
@@ -2731,6 +2790,21 @@ body.is-browser .floating-cart-pill:hover {
 
 .guest-header-actions .header-login-btn:active {
   transform: translateY(0) !important;
+}
+
+.guest-header-actions .header-login-btn svg {
+  flex-shrink: 0 !important;
+}
+
+@media (max-width: 576px) {
+  .guest-header-actions .header-login-btn {
+    padding: 6px !important;
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 8px !important;
+    justify-content: center !important;
+    gap: 0 !important;
+  }
 }
 
 @media (max-width: 768px) {

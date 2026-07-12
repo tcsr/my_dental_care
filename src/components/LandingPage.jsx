@@ -99,7 +99,8 @@ function Carousel() {
     return () => clearInterval(t);
   }, [maxIndex]);
 
-  const cardW = (containerW - gap * (perView - 1)) / perView;
+  const sidePad = 10;
+  const cardW = (containerW - sidePad * 2 - gap * (perView - 1)) / perView;
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', overflow: 'hidden', padding: '36px 0 40px', margin: '-36px 0 -40px' }}>
@@ -282,12 +283,23 @@ export default function LandingPage({ onLoginRequired }) {
         .contact-item:hover { transform: translateY(-3px); border-color: rgba(14,165,233,0.4) !important; box-shadow: 0 12px 24px rgba(14,165,233,0.08) !important; }
         .contact-input { transition: all 0.25s ease !important; }
         .contact-input:focus { border-color: #0ea5e9 !important; background: #ffffff !important; box-shadow: 0 0 0 3px rgba(14,165,233,0.15) !important; }
+        @media (max-width: 768px) {
+          .lp-about-grid { grid-template-columns: 1fr !important; gap: 28px !important; padding: 30px 24px !important; }
+          .lp-contact-grid { grid-template-columns: 1fr !important; }
+          .lp-contact-form-card { padding: 26px 22px !important; }
+        }
+        @media (max-width: 520px) {
+          .lp-hero-section { padding: 36px 16px 36px !important; }
+          .lp-section { padding-left: 16px !important; padding-right: 16px !important; }
+          .lp-contact-form-row { grid-template-columns: 1fr !important; }
+          .hero-btn-primary, .hero-btn-secondary { width: 100%; justify-content: center !important; }
+        }
       `}</style>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
 
         {/* ═══════════ PRODUCT CAROUSEL (TOPMOST) ═══════════ */}
-        <section style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px 32px' }}>
+        <section className="lp-section" style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px 32px' }}>
           <Reveal>
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Our Range</span>
@@ -303,7 +315,7 @@ export default function LandingPage({ onLoginRequired }) {
         </section>
 
         {/* ═══════════ HERO ═══════════ */}
-        <section style={{ padding: '48px 24px 48px', textAlign: 'center', maxWidth: 860, margin: '0 auto', animation: 'heroUp 0.8s cubic-bezier(0.16,1,0.3,1) both' }}>
+        <section className="lp-hero-section" style={{ padding: '48px 24px 48px', textAlign: 'center', maxWidth: 860, margin: '0 auto', animation: 'heroUp 0.8s cubic-bezier(0.16,1,0.3,1) both' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 18px', borderRadius: 999, background: 'linear-gradient(135deg, rgba(14,165,233,0.10), rgba(99,102,241,0.08))', border: '1px solid rgba(14,165,233,0.22)', color: '#0ea5e9', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', backdropFilter: 'blur(12px)', boxShadow: '0 4px 16px rgba(14,165,233,0.10)' }}>
               <Sparkles size={13} /> Next Generation Dental Implant System
@@ -362,9 +374,9 @@ export default function LandingPage({ onLoginRequired }) {
         </section>
 
         {/* ═══════════ ABOUT ═══════════ */}
-        <section id="about" style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px 80px' }}>
+        <section id="about" className="lp-section" style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px 80px' }}>
           <Reveal>
-            <div style={{ background: 'rgba(255,255,255,0.78)', borderRadius: 28, padding: '40px 44px', border: '1px solid rgba(14,165,233,0.12)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 8px 48px rgba(14,165,233,0.07)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'center' }}>
+            <div className="lp-about-grid" style={{ background: 'rgba(255,255,255,0.78)', borderRadius: 28, padding: '40px 44px', border: '1px solid rgba(14,165,233,0.12)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 8px 48px rgba(14,165,233,0.07)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'center' }}>
               <div>
                 <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase' }}>About Us</span>
                 <h2 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.9rem', color: '#0f172a', margin: '10px 0 16px', letterSpacing: '-0.02em' }}>
@@ -483,7 +495,7 @@ export default function LandingPage({ onLoginRequired }) {
                 Let's <span style={{ background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Work Together</span>
               </h2>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 1.1fr) 2fr', gap: 28 }}>
+            <div className="lp-contact-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 1.1fr) 2fr', gap: 28 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {[
                   { icon: Phone, label: 'Phone', value: '+91 94441 26926', color: '#0ea5e9', link: 'tel:+919444126926' },
@@ -528,7 +540,7 @@ export default function LandingPage({ onLoginRequired }) {
                   );
                 })}
               </div>
-              <div style={{
+              <div className="lp-contact-form-card" style={{
                 background: 'rgba(255,255,255,0.85)',
                 borderRadius: 24,
                 padding: '36px 40px',
@@ -536,7 +548,7 @@ export default function LandingPage({ onLoginRequired }) {
                 backdropFilter: 'blur(20px)',
                 boxShadow: '0 10px 40px rgba(14,165,233,0.06), 0 2px 10px rgba(15,23,42,0.03)'
               }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div className="lp-contact-form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                   {[['Full Name', 'text', 'name'], ['Email Address', 'email', 'email']].map(([ph, type, field]) => (
                     <input
                       key={field}

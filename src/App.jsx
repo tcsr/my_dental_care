@@ -840,12 +840,10 @@ export default function App() {
         </div>
       )}
 
-      {/* Sidebar Drawer Overlay + Drawer — logged-in only; guests get the landing page's own nav */}
-      {isLoggedIn && (
-        <>
-          <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)} />
+      {/* Sidebar Drawer Overlay + Drawer — logged-in: full nav; guests: minimal nav, mobile-only via hamburger */}
+      <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''} ${!isLoggedIn ? 'guest-only-mobile' : ''}`} onClick={() => setIsSidebarOpen(false)} />
 
-          <div className={`sidebar-drawer ${isSidebarOpen ? 'open' : ''}`}>
+      <div className={`sidebar-drawer ${isSidebarOpen ? 'open' : ''} ${!isLoggedIn ? 'guest-only-mobile' : ''}`}>
             <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', width: '100%', height: '81px', position: 'relative' }}>
               <img
                 src={`${import.meta.env.BASE_URL || '/'}logo.png`}
@@ -1201,8 +1199,6 @@ export default function App() {
               </div>
             </div>
           </div>
-        </>
-      )}
 
       <div className="main-layout-container">
         {/* Main Premium Layout Wrapper */}
@@ -1210,6 +1206,13 @@ export default function App() {
           <div className={`app-header guest-header ${guestScrolled ? 'scrolled' : ''}`}>
             <div className="guest-header-inner">
               <div className="guest-brand-wrapper">
+                <button
+                  onClick={() => setIsSidebarOpen(prev => !prev)}
+                  className="header-btn guest-hamburger-btn"
+                  title="Menu"
+                >
+                  <Menu size={16} />
+                </button>
                 <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }} className="guest-brand">
                   <img
                     src={`${import.meta.env.BASE_URL || '/'}logo.png`}
@@ -1593,6 +1596,26 @@ export default function App() {
                 </button>
               </>
             )}
+          </div>
+        )}
+
+        {/* Bottom Nav Bar — guest, minimal */}
+        {!isLoggedIn && (
+          <div className="bottom-nav" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+            <button className={`nav-item ${location.pathname === '/' && !location.hash ? 'active' : ''}`} onClick={() => handleNav('')}>
+              <Store /><span>Home</span>
+            </button>
+            <button className={`nav-item ${activeTab === 'catalog' ? 'active' : ''}`} onClick={() => handleNav('catalog')} style={{ position: 'relative' }}>
+              <ShoppingBag />
+              {cartCount > 0 && <span style={{ position: 'absolute', top: 4, right: '50%', transform: 'translateX(10px)', background: '#ef4444', color: '#fff', fontSize: '0.5rem', fontWeight: 800, padding: '1px 4px', borderRadius: 8, minWidth: 14, textAlign: 'center' }}>{cartCount}</span>}
+              <span>Products</span>
+            </button>
+            <button className={`nav-item ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => handleNav('guides')}>
+              <Film /><span>Videos</span>
+            </button>
+            <button className="nav-item" onClick={() => setShowLoginModal(true)}>
+              <LogIn /><span>Log In</span>
+            </button>
           </div>
         )}
       </div> {/* END main-layout-container */}
