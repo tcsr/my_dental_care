@@ -388,7 +388,7 @@ export default function OrderManagement() {
       </div>
 
       {/* Modern Filter Chips */}
-      <div className="om-chips" style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
+      <div className="om-chips" style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', overflowX: 'auto', gap: 8, marginBottom: 18, paddingBottom: 4, scrollbarWidth: 'none' }}>
         <style>{`.om-chips::-webkit-scrollbar{display:none}`}</style>
         {filterOptions.map(({ key, label, color, count }) => {
           const active = tab === key;

@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense, useRef } from 'react';
 import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -64,7 +64,7 @@ const ProProfileSettingsSubscreen = lazy(() => import('./components/ProProfileSe
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const OrderManagement = lazy(() => import('./components/OrderManagement'));
 const ProductManagement = lazy(() => import('./components/ProductManagement'));
-import { ShoppingBag, ShoppingCart, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList, Megaphone } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList, Megaphone, Phone, Mail } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -110,6 +110,28 @@ export default function App() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  const [toast, setToast] = useState(null);
+  const isInitialOnline = useRef(true);
+
+  useEffect(() => {
+    if (isInitialOnline.current) {
+      isInitialOnline.current = false;
+      return;
+    }
+    if (isOnline) {
+      setToast({ message: '🌐 Back online. Offline queue synced successfully!', type: 'success' });
+    } else {
+      setToast({ message: '📡 Offline mode active. Cart changes will sync when reconnected.', type: 'warning' });
+    }
+  }, [isOnline]);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Load/merge cart from Dexie IndexedDB based on auth user
   useEffect(() => {
@@ -720,6 +742,48 @@ export default function App() {
 
   return (
     <>
+      {/* Sleek Glassmorphic Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '12px 20px',
+          borderRadius: 16,
+          background: toast.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+          border: toast.type === 'success' ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(245, 158, 11, 0.25)',
+          color: toast.type === 'success' ? '#10b981' : '#f59e0b',
+          fontFamily: 'Outfit',
+          fontSize: '0.8rem',
+          fontWeight: 700,
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 10px 30px rgba(15, 23, 42, 0.15)',
+          animation: 'toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both'
+        }}>
+          <span>{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'inherit',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            <X size={14} strokeWidth={2.5} />
+          </button>
+        </div>
+      )}
+
       {/* Sidebar Drawer Overlay */}
       <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)} />
 
@@ -905,6 +969,114 @@ export default function App() {
               )}
             </div>
 
+            {/* Premium Sidebar Help Callout */}
+            <div style={{
+              marginTop: '24px',
+              padding: '16px',
+              borderRadius: 'var(--radius-lg)',
+              background: 'linear-gradient(135deg, hsla(205, 85%, 50%, 0.05) 0%, hsla(162, 75%, 38%, 0.02) 100%)',
+              border: '1px solid hsl(var(--primary) / 12%)',
+              boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Subtle background glow */}
+              <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '60px', height: '60px', borderRadius: '50%', background: 'hsl(var(--primary))', filter: 'blur(30px)', opacity: 0.15, pointerEvents: 'none' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'hsl(var(--primary))', fontWeight: 800, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'Outfit', marginBottom: '12px' }}>
+                <span style={{ display: 'flex', width: 6, height: 6, borderRadius: '50%', background: 'hsl(var(--primary))' }} />
+                Contact Support
+              </div>
+
+              {/* Specialist Profile */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.95rem', fontFamily: 'Outfit', boxShadow: '0 4px 12px rgba(14, 165, 233, 0.2)' }}>
+                    L
+                  </div>
+                  <span style={{ position: 'absolute', bottom: '0px', right: '0px', width: '10px', height: '10px', background: '#22c55e', border: '2px solid hsl(var(--bg-card))', borderRadius: '50%' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>
+                    Lal
+                  </div>
+                  <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>
+                    Support Specialist
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <a
+                  href="tel:+919444126926"
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '8px 0',
+                    borderRadius: '10px',
+                    background: 'hsl(var(--bg-card))',
+                    border: '1.5px solid hsl(var(--primary) / 15%)',
+                    color: 'hsl(var(--primary))',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    fontFamily: 'Outfit',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'hsl(var(--primary))';
+                    e.currentTarget.style.color = '#fff';
+                    e.currentTarget.style.borderColor = 'hsl(var(--primary))';
+                    e.currentTarget.style.boxShadow = '0 4px 12px hsl(var(--primary-glow))';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'hsl(var(--bg-card))';
+                    e.currentTarget.style.color = 'hsl(var(--primary))';
+                    e.currentTarget.style.borderColor = 'hsl(var(--primary) / 15%)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <Phone size={12} strokeWidth={2.5} /> Call
+                </a>
+                <a
+                  href="mailto:simpleimplants@gmail.com"
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '8px 0',
+                    borderRadius: '10px',
+                    background: 'hsl(var(--bg-card))',
+                    border: '1.5px solid hsl(var(--border-color))',
+                    color: 'hsl(var(--text-muted))',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    fontFamily: 'Outfit',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'hsl(var(--bg-card-hover))';
+                    e.currentTarget.style.color = 'hsl(var(--text-primary))';
+                    e.currentTarget.style.borderColor = 'hsl(var(--border-light))';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'hsl(var(--bg-card))';
+                    e.currentTarget.style.color = 'hsl(var(--text-muted))';
+                    e.currentTarget.style.borderColor = 'hsl(var(--border-color))';
+                  }}
+                >
+                  <Mail size={12} strokeWidth={2.5} /> Email
+                </a>
+              </div>
+            </div>
+
           </div>
 
           {/* Compact footer actions */}
@@ -981,9 +1153,8 @@ export default function App() {
               <img
                 src={`${import.meta.env.BASE_URL || '/'}logo.png`}
                 alt="Simple Implants"
-                className="sidebar-logo-animated"
+                className="sidebar-logo-animated navbar-brand-logo"
                 style={{
-                  height: '90px',
                   width: 'auto',
                   filter: 'drop-shadow(0 4px 12px rgba(2, 132, 199, 0.15))',
                   objectFit: 'contain'
@@ -1096,7 +1267,7 @@ export default function App() {
               </button>
             )}
 
-            <div className="header-select-wrapper" style={{ width: 105 }}>
+            <div className="header-select-wrapper">
               <PremiumSelect
                 value={lang}
                 onChange={handleLangChange}
@@ -1138,26 +1309,11 @@ export default function App() {
             ) : (
               <button
                 onClick={() => setShowLoginModal(true)}
-                style={{
-                  background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-                  color: '#fff',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
-                  borderRadius: '8px',
-                  height: '28px',
-                  fontSize: '0.72rem',
-                  fontWeight: '800',
-                  fontFamily: 'Outfit',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 4px 10px rgba(14,165,233,0.2)'
-                }}
+                className="header-login-btn"
                 title="Log In"
               >
-                <LogIn size={13} /> Log In
+                <LogIn size={13} />
+                <span className="login-text">Log In</span>
               </button>
             )}
           </div>
@@ -1165,67 +1321,69 @@ export default function App() {
 
         <main>
           <Suspense fallback={<PremiumLoader text="Loading..." />}>
-            <Routes>
-              {isLoggedIn ? (
-                <>
-                  <Route path="/dashboard" element={
-                    <DashboardScreen
-                      authUser={authUser}
-                      onNavigate={setActiveTab}
-                    />
-                  } />
-                  <Route path="/catalog" element={
-                    <ProductCatalog
-                      authUser={authUser}
-                      cart={cart}
-                      onCartChange={setCart}
-                      cartOpen={isCartOpen}
-                      setCartOpen={setIsCartOpen}
-                      onOrderPlaced={() => setActiveTab('sales')}
-                      onLoginRequired={(afterLoginFn) => {
-                        if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
-                        setShowLoginModal(true);
-                      }}
-                    />
-                  } />
-                  <Route path="/orders" element={
-                    <OrderManagement />
-                  } />
-                  <Route path="/products" element={<ProductManagement />} />
-                  <Route path="/sales" element={isAdmin ? <ProSalesSubscreen lang={lang} profile={profile} onNavigate={setActiveTab} /> : <DoctorOrders authUser={authUser} onGoToCatalog={() => setActiveTab('catalog')} />} />
-                  <Route path="/implants" element={<ProImplantsSubscreen lang={lang} profile={profile} />} />
-                  <Route path="/inventory" element={<ProInventorySubscreen lang={lang} profile={profile} />} />
-                  <Route path="/reminders" element={<ProRemindersSubscreen lang={lang} profile={profile} />} />
-                  <Route path="/marketing" element={<ProMarketingSubscreen lang={lang} profile={profile} />} />
-                  <Route path="/guides" element={<ProGuidesSubscreen lang={lang} profile={profile} isLoggedIn={true} />} />
-                  <Route path="/master" element={<ProMasterDataSubscreen lang={lang} profile={profile} authUser={authUser} />} />
-                  <Route path="/profile" element={<ProProfileSettingsSubscreen lang={lang} profile={profile} authUser={authUser} isAdmin={isAdmin} />} />
-                  <Route path="/admin" element={<AdminPanel />} />
-                  <Route path="*" element={
-                    <Navigate to={isAdmin ? "/dashboard" : "/catalog"} replace />
-                  } />
-                </>
-              ) : (
-                <>
-                  <Route path="/catalog" element={
-                    <ProductCatalog
-                      authUser={authUser}
-                      cart={cart}
-                      onCartChange={setCart}
-                      cartOpen={isCartOpen}
-                      setCartOpen={setIsCartOpen}
-                      onOrderPlaced={() => setActiveTab('sales')}
-                      onLoginRequired={(afterLoginFn) => {
-                        if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
-                        setShowLoginModal(true);
-                      }}
-                    />
-                  } />
-                  <Route path="/guides" element={<ProGuidesSubscreen lang={lang} isLoggedIn={false} />} />
-                  <Route path="*" element={<Navigate to="/catalog" replace />} />
-                </>
-              )}
-            </Routes>
+            <div key={location.pathname} style={{ animation: 'fadeInScreen 0.25s cubic-bezier(0.16, 1, 0.3, 1) both', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Routes>
+                {isLoggedIn ? (
+                  <>
+                    <Route path="/dashboard" element={
+                      <DashboardScreen
+                        authUser={authUser}
+                        onNavigate={setActiveTab}
+                      />
+                    } />
+                    <Route path="/catalog" element={
+                      <ProductCatalog
+                        authUser={authUser}
+                        cart={cart}
+                        onCartChange={setCart}
+                        cartOpen={isCartOpen}
+                        setCartOpen={setIsCartOpen}
+                        onOrderPlaced={() => setActiveTab('sales')}
+                        onLoginRequired={(afterLoginFn) => {
+                          if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
+                          setShowLoginModal(true);
+                        }}
+                      />
+                    } />
+                    <Route path="/orders" element={
+                      <OrderManagement />
+                    } />
+                    <Route path="/products" element={<ProductManagement />} />
+                    <Route path="/sales" element={isAdmin ? <ProSalesSubscreen lang={lang} profile={profile} onNavigate={setActiveTab} /> : <DoctorOrders authUser={authUser} onGoToCatalog={() => setActiveTab('catalog')} />} />
+                    <Route path="/implants" element={<ProImplantsSubscreen lang={lang} profile={profile} />} />
+                    <Route path="/inventory" element={<ProInventorySubscreen lang={lang} profile={profile} />} />
+                    <Route path="/reminders" element={<ProRemindersSubscreen lang={lang} profile={profile} />} />
+                    <Route path="/marketing" element={<ProMarketingSubscreen lang={lang} profile={profile} />} />
+                    <Route path="/guides" element={<ProGuidesSubscreen lang={lang} profile={profile} isLoggedIn={true} />} />
+                    <Route path="/master" element={<ProMasterDataSubscreen lang={lang} profile={profile} authUser={authUser} />} />
+                    <Route path="/profile" element={<ProProfileSettingsSubscreen lang={lang} profile={profile} authUser={authUser} isAdmin={isAdmin} />} />
+                    <Route path="/admin" element={<AdminPanel />} />
+                    <Route path="*" element={
+                      <Navigate to={isAdmin ? "/dashboard" : "/catalog"} replace />
+                    } />
+                  </>
+                ) : (
+                  <>
+                    <Route path="/catalog" element={
+                      <ProductCatalog
+                        authUser={authUser}
+                        cart={cart}
+                        onCartChange={setCart}
+                        cartOpen={isCartOpen}
+                        setCartOpen={setIsCartOpen}
+                        onOrderPlaced={() => setActiveTab('sales')}
+                        onLoginRequired={(afterLoginFn) => {
+                          if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
+                          setShowLoginModal(true);
+                        }}
+                      />
+                    } />
+                    <Route path="/guides" element={<ProGuidesSubscreen lang={lang} isLoggedIn={false} />} />
+                    <Route path="*" element={<Navigate to="/catalog" replace />} />
+                  </>
+                )}
+              </Routes>
+            </div>
           </Suspense>
         </main>
 
@@ -1304,7 +1462,7 @@ export default function App() {
           <ArrowDown size={16} />
         </button>
         <a
-          href="https://wa.me/919444126926?text=Hello,%20I%20have%20a%20query%20about%20Simple%20Implant."
+          href="https://wa.me/919444126926?text=Hello%20Simple%20Implants%20Support%2C%20I%20am%20using%20the%20B2B%20catalog%20app%20and%20have%20a%20query%20regarding%20surgical%20supplies%2C%20clinical%20cases%2C%20or%20pricing.%20Could%20you%20please%20assist%20me%3F"
           target="_blank"
           rel="noopener noreferrer"
           className="scroll-btn"

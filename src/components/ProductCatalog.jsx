@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../utils/supabase';
 import { useStore } from '../utils/store';
-import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight, Wrench, FlaskConical, Shield, Settings } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight, Wrench, FlaskConical, Shield, Settings, PhoneCall, ArrowLeft, Mail } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import PremiumLoader from './ui/PremiumLoader';
@@ -131,6 +132,8 @@ export default function ProductCatalog({
     return feedbackList.some(item => item.user_id === authUser?.user?.id);
   }, [feedbackList, authUser]);
 
+  const isAdmin = authUser && authUser.role === 'admin';
+
   useEffect(() => {
     if (selectedProduct) {
       const sizeList = selectedProduct.sizes ? selectedProduct.sizes.split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -161,6 +164,26 @@ export default function ProductCatalog({
     const matchSearch = !q || p.name?.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q)) || (p.sku && p.sku.toLowerCase().includes(q));
     return matchCat && matchSearch;
   }), [products, search, category]);
+
+  const ratingStats = useMemo(() => {
+    let totalCount = 0;
+    let sumRating = 0;
+
+    products.forEach(p => {
+      const cnt = p.rating_count || 0;
+      const avg = p.rating_avg || 0;
+      if (cnt > 0) {
+        totalCount += cnt;
+        sumRating += avg * cnt;
+      }
+    });
+
+    const overallAvg = totalCount > 0 ? (sumRating / totalCount) : 4.8;
+    return {
+      avg: overallAvg.toFixed(1),
+      count: totalCount || 24
+    };
+  }, [products]);
 
   const cartItems = Object.values(cart || {});
   const cartCount = cartItems.reduce((s, i) => s + (i?.qty || 0), 0);
@@ -503,46 +526,143 @@ export default function ProductCatalog({
         </div>
       )}
 
-      {/* Search */}
-      <div style={{ position: 'relative', marginBottom: 14 }}>
-        <Search size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-dim))', pointerEvents: 'none' }} />
-        <input
-          value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..."
-          style={{ width: '100%', padding: '12px 38px 12px 38px', background: 'hsl(var(--bg-card))', border: '1.5px solid hsl(var(--border-color))', borderRadius: 12, fontSize: '0.88rem', color: 'hsl(var(--text-primary))', outline: 'none', fontFamily: 'Outfit', boxSizing: 'border-box', transition: 'all 0.2s ease' }}
-          onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 3px rgba(14, 165, 233, 0.15)'; }}
-          onBlur={e => { e.target.style.borderColor = 'hsl(var(--border-color))'; e.target.style.boxShadow = 'none'; }}
-        />
-        {search && (
-          <button
-            onClick={() => { setSearch(''); setCategory('All'); }}
-            className="search-clear-btn"
-            style={{
-              position: 'absolute',
-              right: 12,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
+      {/* Catalog Intro & Contact Us Banner */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: 'linear-gradient(135deg, hsl(var(--bg-card)), hsl(var(--bg-dark)))', padding: '16px 20px', borderRadius: '16px', border: '1px solid hsl(var(--border-color))' }}>
+        <div style={{ flex: '1 1 300px' }}>
+          <h1 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.25rem', color: 'hsl(var(--text-primary))', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            Premium Dental Catalog
+            <span style={{
+              display: 'inline-flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ef4444'
-            }}
-          >
-            <X size={13} strokeWidth={2.5} style={{ width: '13px', height: '13px', display: 'block' }} />
-          </button>
-        )}
+              gap: 4,
+              fontSize: '0.62rem',
+              fontWeight: 800,
+              padding: '3px 8px',
+              borderRadius: 8,
+              background: 'rgba(245,158,11,0.08)',
+              color: '#f59e0b',
+              border: '1px solid rgba(245,158,11,0.18)',
+              fontFamily: 'Outfit',
+              verticalAlign: 'middle'
+            }}>
+              ★ {ratingStats.avg} ({ratingStats.count} Reviews)
+            </span>
+          </h1>
+          <p style={{ fontSize: '0.78rem', color: 'hsl(var(--text-muted))', lineHeight: 1.5, margin: 0 }}>
+            Browse and order high-precision surgical implants, prosthetics, and specialized dental instruments. Select products below to build your clinical case.
+          </p>
+        </div>
+        
+        <div className="catalog-contact-widget">
+          {/* Avatar with Online indicator */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', fontFamily: 'Outfit' }}>
+              L
+            </div>
+            <span style={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: '50%', background: '#25D366', border: '1.5px solid hsl(var(--bg-card))', animation: 'pulseSupport 1.8s infinite' }} />
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: 6 }}>
+              Contact Support (Lal)
+            </div>
+            <div style={{ fontSize: '0.62rem', color: '#10b981', fontWeight: 700, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
+              Online • Ready to help
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <a
+                href="tel:+919444126926"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '5px 10px',
+                  borderRadius: 8,
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: '#fff',
+                  fontSize: '0.66rem',
+                  fontWeight: 800,
+                  textDecoration: 'none',
+                  fontFamily: 'Outfit',
+                  boxShadow: '0 4px 10px rgba(16,185,129,0.12)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+              >
+                <PhoneCall size={10} /> Call Lal
+              </a>
+              <a
+                href="mailto:simpleimplants@gmail.com"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '5px 10px',
+                  borderRadius: 8,
+                  background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                  color: '#fff',
+                  fontSize: '0.66rem',
+                  fontWeight: 800,
+                  textDecoration: 'none',
+                  fontFamily: 'Outfit',
+                  boxShadow: '0 4px 10px rgba(14,165,233,0.12)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+              >
+                <Mail size={10} /> Email
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Category chips */}
-      <div className="cat-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 20, paddingTop: 6, paddingBottom: 8, scrollbarWidth: 'none' }}>
-        <style>{`.cat-scroll::-webkit-scrollbar{display:none}`}</style>
-        {categoriesList.map(cat => (
-          <button key={cat} className="cat-chip" onClick={() => setCategory(cat)} style={{ flexShrink: 0, padding: '8px 16px', borderRadius: 24, fontSize: '0.78rem', fontWeight: 700, fontFamily: 'Outfit', border: '1.5px solid', cursor: 'pointer', transition: 'all 0.2s', background: category === cat ? '#0ea5e9' : 'transparent', borderColor: category === cat ? '#0ea5e9' : 'hsl(var(--border-color))', color: category === cat ? '#fff' : 'hsl(var(--text-muted))' }}>
-            {cat}
-          </button>
-        ))}
+      {/* Sticky search & category chips bar */}
+      <div className="catalog-sticky-header">
+        {/* Search */}
+        <div style={{ position: 'relative', marginBottom: 14 }}>
+          <Search size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-dim))', pointerEvents: 'none' }} />
+          <input
+            value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..."
+            style={{ width: '100%', padding: '12px 38px 12px 38px', background: 'hsl(var(--bg-card))', border: '1.5px solid hsl(var(--border-color))', borderRadius: 12, fontSize: '0.88rem', color: 'hsl(var(--text-primary))', outline: 'none', fontFamily: 'Outfit', boxSizing: 'border-box', transition: 'all 0.2s ease' }}
+            onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 3px rgba(14, 165, 233, 0.15)'; }}
+            onBlur={e => { e.target.style.borderColor = 'hsl(var(--border-color))'; e.target.style.boxShadow = 'none'; }}
+          />
+          {search && (
+            <button
+              onClick={() => { setSearch(''); setCategory('All'); }}
+              className="search-clear-btn"
+              style={{
+                position: 'absolute',
+                right: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ef4444'
+              }}
+            >
+              <X size={13} strokeWidth={2.5} style={{ width: '13px', height: '13px', display: 'block' }} />
+            </button>
+          )}
+        </div>
+
+        {/* Category chips */}
+        <div className="cat-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 12, paddingTop: 6, paddingBottom: 8, scrollbarWidth: 'none' }}>
+          <style>{`.cat-scroll::-webkit-scrollbar{display:none}`}</style>
+          {categoriesList.map(cat => (
+            <button key={cat} className="cat-chip" onClick={() => setCategory(cat)} style={{ flexShrink: 0, padding: '8px 16px', borderRadius: 24, fontSize: '0.78rem', fontWeight: 700, fontFamily: 'Outfit', border: '1.5px solid', cursor: 'pointer', transition: 'all 0.2s', background: category === cat ? '#0ea5e9' : 'transparent', borderColor: category === cat ? '#0ea5e9' : 'hsl(var(--border-color))', color: category === cat ? '#fff' : 'hsl(var(--text-muted))' }}>
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Product grid */}
@@ -655,7 +775,9 @@ export default function ProductCatalog({
                 </div>
 
                 <div style={{ padding: '0 14px 14px', display: 'flex', justifyContent: 'flex-end' }}>
-                  {outOfStock ? (
+                  {isAdmin ? (
+                    <div style={{ width: '100%', textAlign: 'center', fontSize: '0.66rem', color: 'hsl(var(--text-dim))', padding: '10px 0', borderTop: '1px solid hsl(var(--border-color))', fontWeight: 700 }}>👁️ Administrator View</div>
+                  ) : outOfStock ? (
                     <div style={{ width: '100%', textAlign: 'center', fontSize: '0.66rem', color: 'hsl(var(--text-dim))', padding: '10px 0', borderTop: '1px solid hsl(var(--border-color))', fontWeight: 700 }}>Currently unavailable</div>
                   ) : (p.sizes && p.sizes.trim()) ? (
                     <button onClick={(e) => { e.stopPropagation(); setSelectedProduct(p); setCarouselIndex(0); }} style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 12px rgba(14,165,233,0.25)', transition: 'all 0.2s ease' }}>
@@ -695,7 +817,7 @@ export default function ProductCatalog({
       )}
 
       {/* Floating cart pill */}
-      {cartCount > 0 && !cartOpen && (
+      {cartCount > 0 && !cartOpen && !isAdmin && (
         <button
           onClick={() => setCartOpen(true)}
           style={{
@@ -739,8 +861,8 @@ export default function ProductCatalog({
       )}
 
       {/* Cart drawer */}
-      {cartOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+      {cartOpen && createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 5000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
           <style>{`
             @keyframes cartFadeIn {
               from { opacity: 0; }
@@ -797,10 +919,17 @@ export default function ProductCatalog({
               ) : (
                 cartItems.map(({ product: p, qty, size }) => {
                   const cs = catConfig[p.category] || DEFAULT_CAT;
+                  const images = getProductImages(p);
                   return (
                     <div key={`${p.id}_${size || ''}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'hsl(var(--bg-dark))', borderRadius: 'var(--radius-md)', border: '1px solid hsl(var(--border-color))' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: cs.bg, color: cs.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
-                        {typeof cs.icon === 'string' ? cs.icon : <cs.icon size={17} />}
+                      <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: cs.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid hsl(var(--border-color))', flexShrink: 0 }}>
+                        {images && images.length > 0 ? (
+                          <img src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                        ) : (
+                          <div style={{ color: cs.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', width: '100%', height: '100%' }}>
+                            {typeof cs.icon === 'string' ? cs.icon : <cs.icon size={17} />}
+                          </div>
+                        )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'hsl(var(--text-primary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -883,26 +1012,66 @@ export default function ProductCatalog({
                       alignItems: 'center',
                       gap: '6px'
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(14,165,233,0.35)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(14,165,233,0.25)'; }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(14,165,233,0.35)';
+                      const arrow = e.currentTarget.querySelector('.continue-arrow');
+                      if (arrow) arrow.style.transform = 'translateX(-3px)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.boxShadow = '0 6px 18px rgba(14,165,233,0.25)';
+                      const arrow = e.currentTarget.querySelector('.continue-arrow');
+                      if (arrow) arrow.style.transform = 'none';
+                    }}
                   >
-                    ← Continue Shopping
+                    <ArrowLeft className="continue-arrow" size={15} strokeWidth={2.5} style={{ transition: 'transform 0.2s ease' }} /> Continue Shopping
                   </button>
                 )}
               </div>
               {cartItems.length > 0 && (
                 <button
                   onClick={() => setCartOpen(false)}
-                  style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-muted))', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit', transition: 'all 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'hsl(var(--bg-card))'; e.currentTarget.style.color = 'hsl(var(--text-primary))'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'hsl(var(--text-muted))'; }}
+                  style={{
+                    width: '100%',
+                    padding: '11px',
+                    borderRadius: 12,
+                    border: '1px solid hsl(var(--border-color))',
+                    background: 'hsl(var(--bg-dark))',
+                    color: 'hsl(var(--text-muted))',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    fontFamily: 'Outfit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'hsl(var(--bg-card))';
+                    e.currentTarget.style.color = 'hsl(var(--text-primary))';
+                    e.currentTarget.style.borderColor = 'hsl(var(--border-light))';
+                    const arrow = e.currentTarget.querySelector('.continue-arrow-sec');
+                    if (arrow) arrow.style.transform = 'translateX(-3px)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'hsl(var(--bg-dark))';
+                    e.currentTarget.style.color = 'hsl(var(--text-muted))';
+                    e.currentTarget.style.borderColor = 'hsl(var(--border-color))';
+                    const arrow = e.currentTarget.querySelector('.continue-arrow-sec');
+                    if (arrow) arrow.style.transform = 'none';
+                  }}
                 >
-                  ← Continue Shopping
+                  <ArrowLeft className="continue-arrow-sec" size={14} strokeWidth={2.5} style={{ transition: 'transform 0.2s ease' }} />
+                  Continue Shopping
                 </button>
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Product Detail Modal */}
@@ -914,8 +1083,8 @@ export default function ProductCatalog({
         const lowStock = !outOfStock && selectedProduct.stock_qty <= 5;
         const cs = catConfig[selectedProduct.category] || DEFAULT_CAT;
 
-        return (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, boxSizing: 'border-box' }}>
+        return createPortal(
+          <div style={{ position: 'fixed', inset: 0, zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, boxSizing: 'border-box' }}>
             <style>{`
               @keyframes fadeIn {
                 from { opacity: 0; }
@@ -1247,32 +1416,75 @@ export default function ProductCatalog({
 
               {/* Sticky Action Footer */}
               <div className="detail-modal-footer">
-                {outOfStock ? (
+                {isAdmin ? (
+                  <div style={{ width: '100%', padding: '12px', background: 'rgba(14,165,233,0.05)', border: '1px solid rgba(14,165,233,0.15)', borderRadius: 12, color: 'hsl(var(--text-muted))', fontSize: '0.78rem', textAlign: 'center', fontWeight: 800, fontFamily: 'Outfit' }}>
+                    👁️ Administrator Preview Mode
+                  </div>
+                ) : outOfStock ? (
                   <div style={{ width: '100%', padding: '12px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 12, color: '#ef4444', fontSize: '0.78rem', textAlign: 'center', fontWeight: 800, fontFamily: 'Outfit' }}>
                     🚫 Currently Out of Stock
                   </div>
                 ) : inCart ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.08)', borderRadius: 14, padding: '8px 12px', border: '1.5px solid #0ea5e9', width: '100%' }}>
-                    <button
-                      className="qty-btn"
-                      onClick={() => removeFromCart(selectedProduct.id, selectedSize)}
-                    >
-                      <Minus size={14} strokeWidth={2.5} />
-                    </button>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <span
-                        onClick={() => { setSelectedProduct(null); setCartOpen(true); }}
-                        style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 8px', borderRadius: 'var(--radius-xs)', transition: 'background 0.15s' }}
-                        title="View Cart"
-                      >{inCart.qty}</span>
-                      <span style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>IN CART</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 12 }}>
+                    <style>{`
+                      @keyframes pulseCart {
+                        0% { box-shadow: 0 4px 12px rgba(14,165,233,0.3); transform: scale(1); }
+                        50% { box-shadow: 0 6px 20px rgba(14,165,233,0.5); transform: scale(1.02); }
+                        100% { box-shadow: 0 4px 12px rgba(14,165,233,0.3); transform: scale(1); }
+                      }
+                      @keyframes bounceCartIcon {
+                        0% { transform: translateY(0) scale(1); }
+                        50% { transform: translateY(-3px) scale(1.1); }
+                        100% { transform: translateY(0) scale(1); }
+                      }
+                    `}</style>
+                    {/* Qty Changer */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1.1, background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', borderRadius: 16, padding: '6px 16px' }}>
+                      <button
+                        className="qty-btn"
+                        onClick={() => removeFromCart(selectedProduct.id, selectedSize)}
+                        style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'hsl(var(--border-color))', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                      >
+                        <Minus size={12} strokeWidth={2.5} />
+                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 24 }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>{inCart.qty}</span>
+                        <span style={{ fontSize: '0.5rem', color: 'hsl(var(--text-muted))', fontWeight: 700, letterSpacing: '0.02em' }}>QTY</span>
+                      </div>
+                      <button
+                        className="qty-btn"
+                        onClick={() => addToCart(selectedProduct, selectedSize)}
+                        disabled={selectedProduct.stock_qty !== null && selectedProduct.stock_qty !== undefined && inCart.qty >= selectedProduct.stock_qty}
+                        style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'hsl(var(--border-color))', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                      >
+                        <Plus size={12} strokeWidth={2.5} />
+                      </button>
                     </div>
+
+                    {/* Animated Go to Cart Button */}
                     <button
-                      className="qty-btn"
-                      onClick={() => addToCart(selectedProduct, selectedSize)}
-                      disabled={selectedProduct.stock_qty !== null && selectedProduct.stock_qty !== undefined && inCart.qty >= selectedProduct.stock_qty}
+                      onClick={() => { setSelectedProduct(null); setCartOpen(true); }}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        padding: '12px 20px',
+                        borderRadius: 16,
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                        color: '#fff',
+                        fontSize: '0.82rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        fontFamily: 'Outfit',
+                        animation: 'pulseCart 2s infinite ease-in-out',
+                        transition: 'all 0.2s'
+                      }}
                     >
-                      <Plus size={14} strokeWidth={2.5} />
+                      <ShoppingCart size={15} strokeWidth={2.5} style={{ animation: 'bounceCartIcon 1.5s infinite ease-in-out' }} />
+                      Go to Cart
                     </button>
                   </div>
                 ) : (
@@ -1285,7 +1497,8 @@ export default function ProductCatalog({
                 )}
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         );
       })()}
     </div>

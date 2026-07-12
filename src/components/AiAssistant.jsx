@@ -92,6 +92,14 @@ export default function AiAssistant({ lang, isOpen, onClose }) {
         else if (query.includes('video') || query.includes('procedure') || query.includes('placement') || query.includes('guide')) {
           replyText = "I have loaded implant training procedures. You can play them in the 'Guides' tab: \n- 'Single Piece Implant (BCS) Clinical Placement Guide'\n- 'Two Piece Surgical Placement Walkthrough'\n- 'Abutment & Healing Phase Connection Procedure'";
         }
+        else if (query.includes('contact') || query.includes('support') || query.includes('phone') || query.includes('email') || query.includes('call') || query.includes('lal')) {
+          replyText = `You can contact Simple Implants Support directly:
+• Name: Lal
+• Contact Number: +91 94441 26926 (Click-to-call or WhatsApp)
+• Email: simpleimplants@gmail.com
+
+We are available for clinical guidance, product inquiries, and custom ordering requests.`;
+        }
         else {
           const matchedFaq = faqs.find(f => f.q.toLowerCase().includes(query) || query.includes(f.q.toLowerCase()));
           if (matchedFaq) {

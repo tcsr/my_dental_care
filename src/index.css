@@ -66,12 +66,14 @@ body {
   display: flex;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 /* The Flexbox Screen Container: Header, Body, Footer perfectly aligned */
 #root {
   width: 100%;
   max-width: var(--max-width);
   height: 100vh;
+  height: 100dvh;
   background-color: hsl(var(--bg-dark));
   display: flex;
   flex-direction: column;
@@ -1983,6 +1985,148 @@ body.is-browser .modal-overlay-container.top-aligned-modal {
 .sidebar-logo-animated:hover {
   animation-play-state: paused;
   transform: scale(1.05) !important;
+}
+
+/* Responsive branding logo heights */
+.navbar-brand-logo {
+  height: 90px !important;
+}
+
+@media (max-width: 767px) {
+  .navbar-brand-logo {
+    height: 48px !important;
+  }
+}
+
+/* Premium Login button */
+.header-login-btn {
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  height: 28px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-family: 'Outfit';
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(14,165,233,0.2);
+}
+
+.header-login-btn:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+/* Responsive navbar compression for options/dropdowns spacing on small viewports */
+.header-select-wrapper {
+  width: 105px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 576px) {
+  .header-login-btn {
+    padding: 6px !important;
+    width: 28px !important;
+    height: 28px !important;
+    justify-content: center;
+    border-radius: 8px !important;
+  }
+  .header-login-btn .login-text {
+    display: none !important;
+  }
+  .header-select-wrapper {
+    width: 48px !important;
+  }
+  .header-select-wrapper .premium-select-btn div > span:last-child {
+    display: none !important;
+  }
+  .header-select-wrapper .premium-select-btn svg {
+    margin: 0 !important;
+  }
+  .header-select-wrapper .premium-select-btn > svg:not(:first-child) {
+    display: none !important;
+  }
+  .header-select-wrapper .premium-select-btn {
+    padding: 10px 8px !important;
+    justify-content: center !important;
+  }
+}
+
+/* Premium sticky filter header for product catalog scrolling */
+.catalog-sticky-header {
+  position: sticky;
+  top: -24px;
+  margin-top: -24px;
+  padding-top: 24px;
+  background: hsl(var(--bg-dark));
+  background: hsl(var(--bg-dark) / 85%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 40;
+  margin-left: -20px;
+  margin-right: -20px;
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid hsl(var(--border-color) / 40%);
+  transition: all 0.2s ease;
+}
+
+body.is-browser .catalog-sticky-header {
+  top: -32px !important;
+  margin-top: -32px !important;
+  padding-top: 32px !important;
+  margin-left: -24px !important;
+  margin-right: -24px !important;
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+}
+
+@keyframes fadeInScreen {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastSlideIn {
+  from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+  to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+/* Catalog Header Contact Support Widget */
+.catalog-contact-widget {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(14, 165, 233, 0.04) !important;
+  padding: 14px 20px !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(14, 165, 233, 0.15) !important;
+  flex: 0 1 auto;
+  min-width: 320px;
+  max-width: 420px;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.03);
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+}
+
+.catalog-contact-widget:hover {
+  border-color: rgba(14, 165, 233, 0.35) !important;
+  background: rgba(14, 165, 233, 0.06) !important;
+  box-shadow: 0 6px 24px rgba(14, 165, 233, 0.06);
+}
+
+@media (max-width: 768px) {
+  .catalog-contact-widget {
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    min-width: 100% !important;
+  }
 }
 
 
