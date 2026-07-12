@@ -1,15 +1,21 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { supabase } from '../utils/supabase';
 import { useStore } from '../utils/store';
-import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight, Wrench, FlaskConical, Shield, Settings, PhoneCall, ArrowLeft, Mail } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight, Wrench, FlaskConical, Shield, Settings, PhoneCall, ArrowLeft, Mail, Zap, Layers, Grid3x3, RefreshCw, Boxes, Flame, Clock, Syringe } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import PremiumLoader from './ui/PremiumLoader';
 import EmptyStateCard from './EmptyStateCard';
 import StarRating from './ui/StarRating';
 
-const CATEGORIES = ['All', 'Implants', 'Instruments', 'Materials', 'PPE', 'Equipment', 'Consumables'];
+const CATEGORIES = [
+  'All', 'Implants', 'Instruments', 'Materials', 'PPE', 'Equipment', 'Consumables',
+  // Expanded implant-type taxonomy (additive — existing products keep their current category)
+  'Root Form', 'Compression', 'Basal', 'Basal SS', 'Compression MU', 'Basal MU',
+  'Genweld', 'Instant Provisionals', 'General Instruments', 'Bone Graft'
+];
 
 function ToothIcon(props) {
   return (
@@ -27,6 +33,16 @@ const CAT = {
   PPE: { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', icon: Shield },
   Equipment: { bg: 'rgba(168,85,247,0.12)', color: '#a855f7', icon: Settings },
   Consumables: { bg: 'rgba(236,72,153,0.12)', color: '#ec4899', icon: Package },
+  'Root Form': { bg: 'rgba(99,102,241,0.12)', color: '#6366f1', icon: ToothIcon },
+  Compression: { bg: 'rgba(14,165,233,0.12)', color: '#0ea5e9', icon: Zap },
+  Basal: { bg: 'rgba(16,185,129,0.12)', color: '#10b981', icon: Layers },
+  'Basal SS': { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', icon: Grid3x3 },
+  'Compression MU': { bg: 'rgba(168,85,247,0.12)', color: '#a855f7', icon: RefreshCw },
+  'Basal MU': { bg: 'rgba(236,72,153,0.12)', color: '#ec4899', icon: Boxes },
+  Genweld: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444', icon: Flame },
+  'Instant Provisionals': { bg: 'rgba(8,145,178,0.12)', color: '#0891b2', icon: Clock },
+  'General Instruments': { bg: 'rgba(100,116,139,0.12)', color: '#64748b', icon: Wrench },
+  'Bone Graft': { bg: 'rgba(20,184,166,0.12)', color: '#14b8a6', icon: Syringe },
 };
 const DEFAULT_CAT = { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', icon: Package };
 
@@ -79,6 +95,54 @@ const getProductImages = (product) => {
   return urls.map(resolveUrl);
 };
 
+const parseImplantSizes = (sizesStr, productSku) => {
+  if (!sizesStr) return { diameters: [], variantsByDiameter: {} };
+  const parts = sizesStr.split(',').map(s => s.trim()).filter(Boolean);
+  const diameters = [];
+  const variantsByDiameter = {};
+
+  parts.forEach(part => {
+    // Matches "3.5 x 10mm" or "3.5x10" or similar
+    const match = part.match(/([\d.]+)\s*[xX]\s*([\d.]+)\s*(mm)?/i);
+    if (match) {
+      const diameter = match[1];
+      const length = match[2];
+      if (!diameters.includes(diameter)) {
+        diameters.push(diameter);
+      }
+      if (!variantsByDiameter[diameter]) {
+        variantsByDiameter[diameter] = [];
+      }
+      const prefix = productSku ? productSku.replace('INST-', '').slice(0, 3) : 'R';
+      const cleanDia = diameter.replace('.', '');
+      const code = `${prefix}${cleanDia}${length}`;
+      variantsByDiameter[diameter].push({
+        sizeString: part,
+        diameter,
+        length: `${length} mm`,
+        code
+      });
+    } else {
+      const diameter = 'Standard';
+      if (!diameters.includes(diameter)) {
+        diameters.push(diameter);
+      }
+      if (!variantsByDiameter[diameter]) {
+        variantsByDiameter[diameter] = [];
+      }
+      variantsByDiameter[diameter].push({
+        sizeString: part,
+        diameter,
+        length: part,
+        code: part
+      });
+    }
+  });
+
+  return { diameters, variantsByDiameter };
+};
+
+
 export default function ProductCatalog({
   authUser,
   cart,
@@ -115,6 +179,7 @@ export default function ProductCatalog({
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState(null);
+  const [activeDiameter, setActiveDiameter] = useState(null);
 
   // Ratings & Feedback form states
   const [newRating, setNewRating] = useState(5);
@@ -139,10 +204,36 @@ export default function ProductCatalog({
       const sizeList = selectedProduct.sizes ? selectedProduct.sizes.split(',').map(s => s.trim()).filter(Boolean) : [];
       setSelectedSize(sizeList.length > 0 ? sizeList[0] : null);
       fetchFeedback(selectedProduct.id);
+      
+      const parsed = parseImplantSizes(selectedProduct.sizes, selectedProduct.sku);
+      if (parsed.diameters.length > 0) {
+        setActiveDiameter(parsed.diameters[0]);
+      } else {
+        setActiveDiameter(null);
+      }
     } else {
       setSelectedSize(null);
+      setActiveDiameter(null);
     }
   }, [selectedProduct, fetchFeedback]);
+
+  // ── Auto-open product from URL param (e.g. /catalog?product=Two+Piece+Dental+Implant) ──
+  const [searchParams, setSearchParams] = useSearchParams();
+  const autoOpenDone = useRef(false);
+  useEffect(() => {
+    if (autoOpenDone.current) return;
+    const paramName = searchParams.get('product');
+    if (!paramName || products.length === 0) return;
+    const match = products.find(p => p.name && p.name.toLowerCase() === paramName.toLowerCase());
+    if (match) {
+      setSelectedProduct(match);
+      setCarouselIndex(0);
+      autoOpenDone.current = true;
+      // Remove the query param so back/refresh won't re-open
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, products, setSearchParams]);
+
 
   useEffect(() => {
     if (categories && categories.length > 0) {
@@ -526,304 +617,632 @@ export default function ProductCatalog({
         </div>
       )}
 
-      {/* Catalog Intro & Contact Us Banner */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: 'linear-gradient(135deg, hsl(var(--bg-card)), hsl(var(--bg-dark)))', padding: '16px 20px', borderRadius: '16px', border: '1px solid hsl(var(--border-color))', boxSizing: 'border-box', width: '100%', overflow: 'hidden' }}>
-        <div style={{ flex: '1 1 300px' }}>
-          <h1 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.25rem', color: 'hsl(var(--text-primary))', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            Premium Dental Catalog
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              fontSize: '0.62rem',
-              fontWeight: 800,
-              padding: '3px 8px',
-              borderRadius: 8,
-              background: 'rgba(245,158,11,0.08)',
-              color: '#f59e0b',
-              border: '1px solid rgba(245,158,11,0.18)',
-              fontFamily: 'Outfit',
-              verticalAlign: 'middle'
-            }}>
-              ★ {ratingStats.avg} ({ratingStats.count} Reviews)
-            </span>
-          </h1>
-          <p style={{ fontSize: '0.78rem', color: 'hsl(var(--text-muted))', lineHeight: 1.5, margin: 0 }}>
-            Browse and order high-precision surgical implants, prosthetics, and specialized dental instruments. Select products below to build your clinical case.
-          </p>
-        </div>
-        
-        <div className="catalog-contact-widget">
-          {/* Avatar with Online indicator */}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', fontFamily: 'Outfit' }}>
-              L
-            </div>
-            <span style={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: '50%', background: '#25D366', border: '1.5px solid hsl(var(--bg-card))', animation: 'pulseSupport 1.8s infinite' }} />
-          </div>
+      {selectedProduct ? (
+        /* Product Details Screen */
+        <div className="catalog-container-responsive" style={{ animation: 'fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
+          {/* Back Navigation Button */}
+          <button
+            className="details-back-btn"
+            onClick={() => { setSelectedProduct(null); setCarouselIndex(0); }}
+          >
+            <ArrowLeft size={16} strokeWidth={2.5} /> Back to Catalog
+          </button>
 
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: 6 }}>
-              Contact Support (Lal)
-            </div>
-            <div style={{ fontSize: '0.62rem', color: '#10b981', fontWeight: 700, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
-              Online • Ready to help
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-              <a
-                href="tel:+919444126926"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '5px 10px',
-                  borderRadius: 8,
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  color: '#fff',
-                  fontSize: '0.66rem',
-                  fontWeight: 800,
-                  textDecoration: 'none',
-                  fontFamily: 'Outfit',
-                  boxShadow: '0 4px 10px rgba(16,185,129,0.12)',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'none'}
-              >
-                <PhoneCall size={10} /> Call Support
-              </a>
-              <a
-                href="mailto:simpleimplants@gmail.com"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '5px 10px',
-                  borderRadius: 8,
-                  background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-                  color: '#fff',
-                  fontSize: '0.66rem',
-                  fontWeight: 800,
-                  textDecoration: 'none',
-                  fontFamily: 'Outfit',
-                  boxShadow: '0 4px 10px rgba(14,165,233,0.12)',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'none'}
-              >
-                <Mail size={10} /> Email
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+          {/* Details Grid */}
+          {(() => {
+            const images = getProductImages(selectedProduct);
+            const cs = catConfig[selectedProduct.category] || DEFAULT_CAT;
+            const relatedProducts = products.filter(p => p.category === selectedProduct.category);
+            const { diameters, variantsByDiameter } = parseImplantSizes(selectedProduct.sizes, selectedProduct.sku);
+            const activeDia = activeDiameter || (diameters.length > 0 ? diameters[0] : null);
+            const outOfStockMain = selectedProduct.stock_qty === null || selectedProduct.stock_qty === undefined || selectedProduct.stock_qty <= 0;
+            const lowStockMain = !outOfStockMain && selectedProduct.stock_qty <= 5;
 
-      {/* Sticky search & category chips bar */}
-      <div className="catalog-sticky-header">
-        {/* Search */}
-        <div style={{ position: 'relative', marginBottom: 14 }}>
-          <Search size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-dim))', pointerEvents: 'none' }} />
-          <input
-            value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..."
-            style={{ width: '100%', padding: '12px 38px 12px 38px', background: 'hsl(var(--bg-card))', border: '1.5px solid hsl(var(--border-color))', borderRadius: 12, fontSize: '0.88rem', color: 'hsl(var(--text-primary))', outline: 'none', fontFamily: 'Outfit', boxSizing: 'border-box', transition: 'all 0.2s ease' }}
-            onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 3px rgba(14, 165, 233, 0.15)'; }}
-            onBlur={e => { e.target.style.borderColor = 'hsl(var(--border-color))'; e.target.style.boxShadow = 'none'; }}
-          />
-          {search && (
-            <button
-              onClick={() => { setSearch(''); setCategory('All'); }}
-              className="search-clear-btn"
-              style={{
-                position: 'absolute',
-                right: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ef4444'
-              }}
-            >
-              <X size={13} strokeWidth={2.5} style={{ width: '13px', height: '13px', display: 'block' }} />
-            </button>
-          )}
-        </div>
-
-        {/* Category chips */}
-        <div className="cat-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 12, paddingTop: 6, paddingBottom: 8, scrollbarWidth: 'none' }}>
-          <style>{`.cat-scroll::-webkit-scrollbar{display:none}`}</style>
-          {categoriesList.map(cat => (
-            <button key={cat} className="cat-chip" onClick={() => setCategory(cat)} style={{ flexShrink: 0, padding: '8px 16px', borderRadius: 24, fontSize: '0.78rem', fontWeight: 700, fontFamily: 'Outfit', border: '1.5px solid', cursor: 'pointer', transition: 'all 0.2s', background: category === cat ? '#0ea5e9' : 'transparent', borderColor: category === cat ? '#0ea5e9' : 'hsl(var(--border-color))', color: category === cat ? '#fff' : 'hsl(var(--text-muted))' }}>
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Product grid */}
-      {filtered.length === 0 ? (
-        <EmptyStateCard
-          icon={Package}
-          title="No Products Found"
-          message="Try a different search or category to find what you're looking for."
-          action={(search || category !== 'All') && (
-            <button
-              onClick={() => { setSearch(''); setCategory('All'); }}
-              style={{
-                background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-                color: '#fff',
-                border: 'none',
-                padding: '8px 18px',
-                borderRadius: '10px',
-                fontSize: '0.74rem',
-                fontWeight: '800',
-                fontFamily: 'Outfit',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(14,165,233,0.2)'
-              }}
-            >
-              Clear Search & Filter
-            </button>
-          )}
-        />
-      ) : (
-        <div className="product-catalog-grid">
-          {filtered.map((p, index) => {
-            const cs = catConfig[p.category] || DEFAULT_CAT;
-            const inCart = (cart || {})[p.id];
-            const outOfStock = p.stock_qty === null || p.stock_qty === undefined || p.stock_qty <= 0;
-            const lowStock = !outOfStock && p.stock_qty <= 5;
-            const images = getProductImages(p);
             return (
-              <div
-                key={p.id}
-                onClick={() => { setSelectedProduct(p); setCarouselIndex(0); }}
-                className="product-card"
-                style={{
-                  background: 'hsl(var(--bg-card))', borderRadius: 20, padding: 0,
-                  display: 'flex', flexDirection: 'column',
-                  border: inCart ? '1.5px solid #0ea5e9' : '1px solid hsl(var(--border-color))',
-                  boxShadow: inCart ? '0 8px 24px rgba(14,165,233,0.15)' : 'var(--shadow-sm)',
-                  position: 'relative', overflow: 'hidden',
-                  cursor: 'pointer',
-                  animationDelay: `${index * 0.04}s`
-                }}
-              >
-                {/* Product Image Thumbnail */}
-                <div style={{ width: '100%', height: 150, overflow: 'hidden', background: 'hsl(var(--bg-dark))', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid hsl(var(--border-color))' }}>
-                  <div className="product-card-overlay" />
-                  {images && images.length > 0 ? (
-                    <img className="product-card-img" src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} loading="lazy" />
-                  ) : (
-                    <div style={{ color: cs.color, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: 0.5 }}>
-                      {typeof cs.icon === 'string' ? <span style={{ fontSize: '2.5rem' }}>{cs.icon}</span> : <cs.icon size={40} />}
-                      <span style={{ fontSize: '0.5rem', fontWeight: 700, color: 'hsl(var(--text-dim))', fontFamily: 'Outfit' }}>No Image</span>
-                    </div>
-                  )}
-                  {/* Category Pill Overlay */}
-                  <span style={{ position: 'absolute', left: 8, bottom: 8, fontSize: '0.55rem', fontWeight: 800, color: '#fff', background: cs.color, padding: '4px 10px', borderRadius: 8, textTransform: 'uppercase', letterSpacing: '0.06em', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', zIndex: 2 }}>
-                    {p.category || 'General'}
-                  </span>
-                  {images && images.length > 1 && (
-                    <span style={{ position: 'absolute', right: 8, top: 8, fontSize: '0.5rem', fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.45)', padding: '3px 7px', borderRadius: 6, backdropFilter: 'blur(4px)', zIndex: 2 }}>
-                      {images.length} imgs
+              <>
+                {/* Top Section - Brand/Product Intro Banner */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(240,249,255,0.85) 50%, rgba(238,242,255,0.80) 100%)',
+                  border: '1px solid rgba(14,165,233,0.14)',
+                  borderRadius: 24,
+                  padding: '32px 40px',
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 1.4fr) 1fr',
+                  gap: 36,
+                  alignItems: 'center',
+                  boxShadow: 'var(--shadow-md)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  marginBottom: 32,
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#0ea5e9', background: 'rgba(14,165,233,0.1)', padding: '4px 12px', borderRadius: 8, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'inline-block', width: 'fit-content' }}>
+                      {selectedProduct.category || 'General'}
                     </span>
-                  )}
-                </div>
-
-                <div style={{ padding: '12px 14px 0', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minHeight: 36 }}>
-                    {(p.name || '').replace(/`/g, '')}
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+                      {(selectedProduct.name || '').replace(/`/g, '')}
+                    </h1>
+                    <p style={{ fontSize: '0.94rem', color: 'hsl(var(--text-muted))', lineHeight: 1.6, margin: 0, fontWeight: 500 }}>
+                      {selectedProduct.description || 'Premium dental solution manufactured using Grade 5 Titanium (Ti6Al4V) with high osseointegration surface treatment, designed to provide superior primary stability and predictable clinical success.'}
+                    </p>
+                    
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 6 }}>
+                      <button
+                        style={{
+                          padding: '11px 22px',
+                          borderRadius: 10,
+                          border: 'none',
+                          background: 'linear-gradient(135deg, #0ea5e9 0%, #10b981 100%)',
+                          color: '#fff',
+                          fontSize: '0.82rem',
+                          fontWeight: 800,
+                          fontFamily: 'Outfit',
+                          boxShadow: '0 4px 14px rgba(14,165,233,0.22)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                      >
+                        Learn More...
+                      </button>
+                      {selectedProduct.sku && (
+                        <span style={{ fontSize: '0.74rem', color: 'hsl(var(--text-dim))', fontWeight: 600 }}>
+                          SKU: <span style={{ fontFamily: 'monospace', color: 'hsl(var(--text-muted))' }}>{selectedProduct.sku}</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {p.description && (
-                    <div style={{ fontSize: '0.64rem', color: 'hsl(var(--text-muted))', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
-                      {p.description}
-                    </div>
-                  )}
-
-                  {/* Rating Stars on Card */}
-                  {p.rating_count > 0 ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                      <StarRating rating={Number(p.rating_avg)} size={11} />
-                      <span style={{ fontSize: '0.66rem', fontWeight: 800, color: 'hsl(var(--text-muted))', fontFamily: 'Outfit' }}>
-                        {Number(p.rating_avg).toFixed(1)} ({p.rating_count})
-                      </span>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                      <StarRating rating={0} size={11} />
-                      <span style={{ fontSize: '0.66rem', fontWeight: 500, color: 'hsl(var(--text-dim))', fontFamily: 'Outfit' }}>
-                        No reviews
-                      </span>
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 6 }}>
-                    <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.08rem', color: 'hsl(var(--text-primary))' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'hsl(var(--text-muted))', marginRight: 2 }}>₹</span>{p.price?.toLocaleString('en-IN')}
-                    </span>
-                    <span style={{ fontSize: '0.56rem', fontWeight: 800, padding: '3px 8px', borderRadius: 8, background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
-                      {outOfStock ? 'Out of Stock' : lowStock ? `${p.stock_qty} left` : 'In Stock'}
-                    </span>
+                  {/* Right Column - Product Image Box */}
+                  <div style={{
+                    height: 240,
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.4) 100%)',
+                    borderRadius: 20,
+                    border: '1px solid rgba(14,165,233,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 20,
+                    boxShadow: 'var(--shadow-sm)'
+                  }}>
+                    <img
+                      src={images[0] || `${import.meta.env.BASE_URL || '/'}logo.png`}
+                      alt={selectedProduct.name}
+                      style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.08))' }}
+                    />
                   </div>
                 </div>
 
-                <div style={{ padding: '0 14px 14px', display: 'flex', justifyContent: 'flex-end' }}>
-                  {isAdmin ? (
-                    <div style={{ width: '100%', textAlign: 'center', fontSize: '0.66rem', color: 'hsl(var(--text-dim))', padding: '10px 0', borderTop: '1px solid hsl(var(--border-color))', fontWeight: 700 }}>👁️ Administrator View</div>
-                  ) : outOfStock ? (
-                    <div style={{ width: '100%', textAlign: 'center', fontSize: '0.66rem', color: 'hsl(var(--text-dim))', padding: '10px 0', borderTop: '1px solid hsl(var(--border-color))', fontWeight: 700 }}>Currently unavailable</div>
-                  ) : (p.sizes && p.sizes.trim()) ? (
-                    <button onClick={(e) => { e.stopPropagation(); setSelectedProduct(p); setCarouselIndex(0); }} style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 12px rgba(14,165,233,0.25)', transition: 'all 0.2s ease' }}>
-                      Select Size / Options
-                    </button>
-                  ) : inCart ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.12)', borderRadius: 12, padding: '5px 6px', width: '100%' }}>
+                {/* Sub-category Tabs (Related Products) */}
+                {relatedProducts.length > 1 && (
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 28 }}>
+                    {relatedProducts.map(rp => (
                       <button
-                        className="qty-btn"
-                        onClick={(e) => { e.stopPropagation(); removeFromCart(p.id); }}
+                        key={rp.id}
+                        onClick={() => { setSelectedProduct(rp); setCarouselIndex(0); }}
+                        style={{
+                          padding: '9px 18px',
+                          borderRadius: 24,
+                          background: rp.id === selectedProduct.id
+                            ? 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)'
+                            : 'rgba(255, 255, 255, 0.8)',
+                          color: rp.id === selectedProduct.id ? '#fff' : 'hsl(var(--text-muted))',
+                          fontSize: '0.80rem',
+                          fontWeight: 800,
+                          fontFamily: 'Outfit',
+                          cursor: 'pointer',
+                          boxShadow: rp.id === selectedProduct.id
+                            ? '0 6px 14px rgba(14,165,233,0.25)'
+                            : '0 2px 8px rgba(15,23,42,0.04)',
+                          border: rp.id === selectedProduct.id ? 'none' : '1px solid rgba(14,165,233,0.15)',
+                          transition: 'all 0.25s ease'
+                        }}
                       >
-                        <Minus size={13} strokeWidth={2.5} />
+                        {rp.name}
                       </button>
-                      <span
-                        onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                        style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 6px', borderRadius: 'var(--radius-xs)', transition: 'background 0.15s' }}
-                        title="View Cart"
-                      >{inCart.qty}</span>
-                      <button
-                        className="qty-btn"
-                        onClick={(e) => { e.stopPropagation(); addToCart(p); }}
-                        disabled={p.stock_qty !== null && p.stock_qty !== undefined && inCart.qty >= p.stock_qty}
-                      >
-                        <Plus size={13} strokeWidth={2.5} />
-                      </button>
-                    </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Size / Variant Section */}
+                <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(14,165,233,0.12)', borderRadius: 24, padding: 32, marginBottom: 32, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+                  
+                  {diameters.length > 0 ? (
+                    <>
+                      {/* Diameter Selector Tabs */}
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
+                        {diameters.map(dia => (
+                          <button
+                            key={dia}
+                            onClick={() => setActiveDiameter(dia)}
+                            style={{
+                              padding: '8px 18px',
+                              borderRadius: 20,
+                              background: activeDia === dia
+                                ? '#0ea5e9'
+                                : 'rgba(255,255,255,0.85)',
+                              color: activeDia === dia ? '#fff' : 'hsl(var(--text-muted))',
+                              fontSize: '0.82rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              fontFamily: 'Outfit',
+                              boxShadow: activeDia === dia ? '0 4px 10px rgba(14,165,233,0.2)' : 'none',
+                              border: activeDia === dia ? 'none' : '1px solid rgba(14,165,233,0.15)',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {dia}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Header with selected prefix (e.g. R30 or standard variant category code) */}
+                      <div style={{ textAlign: 'center', marginBottom: 20, fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.45rem', color: '#0ea5e9' }}>
+                        {activeDia === 'Standard' ? 'STANDARD SIZES' : `R${activeDia?.replace('.', '') || '30'}`}
+                      </div>
+
+                      {/* Variants Grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 20 }}>
+                        {(variantsByDiameter[activeDia] || []).map(variant => {
+                          const cartKey = `${selectedProduct.id}_${variant.sizeString}`;
+                          const inCart = (cart || {})[cartKey];
+                          const qty = inCart ? inCart.qty : 0;
+                          return (
+                            <div key={variant.sizeString} style={{
+                              background: 'rgba(255,255,255,0.92)',
+                              border: '1px solid rgba(14,165,233,0.15)',
+                              borderRadius: 20,
+                              padding: 20,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              textAlign: 'center',
+                              position: 'relative',
+                              boxShadow: '0 4px 16px rgba(15,23,42,0.04)',
+                              transition: 'all 0.3s ease'
+                            }}>
+                              {outOfStockMain && (
+                                <div style={{
+                                  position: 'absolute', top: 10, left: 10,
+                                  background: '#ef4444', color: '#fff', fontSize: '0.55rem',
+                                  fontWeight: 800, padding: '3px 8px', borderRadius: 5,
+                                  textTransform: 'uppercase', letterSpacing: '0.04em'
+                                }}>SOLD OUT</div>
+                              )}
+                              
+                              {/* Variant Image */}
+                              <div style={{ height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                                <img
+                                  src={images[0] || `${import.meta.env.BASE_URL || '/'}logo.png`}
+                                  alt={variant.code}
+                                  style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.08))' }}
+                                />
+                              </div>
+
+                              {/* Title / Code */}
+                              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', fontFamily: 'Outfit' }}>{variant.code}</div>
+                              <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: 2, marginBottom: 12 }}>Length: {variant.length}</div>
+                              
+                              {/* Price */}
+                              <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#0ea5e9', marginBottom: 14, fontFamily: 'Outfit' }}>
+                                ₹{selectedProduct.price?.toLocaleString('en-IN')}
+                              </div>
+
+                              {/* Buy button / quantity selectors */}
+                              {isAdmin ? (
+                                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>Admin Mode</div>
+                              ) : outOfStockMain ? (
+                                <button disabled style={{ width: '100%', padding: '8px 0', borderRadius: 10, border: 'none', background: 'rgba(241,245,249,0.8)', color: '#94a3b8', fontSize: '0.74rem', fontWeight: 800, cursor: 'not-allowed' }}>Sold Out</button>
+                              ) : qty > 0 ? (
+                                <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(241,245,249,0.6)', border: '1px solid rgba(14,165,233,0.15)', borderRadius: 10, padding: 3, gap: 8, width: '100%', justifyContent: 'space-between' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeFromCart(selectedProduct.id, variant.sizeString)}
+                                    style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}
+                                  >
+                                    <Minus size={11} strokeWidth={2.5} />
+                                  </button>
+                                  <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit' }}>{qty}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => addToCart(selectedProduct, variant.sizeString)}
+                                    disabled={selectedProduct.stock_qty !== null && selectedProduct.stock_qty !== undefined && qty >= selectedProduct.stock_qty}
+                                    style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}
+                                  >
+                                    <Plus size={11} strokeWidth={2.5} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => addToCart(selectedProduct, variant.sizeString)}
+                                  style={{ width: '100%', padding: '9px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, boxShadow: '0 4px 10px rgba(14,165,233,0.15)' }}
+                                >
+                                  <Plus size={12} strokeWidth={2.5} /> Buy Now
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   ) : (
-                    <button onClick={(e) => { e.stopPropagation(); addToCart(p); }} style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 12px rgba(14,165,233,0.25)', transition: 'all 0.2s ease', marginLeft: 'auto' }}>
-                      <Plus size={14} strokeWidth={2.5} /> Add to Cart
+                    // Simple product view without sizes
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                      <div style={{
+                        background: 'rgba(255,255,255,0.92)',
+                        border: '1px solid rgba(14,165,233,0.15)',
+                        borderRadius: 20,
+                        padding: 24,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        width: '100%',
+                        maxWidth: 320,
+                        boxShadow: '0 4px 16px rgba(15,23,42,0.04)'
+                      }}>
+                        <div style={{ height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                          <img
+                            src={images[0] || `${import.meta.env.BASE_URL || '/'}logo.png`}
+                            alt={selectedProduct.name}
+                            style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
+                          />
+                        </div>
+                        <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', fontFamily: 'Outfit' }}>Standard Size</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0ea5e9', margin: '8px 0 16px', fontFamily: 'Outfit' }}>₹{selectedProduct.price?.toLocaleString('en-IN')}</div>
+                        
+                        {isAdmin ? (
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>Admin Mode</div>
+                        ) : outOfStockMain ? (
+                          <button disabled style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: 'none', background: 'rgba(241,245,249,0.8)', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 800, cursor: 'not-allowed' }}>Sold Out</button>
+                        ) : (
+                          (() => {
+                            const cartKey = selectedProduct.id;
+                            const inCart = (cart || {})[cartKey];
+                            const qty = inCart ? inCart.qty : 0;
+                            return qty > 0 ? (
+                              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(241,245,249,0.6)', border: '1px solid rgba(14,165,233,0.15)', borderRadius: 10, padding: 3, gap: 8, width: '100%', justifyContent: 'space-between' }}>
+                                <button type="button" onClick={() => removeFromCart(selectedProduct.id)} style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}><Minus size={11} strokeWidth={2.5} /></button>
+                                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit' }}>{qty}</span>
+                                <button type="button" onClick={() => addToCart(selectedProduct)} disabled={selectedProduct.stock_qty !== null && selectedProduct.stock_qty !== undefined && qty >= selectedProduct.stock_qty} style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}><Plus size={11} strokeWidth={2.5} /></button>
+                              </div>
+                            ) : (
+                              <button type="button" onClick={() => addToCart(selectedProduct)} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 10px rgba(14,165,233,0.15)' }}><Plus size={14} /> Buy Now</button>
+                            );
+                          })()
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
+                    <button onClick={() => setCartOpen(true)} style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.84rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 12px rgba(14,165,233,0.2)' }}>
+                      <ShoppingCart size={15} /> View Cart
                     </button>
+                  </div>
+                </div>
+
+                {/* Technical Specifications */}
+                <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(14,165,233,0.12)', borderRadius: 24, padding: 32, marginBottom: 32, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: '0 0 20px 0', letterSpacing: '-0.01em' }}>Technical Specifications</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+                    <div style={{ background: 'rgba(255,255,255,0.6)', padding: '16px 20px', borderRadius: 16, border: '1px solid rgba(14,165,233,0.1)' }}>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Availability</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: outOfStockMain ? '#ef4444' : lowStockMain ? '#f59e0b' : '#10b981', marginTop: 4 }}>
+                        {outOfStockMain ? 'Out of Stock' : lowStockMain ? `Low Stock — ${selectedProduct.stock_qty} units left` : 'In Stock'}
+                      </div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.6)', padding: '16px 20px', borderRadius: 16, border: '1px solid rgba(14,165,233,0.1)' }}>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Category</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: cs.color, marginTop: 4 }}>{selectedProduct.category || 'General'}</div>
+                    </div>
+                    {selectedProduct.material && (
+                      <div style={{ background: 'rgba(255,255,255,0.6)', padding: '16px 20px', borderRadius: 16, border: '1px solid rgba(14,165,233,0.1)' }}>
+                        <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Material Composition</div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 4 }}>{selectedProduct.material}</div>
+                      </div>
+                    )}
+                    {selectedProduct.finish && (
+                      <div style={{ background: 'rgba(255,255,255,0.6)', padding: '16px 20px', borderRadius: 16, border: '1px solid rgba(14,165,233,0.1)' }}>
+                        <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Surface Treatment</div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 4 }}>{selectedProduct.finish}</div>
+                      </div>
+                    )}
+                    {selectedProduct.sterilization && (
+                      <div style={{ background: 'rgba(255,255,255,0.6)', padding: '16px 20px', borderRadius: 16, border: '1px solid rgba(14,165,233,0.1)' }}>
+                        <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Sterilization Method</div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 4 }}>{selectedProduct.sterilization}</div>
+                      </div>
+                    )}
+                    {selectedProduct.warrantyPct > 0 && (
+                      <div style={{ background: 'rgba(255,255,255,0.6)', padding: '16px 20px', borderRadius: 16, border: '1px solid rgba(14,165,233,0.1)' }}>
+                        <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Product Warranty</div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'hsl(var(--text-primary))', marginTop: 4 }}>{selectedProduct.warrantyPct}% Clinical Lifetime Coverage</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Reviews & Feedback */}
+                <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(14,165,233,0.12)', borderRadius: 24, padding: 32, marginBottom: 40, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: '0 0 24px 0', letterSpacing: '-0.01em' }}>Doctor Reviews &amp; Clinical Feedback</h3>
+
+                  {/* Submit Review */}
+                  {authUser ? (
+                    hasReviewed ? (
+                      <div style={{ fontSize: '0.8rem', color: '#10b981', background: 'rgba(16,185,129,0.06)', padding: '14px 20px', borderRadius: 12, fontWeight: 700, marginBottom: 24, border: '1px solid rgba(16,185,129,0.15)' }}>
+                        ✓ You have already submitted feedback for this product. Thank you for sharing your experience!
+                      </div>
+                    ) : (
+                      <form onSubmit={handleReviewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24, borderBottom: '1px solid hsl(var(--border-color))', paddingBottom: 24 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'hsl(var(--text-muted))' }}>Your Rating:</span>
+                          <StarRating rating={newRating} onRatingChange={setNewRating} editable size={18} />
+                        </div>
+                        <textarea
+                          value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Share your clinical experience, material quality, or product specifications feedback..." required
+                          style={{ width: '100%', minHeight: 80, padding: 12, background: 'rgba(255,255,255,0.8)', border: '1.5px solid rgba(14,165,233,0.2)', borderRadius: 12, fontSize: '0.82rem', color: 'hsl(var(--text-primary))', outline: 'none', fontFamily: 'Outfit', boxSizing: 'border-box' }}
+                        />
+                        {feedbackError && <div style={{ fontSize: '0.7rem', color: '#ef4444' }}>{feedbackError}</div>}
+                        <button type="submit" disabled={submittingFeedback} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', alignSelf: 'flex-start', fontFamily: 'Outfit' }}>
+                          {submittingFeedback ? 'Submitting...' : 'Submit Feedback'}
+                        </button>
+                      </form>
+                    )
+                  ) : (
+                    <div style={{ fontSize: '0.78rem', color: 'hsl(var(--text-muted))', background: 'rgba(255,255,255,0.6)', padding: '14px 20px', borderRadius: 12, fontWeight: 700, marginBottom: 24, border: '1px solid rgba(0,0,0,0.05)' }}>
+                      🔒 Please log in to write a review.
+                    </div>
+                  )}
+
+                  {/* Reviews List */}
+                  {feedbackList.length === 0 ? (
+                    <div style={{ fontSize: '0.85rem', color: 'hsl(var(--text-dim))', fontStyle: 'italic' }}>No doctor reviews submitted yet.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      {feedbackList.map(item => (
+                        <div key={item.id} style={{ display: 'flex', gap: 14, padding: '16px', borderRadius: 16, background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(14,165,233,0.08)' }}>
+                          <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.95rem', flexShrink: 0 }}>
+                            {item.profiles?.name?.charAt(0).toUpperCase() || 'D'}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                              <div style={{ fontSize: '0.84rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>
+                                {item.profiles?.name || 'Doctor'}
+                              </div>
+                              <span style={{ fontSize: '0.64rem', color: 'hsl(var(--text-dim))' }}>
+                                {new Date(item.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', marginTop: 4, marginBottom: 8 }}>
+                              <StarRating rating={item.rating} size={10} />
+                            </div>
+                            <p style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', lineHeight: 1.5, margin: 0 }}>{item.comment}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-              </div>
+              </>
             );
-          })}
+          })()}
+        </div>
+      ) : (
+        /* Catalog Listing View */
+        <div className="catalog-container-responsive">
+          {/* Sticky search & category chips bar */}
+          <div className="catalog-sticky-header">
+            {/* Search */}
+            <div style={{ position: 'relative', marginBottom: 14 }}>
+              <Search size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-dim))', pointerEvents: 'none' }} />
+              <input
+                value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..."
+                style={{ width: '100%', padding: '12px 38px 12px 38px', background: 'hsl(var(--bg-card))', border: '1.5px solid hsl(var(--border-color))', borderRadius: 12, fontSize: '0.88rem', color: 'hsl(var(--text-primary))', outline: 'none', fontFamily: 'Outfit', boxSizing: 'border-box', transition: 'all 0.2s ease' }}
+                onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 3px rgba(14, 165, 233, 0.15)'; }}
+                onBlur={e => { e.target.style.borderColor = 'hsl(var(--border-color))'; e.target.style.boxShadow = 'none'; }}
+              />
+              {search && (
+                <button
+                  onClick={() => { setSearch(''); setCategory('All'); }}
+                  className="search-clear-btn"
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ef4444'
+                  }}
+                >
+                  <X size={13} strokeWidth={2.5} style={{ width: '13px', height: '13px', display: 'block' }} />
+                </button>
+              )}
+            </div>
+
+            {/* Category chips */}
+            <div className="cat-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 12, paddingTop: 6, paddingBottom: 8, scrollbarWidth: 'none' }}>
+              <style>{`.cat-scroll::-webkit-scrollbar{display:none}`}</style>
+              {categoriesList.map(cat => (
+                <button key={cat} className="cat-chip" onClick={() => setCategory(cat)} style={{ flexShrink: 0, padding: '8px 16px', borderRadius: 24, fontSize: '0.78rem', fontWeight: 700, fontFamily: 'Outfit', border: '1.5px solid', cursor: 'pointer', transition: 'all 0.2s', background: category === cat ? '#0ea5e9' : 'transparent', borderColor: category === cat ? '#0ea5e9' : 'hsl(var(--border-color))', color: category === cat ? '#fff' : 'hsl(var(--text-muted))' }}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Product grid */}
+          {filtered.length === 0 ? (
+            <EmptyStateCard
+              icon={Package}
+              title="No Products Found"
+              message="Try a different search or category to find what you're looking for."
+              action={(search || category !== 'All') && (
+                <button
+                  onClick={() => { setSearch(''); setCategory('All'); }}
+                  style={{
+                    background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '8px 18px',
+                    borderRadius: '10px',
+                    fontSize: '0.74rem',
+                    fontWeight: '800',
+                    fontFamily: 'Outfit',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(14,165,233,0.2)'
+                  }}
+                >
+                  Clear Search & Filter
+                </button>
+              )}
+            />
+          ) : (
+            <div className="product-catalog-grid">
+              {filtered.map((p, index) => {
+                const cs = catConfig[p.category] || DEFAULT_CAT;
+                const inCart = (cart || {})[p.id];
+                const outOfStock = p.stock_qty === null || p.stock_qty === undefined || p.stock_qty <= 0;
+                const lowStock = !outOfStock && p.stock_qty <= 5;
+                const images = getProductImages(p);
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => { setSelectedProduct(p); setCarouselIndex(0); }}
+                    className="product-card"
+                    style={{
+                      background: 'hsl(var(--bg-card))', borderRadius: 20, padding: 0,
+                      display: 'flex', flexDirection: 'column',
+                      border: inCart ? '1.5px solid #0ea5e9' : '1px solid hsl(var(--border-color))',
+                      boxShadow: inCart ? '0 8px 24px rgba(14,165,233,0.15)' : 'var(--shadow-sm)',
+                      position: 'relative', overflow: 'hidden',
+                      cursor: 'pointer',
+                      animationDelay: `${index * 0.04}s`
+                    }}
+                  >
+                    {/* Product Image Thumbnail */}
+                    <div style={{ width: '100%', height: 150, overflow: 'hidden', background: 'hsl(var(--bg-dark))', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid hsl(var(--border-color))' }}>
+                      <div className="product-card-overlay" />
+                      {images && images.length > 0 ? (
+                        <img className="product-card-img" src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} loading="lazy" />
+                      ) : (
+                        <div style={{ color: cs.color, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: 0.5 }}>
+                          {typeof cs.icon === 'string' ? <span style={{ fontSize: '2.5rem' }}>{cs.icon}</span> : <cs.icon size={40} />}
+                          <span style={{ fontSize: '0.5rem', fontWeight: 700, color: 'hsl(var(--text-dim))', fontFamily: 'Outfit' }}>No Image</span>
+                        </div>
+                      )}
+                      {/* Category Pill Overlay */}
+                      <span style={{ position: 'absolute', left: 8, bottom: 8, fontSize: '0.55rem', fontWeight: 800, color: '#fff', background: cs.color, padding: '4px 10px', borderRadius: 8, textTransform: 'uppercase', letterSpacing: '0.06em', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', zIndex: 2 }}>
+                        {p.category || 'General'}
+                      </span>
+                      {images && images.length > 1 && (
+                        <span style={{ position: 'absolute', right: 8, top: 8, fontSize: '0.5rem', fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.45)', padding: '3px 7px', borderRadius: 6, backdropFilter: 'blur(4px)', zIndex: 2 }}>
+                          {images.length} imgs
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ padding: '12px 14px 0', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minHeight: 36 }}>
+                        {(p.name || '').replace(/`/g, '')}
+                      </div>
+
+                      {p.description && (
+                        <div style={{ fontSize: '0.64rem', color: 'hsl(var(--text-muted))', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
+                          {p.description}
+                        </div>
+                      )}
+
+                      {/* Rating Stars on Card */}
+                      {p.rating_count > 0 ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                          <StarRating rating={Number(p.rating_avg)} size={11} />
+                          <span style={{ fontSize: '0.66rem', fontWeight: 800, color: 'hsl(var(--text-muted))', fontFamily: 'Outfit' }}>
+                            {Number(p.rating_avg).toFixed(1)} ({p.rating_count})
+                          </span>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                          <StarRating rating={0} size={11} />
+                          <span style={{ fontSize: '0.66rem', fontWeight: 500, color: 'hsl(var(--text-dim))', fontFamily: 'Outfit' }}>
+                            No reviews
+                          </span>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 6 }}>
+                        <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.08rem', color: 'hsl(var(--text-primary))' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'hsl(var(--text-muted))', marginRight: 2 }}>₹</span>{p.price?.toLocaleString('en-IN')}
+                        </span>
+                        <span style={{ fontSize: '0.56rem', fontWeight: 800, padding: '3px 8px', borderRadius: 8, background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
+                          {outOfStock ? 'Out of Stock' : lowStock ? `${p.stock_qty} left` : 'In Stock'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '0 14px 14px', display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                      {isAdmin ? (
+                        <div style={{ width: '100%', textAlign: 'center', fontSize: '0.66rem', color: 'hsl(var(--text-dim))', padding: '10px 0', borderTop: '1px solid hsl(var(--border-color))', fontWeight: 700 }}>👁️ Administrator View</div>
+                      ) : outOfStock ? (
+                        <div style={{ width: '100%', textAlign: 'center', fontSize: '0.66rem', color: 'hsl(var(--text-dim))', padding: '10px 0', borderTop: '1px solid hsl(var(--border-color))', fontWeight: 700 }}>Currently unavailable</div>
+                      ) : (p.sizes && p.sizes.trim()) ? (
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedProduct(p); setCarouselIndex(0); }} style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 12px rgba(14,165,233,0.25)', transition: 'all 0.2s ease' }}>
+                          Select Size / Options
+                        </button>
+                      ) : inCart ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.12)', borderRadius: 12, padding: '5px 6px', width: '100%' }}>
+                          <button
+                            className="qty-btn"
+                            onClick={(e) => { e.stopPropagation(); removeFromCart(p.id); }}
+                            style={{ width: 22, height: 22 }}
+                          >
+                            <Minus size={11} strokeWidth={2.5} />
+                          </button>
+                          <span
+                            onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
+                            style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit', cursor: 'pointer', padding: '2px 6px' }}
+                            title="View Cart"
+                          >{inCart.qty}</span>
+                          <button
+                            className="qty-btn"
+                            onClick={(e) => { e.stopPropagation(); addToCart(p); }}
+                            disabled={p.stock_qty !== null && p.stock_qty !== undefined && inCart.qty >= p.stock_qty}
+                            style={{ width: 22, height: 22 }}
+                          >
+                            <Plus size={11} strokeWidth={2.5} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={(e) => { e.stopPropagation(); addToCart(p); }} style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 12px rgba(14,165,233,0.25)', transition: 'all 0.2s ease', marginLeft: 'auto' }}>
+                          <Plus size={14} strokeWidth={2.5} /> Add to Cart
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Floating cart pill — rendered via portal so position:fixed anchors to viewport, not the animated ancestor */}
+      {/* Floating cart pill — rendered via portal */}
       {cartCount > 0 && !cartOpen && !isAdmin && createPortal(
         <button
           onClick={() => setCartOpen(true)}
           className="floating-cart-pill"
           style={{
             position: 'fixed',
-            bottom: 'calc(72px + 10px)',
+            bottom: '24px',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1000,
@@ -854,100 +1273,85 @@ export default function ProductCatalog({
 
       {/* Cart drawer */}
       {cartOpen && createPortal(
-        <div style={{ position: 'fixed', inset: 0, zIndex: 5000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
-          <style>{`
-            @keyframes cartFadeIn {
-              from { opacity: 0; }
-              to { opacity: 1; }
-            }
-            @keyframes cartSlideDown {
-              from { transform: translateY(-20px); opacity: 0; }
-              to { transform: translateY(0); opacity: 1; }
-            }
-          `}</style>
-          <div onClick={() => setCartOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', animation: 'cartFadeIn 0.2s ease-out' }} />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 5000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(8px)' }}>
           <div style={{
-            position: 'relative',
-            marginTop: '5vh',
             background: 'hsl(var(--bg-card))',
-            borderRadius: '24px',
+            borderRadius: '24px 24px 0 0',
             width: '100%',
             maxWidth: '620px',
-            maxHeight: '85vh',
+            maxHeight: '90vh',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 24px 64px rgba(15,23,42,0.25)',
-            border: '1px solid hsl(var(--border-color))',
+            boxShadow: '0 -24px 64px rgba(15,23,42,0.25)',
+            borderTop: '1px solid hsl(var(--border-color))',
             animation: 'cartSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             overflow: 'hidden'
           }}>
             <div style={{ padding: '20px 20px 12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h3 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.2rem', color: 'hsl(var(--text-primary))', margin: 0 }}>Your Cart</h3>
-                  <p style={{ fontSize: '0.72rem', color: 'hsl(var(--text-muted))', margin: '2px 0 0' }}>{cartCount} item{cartCount !== 1 ? 's' : ''}</p>
-                </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  {cartItems.length > 0 && (
-                    <button onClick={clearCart} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', color: '#ef4444', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit', transition: 'all 0.2s' }}>Clear All</button>
-                  )}
-                  <button
-                    onClick={() => setCartOpen(false)}
-                    style={{ background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '8px', width: '28px', height: '28px', transition: 'all 0.2s' }}
-                  >
-                    <X size={15} strokeWidth={2.5} color="hsl(var(--text-primary))" />
-                  </button>
-                </div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ShoppingCart size={18} strokeWidth={2.5} style={{ color: '#0ea5e9' }} /> Your Order Case
+                </h3>
+                <button
+                  onClick={() => setCartOpen(false)}
+                  style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'hsl(var(--bg-dark))', color: 'hsl(var(--text-muted))', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'hsl(var(--text-muted))'; e.currentTarget.style.background = 'hsl(var(--bg-dark))'; }}
+                >
+                  <X size={14} strokeWidth={2.5} />
+                </button>
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: '16px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
               {cartItems.length === 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '220px', gap: '12px', color: 'hsl(var(--text-muted))', textAlign: 'center' }}>
-                  <ShoppingCart size={40} strokeWidth={1.5} color="hsl(var(--text-dim))" />
-                  <p style={{ fontSize: '0.85rem', fontWeight: 600, margin: 0, fontFamily: 'Outfit', color: 'hsl(var(--text-primary))' }}>Your cart is empty</p>
-                  <p style={{ fontSize: '0.72rem', margin: 0, maxWidth: '220px', lineHeight: 1.5 }}>Please add some products from the catalog first.</p>
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'hsl(var(--text-dim))' }}>
+                  <Package size={36} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, fontFamily: 'Outfit' }}>Your case is currently empty</div>
+                  <div style={{ fontSize: '0.72rem', marginTop: 4 }}>Add surgical supplies or implants from the catalog to build an order.</div>
                 </div>
               ) : (
-                cartItems.map(({ product: p, qty, size }) => {
-                  const cs = catConfig[p.category] || DEFAULT_CAT;
-                  const images = getProductImages(p);
+                cartItems.map(item => {
+                  const images = getProductImages(item.product);
                   return (
-                    <div key={`${p.id}_${size || ''}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'hsl(var(--bg-dark))', borderRadius: 'var(--radius-md)', border: '1px solid hsl(var(--border-color))' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: cs.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid hsl(var(--border-color))', flexShrink: 0 }}>
+                    <div key={item.key} style={{ display: 'flex', gap: 12, padding: 12, background: 'hsl(var(--bg-dark))', borderRadius: 16, border: '1px solid hsl(var(--border-color))', alignItems: 'center' }}>
+                      <div style={{ width: 56, height: 56, borderRadius: 10, background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {images && images.length > 0 ? (
-                          <img src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          <img src={images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          <div style={{ color: cs.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', width: '100%', height: '100%' }}>
-                            {typeof cs.icon === 'string' ? cs.icon : <cs.icon size={17} />}
-                          </div>
+                          <Package size={20} style={{ opacity: 0.3 }} />
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'hsl(var(--text-primary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {p.name}
-                          {size && <span style={{ color: '#0ea5e9', fontSize: '0.7rem', fontWeight: 800, marginLeft: 6 }}>({size})</span>}
+                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {(item.product.name || '').replace(/`/g, '')}
                         </div>
-                        <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', marginTop: 1 }}>₹{p.price?.toLocaleString('en-IN')}</div>
+                        {item.size && (
+                          <div style={{ fontSize: '0.62rem', color: '#0ea5e9', fontWeight: 800, fontFamily: 'Outfit', marginTop: 1 }}>
+                            Size: {item.size}
+                          </div>
+                        )}
+                        <div style={{ fontSize: '0.76rem', fontWeight: 900, color: 'hsl(var(--text-primary))', marginTop: 3 }}>
+                          ₹{(item.product.price * item.qty).toLocaleString('en-IN')}
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', borderRadius: 10, padding: 4, gap: 8 }}>
                         <button
                           className="qty-btn"
-                          onClick={() => removeFromCart(p.id, size)}
+                          onClick={() => removeFromCart(item.product.id, item.size)}
+                          style={{ width: 22, height: 22 }}
                         >
-                          <Minus size={11} strokeWidth={2.5} />
+                          <Minus size={10} strokeWidth={2.5} />
                         </button>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 800, minWidth: 16, textAlign: 'center', fontFamily: 'Outfit' }}>{qty}</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', minWidth: 16, textAlign: 'center' }}>{item.qty}</span>
                         <button
                           className="qty-btn"
-                          onClick={() => addToCart(p, size)}
-                          disabled={p.stock_qty !== null && p.stock_qty !== undefined && qty >= p.stock_qty}
+                          onClick={() => addToCart(item.product, item.size)}
+                          disabled={item.product.stock_qty !== null && item.product.stock_qty !== undefined && item.qty >= item.product.stock_qty}
+                          style={{ width: 22, height: 22 }}
                         >
-                          <Plus size={11} strokeWidth={2.5} />
+                          <Plus size={10} strokeWidth={2.5} />
                         </button>
-                      </div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(var(--primary))', minWidth: 60, textAlign: 'right', fontFamily: 'Outfit' }}>
-                        ₹{(qty * p.price).toLocaleString('en-IN')}
                       </div>
                     </div>
                   );
@@ -955,31 +1359,33 @@ export default function ProductCatalog({
               )}
             </div>
 
-            <div style={{ padding: '16px 20px 20px', borderTop: '1px solid hsl(var(--border-color))', display: 'flex', flexDirection: 'column', gap: 10, background: 'hsl(var(--bg-dark))' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Amount</span>
-                  <span style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.3rem', color: 'hsl(var(--primary))' }}>₹{(cartTotal * 1.12).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                  <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-muted))' }}>Incl. 12% GST</span>
-                </div>
+            <div style={{ padding: 20, borderTop: '1px solid hsl(var(--border-color))', background: 'hsl(var(--bg-dark))' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Case Total</span>
+                <span style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit' }}>₹{cartTotal.toLocaleString('en-IN')}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
                 {cartItems.length > 0 ? (
                   <button
-                    onClick={placeOrder} disabled={placing}
+                    onClick={placeOrder}
+                    disabled={placing}
                     style={{
-                      padding: '12px 22px',
+                      flex: 1.2,
+                      padding: '12px 20px',
                       borderRadius: 12,
                       border: 'none',
-                      background: placing ? 'hsl(var(--border-color))' : 'linear-gradient(135deg, hsl(var(--primary)), #6366f1)',
+                      background: 'linear-gradient(135deg, #10b981, #0ea5e9)',
                       color: '#fff',
-                      fontSize: '0.85rem',
+                      fontSize: '0.84rem',
                       fontWeight: 800,
-                      cursor: placing ? 'not-allowed' : 'pointer',
+                      cursor: 'pointer',
                       fontFamily: 'Outfit',
-                      boxShadow: placing ? 'none' : '0 6px 18px rgba(14,165,233,0.3)',
-                      transition: 'all 0.2s',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px'
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 6px 18px rgba(16,185,129,0.25)',
+                      transition: 'all 0.2s'
                     }}
                   >
                     {placing ? 'Placing...' : 'Place Order'}
@@ -989,35 +1395,23 @@ export default function ProductCatalog({
                   <button
                     onClick={() => setCartOpen(false)}
                     style={{
+                      flex: 1,
                       padding: '12px 22px',
                       borderRadius: 12,
                       border: 'none',
                       background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
                       color: '#fff',
-                      fontSize: '0.85rem',
+                      fontSize: '0.84rem',
                       fontWeight: 800,
                       cursor: 'pointer',
                       fontFamily: 'Outfit',
-                      boxShadow: '0 6px 18px rgba(14,165,233,0.25)',
                       transition: 'all 0.2s',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px'
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(14,165,233,0.35)';
-                      const arrow = e.currentTarget.querySelector('.continue-arrow');
-                      if (arrow) arrow.style.transform = 'translateX(-3px)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.transform = 'none';
-                      e.currentTarget.style.boxShadow = '0 6px 18px rgba(14,165,233,0.25)';
-                      const arrow = e.currentTarget.querySelector('.continue-arrow');
-                      if (arrow) arrow.style.transform = 'none';
-                    }}
                   >
-                    <ArrowLeft className="continue-arrow" size={15} strokeWidth={2.5} style={{ transition: 'transform 0.2s ease' }} /> Continue Shopping
+                    <ArrowLeft size={15} strokeWidth={2.5} /> Continue Shopping
                   </button>
                 )}
               </div>
@@ -1029,7 +1423,7 @@ export default function ProductCatalog({
                     padding: '11px',
                     borderRadius: 12,
                     border: '1px solid hsl(var(--border-color))',
-                    background: 'hsl(var(--bg-dark))',
+                    background: 'transparent',
                     color: 'hsl(var(--text-muted))',
                     fontSize: '0.78rem',
                     fontWeight: 800,
@@ -1038,13 +1432,9 @@ export default function ProductCatalog({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                    gap: '8px'
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.background = 'hsl(var(--bg-card))';
-                    e.currentTarget.style.color = 'hsl(var(--text-primary))';
-                    e.currentTarget.style.borderColor = 'hsl(var(--border-light))';
                     const arrow = e.currentTarget.querySelector('.continue-arrow-sec');
                     if (arrow) arrow.style.transform = 'translateX(-3px)';
                   }}

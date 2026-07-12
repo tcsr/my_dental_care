@@ -21,6 +21,16 @@ const CAT_CONFIG = {
   PPE:         { bg: 'rgba(245,158,11,0.12)',  color: '#f59e0b', icon: '🧤' },
   Equipment:   { bg: 'rgba(168,85,247,0.12)',  color: '#a855f7', icon: '⚙️' },
   Consumables: { bg: 'rgba(236,72,153,0.12)', color: '#ec4899', icon: '📦' },
+  'Root Form':            { bg: 'rgba(99,102,241,0.12)', color: '#6366f1', icon: '🦷' },
+  Compression:            { bg: 'rgba(14,165,233,0.12)', color: '#0ea5e9', icon: '⚡' },
+  Basal:                  { bg: 'rgba(16,185,129,0.12)', color: '#10b981', icon: '📶' },
+  'Basal SS':             { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', icon: '📶' },
+  'Compression MU':       { bg: 'rgba(168,85,247,0.12)', color: '#a855f7', icon: '🔄' },
+  'Basal MU':             { bg: 'rgba(236,72,153,0.12)', color: '#ec4899', icon: '📦' },
+  Genweld:                { bg: 'rgba(239,68,68,0.12)',  color: '#ef4444', icon: '🔥' },
+  'Instant Provisionals': { bg: 'rgba(8,145,178,0.12)',  color: '#0891b2', icon: '⏱️' },
+  'General Instruments':  { bg: 'rgba(100,116,139,0.12)', color: '#64748b', icon: '🔧' },
+  'Bone Graft':           { bg: 'rgba(20,184,166,0.12)', color: '#14b8a6', icon: '💉' },
 };
 const DEFAULT_CAT_CONFIG = { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', icon: '📦' };
 
@@ -44,6 +54,7 @@ const splitImageUrls = (imageUrlStr) => {
 
 const getCategoryKey = (cat) => {
   if (!cat) return 'General';
+  if (CAT_CONFIG[cat]) return cat; // exact match on new taxonomy names first
   const c = cat.toLowerCase();
   if (c.includes('implant')) return 'Implants';
   if (c.includes('instrument') || c.includes('tool')) return 'Instruments';
@@ -82,7 +93,12 @@ const uploadImage = async (file) => {
   });
 };
 
-const B2B_CATEGORIES = ['Implant', 'Abutment', 'Crown', 'Bridge', 'Surgical Tool'];
+const B2B_CATEGORIES = [
+  'Implant', 'Abutment', 'Crown', 'Bridge', 'Surgical Tool',
+  // Expanded implant-type taxonomy (additive — existing products keep their current category)
+  'Root Form', 'Compression', 'Basal', 'Basal SS', 'Compression MU', 'Basal MU',
+  'Genweld', 'Instant Provisionals', 'General Instruments', 'Bone Graft'
+];
 const EMPTY_B2C = { name: '', category: 'Implants', price: '', stock_qty: '', description: '', active: true, image_url: '' };
 const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0', sizes: '' };
 const STERILIZATION_METHODS = ['ETO', 'Autoclave', 'Gamma'];

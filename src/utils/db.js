@@ -211,6 +211,11 @@ export async function seedSurgicalKit() {
 
 // Seed Initial B2B Data
 export async function seedDemoData() {
+  // Cloud sync (Supabase) must run OUTSIDE the Dexie transaction below — awaiting a real
+  // network call inside db.transaction() auto-commits the IDB transaction partway through,
+  // so every local write issued after it throws a DexieError (TransactionInactiveError).
+  let needsSupabaseSync = false;
+
   // Transaction serializes concurrent calls (e.g. React StrictMode's double-invoked
   // effects in dev) so the isSeeded check can't race across two callers.
   await db.transaction('rw', db.tables, async () => {
@@ -228,35 +233,7 @@ export async function seedDemoData() {
 
       // Seed the new 10 products locally
       await db.b2bProducts.bulkAdd(B2B_PRODUCTS_SEED);
-
-      // Seed the new 10 products to Supabase cloud
-      try {
-        await supabase.from('products').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        const supabasePayload = B2B_PRODUCTS_SEED.map(p => ({
-          name: p.name,
-          category: p.category === 'Implant' ? 'Implants' : p.category === 'Abutment' ? 'Materials' : 'Instruments',
-          price: p.price,
-          stock_qty: p.stock,
-          sku: p.sku,
-          purchase_cost: p.purchaseCost,
-          is_serialized: p.isSerialized,
-          image_url: p.image,
-          active: true,
-          sizes: p.sizes || ''
-        }));
-        const { data: insertedList, error: insertError } = await supabase.from('products').insert(supabasePayload).select();
-        if (!insertError && insertedList) {
-          const localList = await db.b2bProducts.toArray();
-          for (const localP of localList) {
-            const match = insertedList.find(r => r.name.toLowerCase() === localP.name.toLowerCase());
-            if (match) {
-              await db.b2bProducts.update(localP.id, { supabase_id: match.id });
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Supabase seeding failed:', e);
-      }
+      needsSupabaseSync = true;
 
       // Seed consistent B2B orders referencing product ID 1 (Two Piece Dental Implant)
       await db.b2bOrders.bulkAdd([
