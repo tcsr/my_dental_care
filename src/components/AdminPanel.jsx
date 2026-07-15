@@ -84,7 +84,7 @@ export default function AdminPanel() {
   const list = tab === 'pending' ? pending : approved;
 
   return (
-    <div style={{ padding: '24px 20px', maxWidth: 1000, margin: '0 auto' }}>
+    <div style={{ padding: '24px 0', width: '100%', margin: 0 }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h2 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1.35rem', color: 'hsl(var(--text-primary))', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
@@ -140,7 +140,7 @@ export default function AdminPanel() {
           message={tab === 'pending' ? 'No pending registrations to verify.' : 'No approved clinics yet.'} 
         />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', alignItems: 'stretch' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: '20px', alignItems: 'stretch' }}>
           {list.map(doc => (
             <DoctorCard
               key={doc.id}

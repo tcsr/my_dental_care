@@ -75,7 +75,7 @@ const ProProfileSettingsSubscreen = lazy(() => import('./components/ProProfileSe
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const OrderManagement = lazy(() => import('./components/OrderManagement'));
 const ProductManagement = lazy(() => import('./components/ProductManagement'));
-import { ShoppingBag, ShoppingCart, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList, Megaphone, Phone, Mail } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList, Megaphone, Phone, Mail } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -1351,35 +1351,7 @@ export default function App() {
 
             {/* Premium Globe i18n Dropdown & Profile Icon */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div
-                className="header-status-indicator"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '4px 10px',
-                  borderRadius: '12px',
-                  fontSize: '0.62rem',
-                  fontWeight: '800',
-                  fontFamily: 'Outfit',
-                  background: isOnline ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                  border: isOnline ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(239, 68, 68, 0.2)',
-                  color: isOnline ? '#10b981' : '#ef4444',
-                  marginRight: '6px',
-                  transition: 'all 0.3s ease',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em'
-                }} title={isOnline ? 'Online - Database synchronized' : 'Offline Mode - Saving modifications locally'}
-              >
-                <span style={{
-                  width: 5,
-                  height: 5,
-                  borderRadius: '50%',
-                  background: isOnline ? '#10b981' : '#ef4444',
-                  animation: isOnline ? 'none' : 'dotPulse 1.5s infinite'
-                }} />
-                {isOnline ? 'Online' : 'Offline'}
-              </div>
+
 
               {/* AI Support Chat Button */}
               <button
@@ -1627,7 +1599,7 @@ export default function App() {
           className="scroll-btn up"
           title="Scroll to Top"
         >
-          <ArrowUp size={16} />
+          <ChevronUp size={20} />
         </button>
         <button
           onClick={() => {
@@ -1637,40 +1609,17 @@ export default function App() {
           className="scroll-btn down"
           title="Scroll to Bottom"
         >
-          <ArrowDown size={16} />
+          <ChevronDown size={20} />
         </button>
         <a
           href="https://wa.me/919444126926?text=Hello%20Simple%20Implants%20Support%2C%20I%20am%20using%20the%20B2B%20catalog%20app%20and%20have%20a%20query%20regarding%20surgical%20supplies%2C%20clinical%20cases%2C%20or%20pricing.%20Could%20you%20please%20assist%20me%3F"
           target="_blank"
           rel="noopener noreferrer"
-          className="scroll-btn"
+          className="whatsapp-btn"
           title="Chat on WhatsApp"
-          style={{
-            background: '#25D366',
-            color: '#fff',
-            borderColor: '#25D366',
-            width: '48px',
-            height: '48px',
-            borderRadius: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(37, 211, 102, 0.35)',
-            border: 'none',
-            textDecoration: 'none',
-            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px) scale(1.15)';
-            e.currentTarget.style.boxShadow = '0 8px 20px rgba(37, 211, 102, 0.5)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'none';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 211, 102, 0.35)';
-          }}
         >
-          <svg viewBox="0 0 16 16" width="24" height="24" fill="currentColor">
-            <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232" />
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.248 8.477 3.517 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.731-1.456L0 24h.057zM12.008 2.18c-5.405 0-9.782 4.382-9.785 9.791a9.77 9.77 0 001.492 5.178l.327.52-1.002 3.657 3.743-.982.507.301a9.75 9.75 0 005.173 1.496c5.405 0 9.782-4.382 9.786-9.79a9.77 9.77 0 00-2.868-6.924A9.73 9.73 0 0012.008 2.18zm5.359 13.149c-.293-.146-1.737-.858-2.006-.955-.269-.098-.465-.147-.661.147-.196.293-.76.955-.931 1.15-.171.196-.343.22-.636.073-.293-.146-1.239-.456-2.361-1.458-.873-.779-1.462-1.74-1.633-2.033-.171-.293-.018-.452.129-.597.132-.131.293-.342.44-.513.146-.171.196-.293.293-.489.098-.196.049-.367-.024-.513-.074-.146-.661-1.593-.906-2.18-.238-.574-.48-.496-.661-.505-.171-.007-.367-.008-.563-.008-.196 0-.514.073-.783.366-.269.293-1.026 1.002-1.026 2.444s1.05 2.836 1.197 3.031c.147.196 2.067 3.156 5.006 4.428.699.303 1.246.484 1.671.62.704.223 1.345.192 1.851.116.564-.084 1.737-.709 1.982-1.393.245-.684.245-1.27.172-1.393-.073-.122-.269-.195-.563-.341z"/>
           </svg>
         </a>
       </div>

@@ -169,6 +169,27 @@ main::-webkit-scrollbar-thumb:hover {
   box-shadow: 0 12px 28px rgba(139, 92, 246, 0.05), 0 2px 8px rgba(0, 0, 0, 0.01);
 }
 
+/* Protect B2B status order cards left border color from general hover resets */
+.status-order-card {
+  border-top: 1.5px solid rgba(14, 165, 233, 0.12) !important;
+  border-right: 1.5px solid rgba(14, 165, 233, 0.12) !important;
+  border-bottom: 1.5px solid rgba(14, 165, 233, 0.12) !important;
+}
+
+.status-order-card:hover {
+  border-top-color: hsl(var(--primary) / 22%) !important;
+  border-right-color: hsl(var(--primary) / 22%) !important;
+  border-bottom-color: hsl(var(--primary) / 22%) !important;
+}
+
+/* Override desktop card grid layouts to allow full-width column view on B2B orders list */
+body.is-browser .orders-list-container {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  gap: 20px !important;
+}
+
 /* Premium Gradient Headers */
 .gradient-text {
   background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
@@ -181,7 +202,6 @@ main::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
 }
 
-/* Header layout - Safe Area Insets added to prevent status bar collision! */
 .app-header {
   flex-shrink: 0;
   height: calc(60px + env(safe-area-inset-top, 0px));
@@ -189,11 +209,11 @@ main::-webkit-scrollbar-thumb:hover {
   justify-content: space-between;
   align-items: center;
   padding: env(safe-area-inset-top, 0px) 20px 0;
-  background: hsl(var(--bg-card) / 85%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid hsl(var(--border-color));
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  background: rgba(240, 249, 255, 0.88) !important;
+  backdrop-filter: blur(20px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+  border-bottom: 1.5px solid rgba(14, 165, 233, 0.18) !important;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.05);
   z-index: 100;
 }
 
@@ -1150,67 +1170,78 @@ button {
 }
 
 .scroll-btn {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background: hsla(var(--bg-card) / 45%);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid hsla(var(--primary) / 10%);
-  color: hsl(var(--text-primary));
-  opacity: 0.65;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(14, 165, 233, 0.18);
+  color: #0ea5e9;
+  opacity: 0.95;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.08);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
 }
 
-.scroll-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: -1;
-}
-
 .scroll-btn svg {
-  width: 14px;
-  height: 14px;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   z-index: 1;
 }
 
 .scroll-btn:hover {
   opacity: 1 !important;
   color: white !important;
-  border-color: transparent;
-  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);
-  transform: translateY(-2px);
-}
-
-.scroll-btn:hover::before {
-  opacity: 1;
+  border-color: transparent !important;
+  background: linear-gradient(135deg, #0ea5e9 0%, #4f46e5 100%) !important;
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.35) !important;
+  transform: translateY(-3px) scale(1.06);
 }
 
 .scroll-btn.up:hover svg {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.1);
 }
 
 .scroll-btn.down:hover svg {
-  transform: translateY(2px);
+  transform: translateY(3px) scale(1.1);
 }
 
 .scroll-btn:active {
-  transform: scale(0.9) !important;
+  transform: scale(0.92) !important;
+}
+
+/* Premium WhatsApp Floating Button Styling */
+.whatsapp-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%) !important;
+  color: white !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 8px 24px rgba(37, 211, 102, 0.35) !important;
+  border: none !important;
+  text-decoration: none !important;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  cursor: pointer !important;
+}
+
+.whatsapp-btn:hover {
+  transform: translateY(-4px) scale(1.1) !important;
+  box-shadow: 0 12px 30px rgba(37, 211, 102, 0.5) !important;
+  opacity: 1 !important;
+}
+
+.whatsapp-btn:active {
+  transform: scale(0.92) !important;
 }
 
 /* Premium Responsive Modal Classes */
@@ -1318,14 +1349,15 @@ button {
     height: 81px !important;
     padding: 0 24px !important;
     box-sizing: border-box !important;
-    background: hsl(var(--bg-card) / 75%) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
+    background: rgba(240, 249, 255, 0.88) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+    border-bottom: 1.5px solid rgba(14, 165, 233, 0.18) !important;
   }
 
   body.is-browser .floating-scroll-controls {
-    right: 24px !important;
-    bottom: 24px !important;
+    right: 12px !important;
+    bottom: 20px !important;
   }
 
   body.is-browser .sidebar-header button {
@@ -1344,9 +1376,9 @@ button {
   }
 
   body.is-browser main:not(.guest-main) {
-    padding: 32px 24px !important;
-    max-width: 1400px;
-    margin: 0 auto;
+    padding: 24px 72px 24px 16px !important;
+    max-width: 100%;
+    margin: 0;
   }
 
   body.is-browser main.guest-main {
@@ -2520,18 +2552,12 @@ body.is-browser .floating-cart-pill:hover {
   top: 0;
   z-index: 1000;
   overflow: hidden;
-  background:
-    radial-gradient(120% 260% at 12% -60%, rgba(14, 165, 233, 0.16), transparent 55%),
-    radial-gradient(100% 220% at 88% 160%, rgba(99, 102, 241, 0.14), transparent 55%),
-    linear-gradient(135deg,
-      rgba(255, 255, 255, 0.97) 0%,
-      rgba(240, 249, 255, 0.94) 50%,
-      rgba(224, 242, 254, 0.92) 100%) !important;
-  backdrop-filter: blur(24px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  background: rgba(240, 249, 255, 0.88) !important;
+  backdrop-filter: blur(20px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  border-bottom: 1px solid rgba(14, 165, 233, 0.16) !important;
-  box-shadow: 0 4px 32px rgba(14, 165, 233, 0.08), 0 1px 4px rgba(15, 23, 42, 0.03) !important;
+  border-bottom: 1.5px solid rgba(14, 165, 233, 0.18) !important;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.05) !important;
 }
 
 .guest-header::after {
@@ -2541,21 +2567,15 @@ body.is-browser .floating-cart-pill:hover {
   right: 0;
   bottom: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.55) 25%, rgba(99, 102, 241, 0.55) 75%, transparent);
+  background: rgba(14, 165, 233, 0.15);
   pointer-events: none;
 }
 
 .guest-header.scrolled {
   height: 64px !important;
-  background:
-    radial-gradient(120% 260% at 12% -60%, rgba(14, 165, 233, 0.20), transparent 55%),
-    radial-gradient(100% 220% at 88% 160%, rgba(99, 102, 241, 0.18), transparent 55%),
-    linear-gradient(135deg,
-      rgba(255, 255, 255, 0.99) 0%,
-      rgba(240, 249, 255, 0.97) 50%,
-      rgba(224, 242, 254, 0.95) 100%) !important;
-  box-shadow: 0 8px 40px rgba(14, 165, 233, 0.14), 0 2px 8px rgba(15, 23, 42, 0.06) !important;
-  border-bottom: 1px solid rgba(14, 165, 233, 0.22) !important;
+  background: rgba(240, 249, 255, 0.96) !important;
+  box-shadow: 0 8px 30px rgba(14, 165, 233, 0.09) !important;
+  border-bottom: 1.5px solid rgba(14, 165, 233, 0.22) !important;
 }
 
 
@@ -2634,52 +2654,32 @@ body.is-browser .floating-cart-pill:hover {
 }
 
 .guest-nav-link {
-  font-size: 0.94rem !important;
+  font-size: 0.92rem !important;
   font-weight: 700 !important;
-  color: #1e293b !important;
+  color: #475569 !important; /* Soft Slate-600 */
   text-decoration: none !important;
   font-family: 'Outfit', sans-serif !important;
   position: relative !important;
   padding: 8px 16px !important;
   border-radius: 12px !important;
   background: transparent !important;
+  border: 1.5px solid transparent !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   display: inline-block !important;
 }
 
 .guest-nav-link:hover {
   color: #0ea5e9 !important;
-  background: rgba(14, 165, 233, 0.08) !important;
-  transform: translateY(-1px) !important;
+  background: rgba(14, 165, 233, 0.05) !important;
+  border-color: rgba(14, 165, 233, 0.08) !important;
+  transform: translateY(-1.5px) !important;
 }
 
 .guest-nav-link.active {
   color: #0ea5e9 !important;
-  background: rgba(14, 165, 233, 0.12) !important;
-}
-
-.guest-nav-link::after {
-  content: '' !important;
-  position: absolute !important;
-  bottom: 4px !important;
-  left: 50% !important;
-  width: 0 !important;
-  height: 2.5px !important;
-  background: #0ea5e9 !important;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  transform: translateX(-50%) !important;
-  border-radius: 2px !important;
-  opacity: 0 !important;
-}
-
-.guest-nav-link.active::after {
-  width: 16px !important;
-  opacity: 1 !important;
-}
-
-.guest-nav-link:hover::after {
-  width: 12px !important;
-  opacity: 0.7 !important;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(99, 102, 241, 0.06) 100%) !important;
+  border-color: rgba(14, 165, 233, 0.22) !important;
+  box-shadow: 0 4px 12px -2px rgba(14, 165, 233, 0.08) !important;
 }
 
 @media (max-width: 768px) {

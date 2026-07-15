@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
-import { Play, X, Film, Trash2, Edit3, Plus, ExternalLink, ShoppingBag, Activity, Package, MessageSquare, Settings, ChevronDown, BookOpen, Link } from 'lucide-react';
+import { Play, X, Film, Trash2, Edit3, Plus, ExternalLink, ShoppingBag, Activity, Package, MessageSquare, Settings, ChevronDown, BookOpen, Link, Search } from 'lucide-react';
 import PremiumSelect from './ui/PremiumSelect';
 import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
@@ -11,6 +11,23 @@ export default function ProGuidesSubscreen({ lang, isLoggedIn = true }) {
   const guides = useLiveQuery(() => db.customGuides.toArray()) || [];
   const [guideSubTab, setGuideSubTab] = useState('video'); // 'video' | 'written'
   const [expandedSection, setExpandedSection] = useState(null);
+  
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('All');
+  
+  const GUIDE_CATEGORIES = ['All', 'Implant', 'Surgical', 'Abutment', 'Crown', 'Portal Guide'];
+
+  const filteredGuides = useMemo(() => {
+    return guides.filter(guide => {
+      const matchCat = category === 'All' || guide.tag === category || (category === 'Portal Guide' && guide.tag === 'System Guide');
+      const q = search.toLowerCase();
+      const matchSearch = !q || 
+        guide.title?.toLowerCase().includes(q) || 
+        (guide.desc && guide.desc.toLowerCase().includes(q)) || 
+        (guide.tag && guide.tag.toLowerCase().includes(q));
+      return matchCat && matchSearch;
+    });
+  }, [guides, search, category]);
   
   // Modal player state
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -146,7 +163,7 @@ export default function ProGuidesSubscreen({ lang, isLoggedIn = true }) {
   };
 
   return (
-    <div className="animate-fade-in" style={{ paddingBottom: '30px' }}>
+    <div className="animate-fade-in" style={{ padding: '24px 24px 30px 24px', boxSizing: 'border-box' }}>
       
       {/* Intro Header */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
@@ -308,7 +325,92 @@ export default function ProGuidesSubscreen({ lang, isLoggedIn = true }) {
       {/* Videos List Grid */}
       {guideSubTab === 'video' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {guides.map((video) => (
+          
+          {/* Glassmorphic Search & Filters */}
+          <div className="guides-search-filters" style={{ background: 'rgba(255,255,255,0.7)', borderRadius: 24, padding: '16px 16px 14px', border: '1.5px solid rgba(14,165,233,0.18)', marginBottom: 12, boxShadow: '0 8px 30px -10px rgba(14,165,233,0.15)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)' }}>
+            {/* Search Input */}
+            <div style={{ position: 'relative', marginBottom: 12 }}>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search B2B video guides..."
+                style={{ width: '100%', padding: '13px 40px 13px 42px', background: 'rgba(255, 255, 255, 0.95)', border: '1.5px solid rgba(14,165,233,0.2)', borderRadius: 16, fontSize: '0.88rem', color: 'hsl(var(--text-primary))', outline: 'none', fontFamily: 'Outfit', boxSizing: 'border-box', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 6px rgba(15,23,42,0.03)' }}
+                onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.background = '#ffffff'; e.target.style.boxShadow = '0 10px 25px -10px rgba(14,165,233,0.22), 0 0 0 3px rgba(14, 165, 233, 0.1)'; }}
+                onBlur={e => { e.target.style.borderColor = 'rgba(14,165,233,0.2)'; e.target.style.background = 'rgba(255, 255, 255, 0.95)'; e.target.style.boxShadow = '0 2px 6px rgba(15,23,42,0.03)'; }}
+              />
+              <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#0ea5e9', pointerEvents: 'none', zIndex: 2 }} />
+              {search && (
+                <button
+                  onClick={() => { setSearch(''); setCategory('All'); }}
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 20, height: 20, borderRadius: '50%',
+                    color: '#ef4444'
+                  }}
+                >
+                  <X size={12} strokeWidth={2.5} />
+                </button>
+              )}
+            </div>
+
+            {/* Category Chips Scrollbar */}
+            <div className="cat-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingTop: 2, paddingBottom: 4, paddingLeft: 2, paddingRight: 2, scrollbarWidth: 'none', justifyContent: 'flex-start', maskImage: 'linear-gradient(to right, white 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, white 85%, transparent)' }}>
+              <style>{`.cat-scroll::-webkit-scrollbar{display:none}`}</style>
+              {GUIDE_CATEGORIES.map(cat => {
+                const isActive = category.toLowerCase() === cat.toLowerCase();
+                return (
+                  <button
+                    key={cat}
+                    className="cat-chip"
+                    onClick={() => setCategory(cat)}
+                    style={{
+                      flexShrink: 0,
+                      padding: '8px 16px',
+                      borderRadius: 24,
+                      fontSize: '0.76rem',
+                      fontWeight: 800,
+                      fontFamily: 'Outfit',
+                      border: '1.5px solid',
+                      cursor: 'pointer',
+                      transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                      background: isActive ? 'linear-gradient(135deg, #0ea5e9, #4f46e5)' : 'rgba(255,255,255,0.7)',
+                      borderColor: isActive ? '#0ea5e9' : 'rgba(14,165,233,0.12)',
+                      color: isActive ? '#fff' : 'hsl(var(--text-muted))',
+                      boxShadow: isActive ? '0 4px 12px -4px rgba(14,165,233,0.4)' : '0 2px 4px rgba(15,23,42,0.02)',
+                      backdropFilter: isActive ? 'none' : 'blur(6px)',
+                    }}
+                    onMouseEnter={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.borderColor = '#0ea5e9';
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.95)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.borderColor = 'rgba(14,165,233,0.12)';
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.7)';
+                        e.currentTarget.style.transform = 'none';
+                      }
+                    }}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {filteredGuides.map((video) => (
             <div key={video.id} className="glass-card" style={{ padding: '14px', margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid hsl(var(--border-color))' }}>
               
               {/* Thumbnail Mock Container */}
@@ -372,11 +474,11 @@ export default function ProGuidesSubscreen({ lang, isLoggedIn = true }) {
             </div>
           ))}
   
-          {guides.length === 0 && (
+          {filteredGuides.length === 0 && (
             <EmptyStateCard 
               icon={Film} 
               title="No Video Guides Found" 
-              message={t('noGuides', lang)} 
+              message={search || category !== 'All' ? "Try a different search or tag category." : t('noGuides', lang)} 
             />
           )}
         </div>

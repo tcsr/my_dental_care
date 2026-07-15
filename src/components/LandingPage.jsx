@@ -125,26 +125,26 @@ function Carousel() {
                 width: cardW,
                 flexShrink: 0,
                 background: isHov
-                  ? 'rgba(255,255,255,0.98)'
-                  : 'rgba(255,255,255,0.80)',
-                borderRadius: 20,
+                  ? 'rgba(255, 255, 255, 0.95)'
+                  : 'rgba(255, 255, 255, 0.70)',
+                borderRadius: 24,
                 padding: 20,
-                border: isHov ? '1.5px solid rgba(14,165,233,0.5)' : '1.5px solid rgba(14,165,233,0.14)',
+                border: isHov ? '1.5px solid rgba(14, 165, 233, 0.4)' : '1.5px solid rgba(255, 255, 255, 0.4)',
                 boxShadow: isHov
-                  ? '0 24px 56px rgba(14,165,233,0.18), 0 6px 20px rgba(99,102,241,0.10)'
-                  : '0 4px 20px rgba(15,23,42,0.06)',
+                  ? '0 30px 60px -15px rgba(14, 165, 233, 0.22), 0 12px 30px -10px rgba(99, 102, 241, 0.15)'
+                  : '0 10px 30px -10px rgba(15, 23, 42, 0.08)',
                 cursor: 'pointer',
                 display: 'flex', flexDirection: 'column', gap: 14,
-                minHeight: 300, boxSizing: 'border-box',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-                transform: isHov ? 'translateY(-6px) scale(1.01)' : 'none',
+                minHeight: 320, boxSizing: 'border-box',
+                backdropFilter: 'blur(30px)',
+                WebkitBackdropFilter: 'blur(30px)',
+                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                transform: isHov ? 'translateY(-8px) scale(1.02)' : 'none',
               }}
             >
               {/* Image area */}
               <div style={{
-                height: 150, borderRadius: 14,
+                height: 150, borderRadius: 16,
                 background: isHov
                   ? 'linear-gradient(160deg, rgba(14,165,233,0.06), rgba(99,102,241,0.04))'
                   : 'linear-gradient(160deg, rgba(241,245,249,0.9), rgba(248,250,252,0.5))',
@@ -167,12 +167,13 @@ function Carousel() {
               {/* Info */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
                 <span style={{
-                  fontSize: '0.6rem', fontWeight: 800,
-                  color: isHov ? '#0ea5e9' : '#64748b',
-                  textTransform: 'uppercase', letterSpacing: '0.07em',
-                  background: isHov ? 'rgba(14,165,233,0.1)' : 'rgba(100,116,139,0.08)',
-                  padding: '3px 10px', borderRadius: 7, width: 'fit-content',
-                  transition: 'all 0.3s',
+                  fontSize: '0.58rem', fontWeight: 850,
+                  color: isHov ? '#0284c7' : '#64748b',
+                  textTransform: 'uppercase', letterSpacing: '0.08em',
+                  background: isHov ? 'linear-gradient(135deg, rgba(14,165,233,0.15), rgba(99,102,241,0.15))' : 'rgba(100,116,139,0.06)',
+                  padding: '4px 12px', borderRadius: 20, width: 'fit-content',
+                  transition: 'all 0.3s ease',
+                  border: isHov ? '1px solid rgba(14,165,233,0.2)' : '1px solid rgba(0,0,0,0.02)'
                 }}>
                   {prod.category}
                 </span>
@@ -188,23 +189,23 @@ function Carousel() {
                 }}>{prod.desc}</p>
               </div>
               {/* Footer */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 4 }}>
                 <span style={{
-                  fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.05rem',
+                  fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.1rem',
                   color: isHov ? '#0ea5e9' : '#0f172a',
-                  transition: 'color 0.3s',
+                  transition: 'color 0.3s ease',
                 }}>
                   ₹{prod.price.toLocaleString('en-IN')}
                 </span>
                 <span style={{
-                  fontSize: '0.72rem', fontWeight: 700, color: 'white',
+                  fontSize: '0.7rem', fontWeight: 800, color: 'white',
                   background: isHov
-                    ? 'linear-gradient(135deg, #0ea5e9, #6366f1)'
-                    : 'linear-gradient(135deg, #94a3b8, #64748b)',
-                  padding: '7px 16px', borderRadius: 999,
+                    ? 'linear-gradient(135deg, #0ea5e9, #4f46e5)'
+                    : 'linear-gradient(135deg, #64748b, #475569)',
+                  padding: '8px 16px', borderRadius: 20,
                   display: 'inline-flex', alignItems: 'center', gap: 6,
-                  transition: 'all 0.3s',
-                  boxShadow: isHov ? '0 6px 14px rgba(14,165,233,0.30)' : 'none',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  boxShadow: isHov ? '0 8px 20px -6px rgba(14,165,233,0.5)' : 'none',
                 }}>
                   View Details <ArrowRight size={12} style={{ transform: isHov ? 'translateX(3px)' : 'none', transition: 'transform 0.3s' }} />
                 </span>
@@ -360,12 +361,12 @@ export default function LandingPage({ onLoginRequired }) {
               {STATS.map((s, i) => {
                 const Icon = s.icon;
                 return (
-                  <div key={i} className="lp-stat-card" style={{ background: 'rgba(255,255,255,0.82)', borderRadius: 18, padding: '22px 18px', textAlign: 'center', border: `1px solid ${s.color}22`, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: '0 4px 20px rgba(15,23,42,0.06)' }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${s.color}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                      <Icon size={20} color={s.color} />
+                  <div key={i} className="lp-stat-card" style={{ background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: '24px 20px', textAlign: 'center', border: `1.5px solid rgba(255, 255, 255, 0.4)`, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.08)', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 14, background: `${s.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', border: `1px solid ${s.color}22` }}>
+                      <Icon size={22} color={s.color} />
                     </div>
-                    <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.6rem', color: '#0f172a', lineHeight: 1 }}>{s.value}</div>
-                    <div style={{ fontSize: '0.67rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 6 }}>{s.label}</div>
+                    <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.8rem', color: '#0f172a', lineHeight: 1, letterSpacing: '-0.02em' }}>{s.value}</div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 8 }}>{s.label}</div>
                   </div>
                 );
               })}
@@ -376,7 +377,7 @@ export default function LandingPage({ onLoginRequired }) {
         {/* ═══════════ ABOUT ═══════════ */}
         <section id="about" className="lp-section" style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px 80px' }}>
           <Reveal>
-            <div className="lp-about-grid" style={{ background: 'rgba(255,255,255,0.78)', borderRadius: 28, padding: '40px 44px', border: '1px solid rgba(14,165,233,0.12)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 8px 48px rgba(14,165,233,0.07)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'center' }}>
+            <div className="lp-about-grid" style={{ background: 'rgba(255,255,255,0.72)', borderRadius: 32, padding: '44px 48px', border: '1.5px solid rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', boxShadow: '0 20px 50px -10px rgba(14,165,233,0.08)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'center' }}>
               <div>
                 <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase' }}>About Us</span>
                 <h2 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.9rem', color: '#0f172a', margin: '10px 0 16px', letterSpacing: '-0.02em' }}>
@@ -398,7 +399,7 @@ export default function LandingPage({ onLoginRequired }) {
                 ].map((item, i) => {
                   const Icon = item.icon;
                   return (
-                    <div key={i} style={{ background: `linear-gradient(135deg, ${item.color}0c, rgba(255,255,255,0.4))`, borderRadius: 16, padding: 22, border: `1px solid ${item.color}20` }}>
+                    <div key={i} style={{ background: `linear-gradient(135deg, ${item.color}08, rgba(255,255,255,0.5))`, borderRadius: 20, padding: 24, border: `1px solid rgba(255, 255, 255, 0.5)`, boxShadow: '0 8px 24px -8px rgba(15,23,42,0.06)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                         <div style={{ width: 38, height: 38, borderRadius: 10, background: `${item.color}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Icon size={18} color={item.color} />
@@ -474,8 +475,8 @@ export default function LandingPage({ onLoginRequired }) {
                 ].map((item, i) => {
                   const Icon = item.icon;
                   return (
-                    <div key={i} className="lp-support-card" style={{ background: 'rgba(255,255,255,0.82)', borderRadius: 18, padding: 26, border: `1px solid ${item.color}18`, display: 'flex', flexDirection: 'column', gap: 13, backdropFilter: 'blur(12px)', boxShadow: '0 2px 16px rgba(15,23,42,0.05)' }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 12, background: `${item.color}12`, color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon size={20} /></div>
+                    <div key={i} className="lp-support-card" style={{ background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 26, border: `1.5px solid rgba(255, 255, 255, 0.4)`, display: 'flex', flexDirection: 'column', gap: 13, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.06)', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                      <div style={{ width: 46, height: 46, borderRadius: 14, background: `${item.color}12`, color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${item.color}22` }}><Icon size={20} /></div>
                       <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '0.84rem', color: '#0f172a', letterSpacing: '0.02em' }}>{item.title}</div>
                       <p style={{ fontSize: '0.76rem', color: '#64748b', lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
                     </div>
