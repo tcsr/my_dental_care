@@ -168,7 +168,7 @@ function DonutChart({ data, labelKey = 'label', valueKey = 'value' }) {
 /* ─── Card wrapper ─── */
 function ChartCard({ title, icon, children }) {
   return (
-    <div className="glass-card" style={{ margin: 0, padding: '16px 18px' }}>
+    <div className="sales-card-premium" style={{ padding: '16px 18px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
         <div style={{ color: '#0ea5e9', display: 'flex', background: 'rgba(14,165,233,0.1)', width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           {icon}
@@ -345,12 +345,12 @@ export default function SalesAnalytics({ setActiveSubTab, setOrderDispatchFilter
           { label: 'Avg Order Value', value: fmt(avgOrderValue), color: '#10b981', icon: <CreditCard size={14} />, navTab: 'orders' },
           { label: 'Delivered Revenue', value: fmt(deliveredRevenue), color: '#f59e0b', icon: <Package size={14} />, navTab: 'orders' },
         ].map((kpi, i) => (
-          <div key={i} className="glass-card kpi-card-hover" 
+          <div key={i} className="sales-card-premium kpi-card-hover" 
             onClick={() => { 
               if (onNavigate) onNavigate(kpi.navTab);
             }}
             style={{
-              margin: 0, padding: '14px 16px', borderLeft: `4px solid ${kpi.color}`,
+              padding: '14px 16px', borderLeft: `4px solid ${kpi.color}`,
               background: `linear-gradient(135deg, hsl(var(--bg-card)) 0%, ${kpi.color}06 100%)`,
               cursor: 'pointer',
               transition: 'transform 0.2s, box-shadow 0.2s'

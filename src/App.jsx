@@ -684,106 +684,168 @@ export default function App() {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 99998,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      background: '#0a0f1e',
+      background: '#ffffff',
+      overflow: 'hidden'
     }}>
       <style>{`
-        @keyframes _bgPulse  { from { opacity:0.7; } to { opacity:1; } }
-        @keyframes _ringExp  { 0% { transform:scale(0.8); opacity:0.6; } 100% { transform:scale(1.2); opacity:0; } }
-        @keyframes _logoFlt  { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-9px); } }
-        @keyframes _fadeUp   { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes _shimmer  { 0% { background-position:100% 0; } 100% { background-position:-100% 0; } }
-        @keyframes _dotB     { 0%,75%,100% { transform:translateY(0); opacity:0.4; } 38% { transform:translateY(-8px); opacity:1; } }
-        ._splash-bg::before {
-          content:''; position:absolute; inset:0; pointer-events:none;
-          background:
-            radial-gradient(ellipse 70% 60% at 20% 30%, rgba(14,165,233,0.12) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 50% at 80% 70%, rgba(99,102,241,0.10) 0%, transparent 60%);
-          animation: _bgPulse 4s ease-in-out infinite alternate;
+        @keyframes _glowMove {
+          0% { transform: translate(-10%, -10%) scale(1); }
+          100% { transform: translate(10%, 10%) scale(1.1); }
+        }
+        @keyframes _glowMove2 {
+          0% { transform: translate(15%, -15%) scale(0.9); }
+          100% { transform: translate(-15%, 15%) scale(1.05); }
+        }
+        @keyframes _rotateOrbital {
+          0% { transform: rotate(0deg); opacity: 0.2; }
+          50% { transform: rotate(180deg); opacity: 0.5; }
+          100% { transform: rotate(360deg); opacity: 0.2; }
+        }
+        @keyframes _logoFloat {
+          0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+          50% { transform: translateY(-10px) rotate(2deg) scale(1.03); }
+        }
+        @keyframes _logoShine {
+          0% { background-position: 150% 0; }
+          100% { background-position: -150% 0; }
+        }
+        @keyframes _gridMove {
+          from { background-position: 0 0; }
+          to { background-position: 56px 56px; }
+        }
+        @keyframes _barProgress {
+          0% { background-position: 100% 0; }
+          100% { background-position: -100% 0; }
+        }
+        @keyframes _fadeUp {
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        ._s-glow {
+          position: absolute;
+          width: 600px;
+          height: 600px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(14, 165, 233, 0.08) 0%, rgba(99, 102, 241, 0.03) 50%, transparent 70%);
+          filter: blur(80px);
+          animation: _glowMove 8s ease-in-out infinite alternate;
+          pointer-events: none;
+        }
+        ._s-glow-2 {
+          position: absolute;
+          width: 400px;
+          height: 400px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, rgba(14, 165, 233, 0.02) 50%, transparent 70%);
+          filter: blur(60px);
+          animation: _glowMove2 6s ease-in-out infinite alternate-reverse;
+          pointer-events: none;
+        }
+        ._s-grid {
+          position: absolute;
+          inset: 0;
+          background-image:
+            linear-gradient(rgba(14, 165, 233, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(14, 165, 233, 0.03) 1px, transparent 1px);
+          background-size: 56px 56px;
+          mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 80%);
+          WebkitMaskImage: radial-gradient(circle at 50% 50%, black 30%, transparent 80%);
+          pointer-events: none;
+          animation: _gridMove 24s linear infinite;
+        }
+        ._s-orbital {
+          position: absolute;
+          border-radius: 50%;
+          border: 1px dashed rgba(14, 165, 233, 0.25);
+          animation: _rotateOrbital 12s linear infinite;
+          pointer-events: none;
+        }
+        ._s-orbital-1 { width: 210px; height: 210px; }
+        ._s-orbital-2 { width: 280px; height: 280px; animation-duration: 18s; animation-direction: reverse; }
+
+        ._s-logo {
+          position: relative;
+          width: 148px;
+          height: 148px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.95);
+          border: 1.5px solid rgba(14, 165, 233, 0.22);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow:
+            0 16px 40px rgba(148, 163, 184, 0.16),
+            0 4px 12px rgba(14, 165, 233, 0.08),
+            inset 0 1px 1px rgba(255, 255, 255, 1);
+          animation: _logoFloat 4s ease-in-out infinite;
+          transform-style: preserve-3d;
+        }
+        ._s-logo::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.4) 45%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.4) 55%, transparent 65%);
+          background-size: 200% 100%;
+          background-position: 200% 0;
+          animation: _logoShine 3s ease-in-out infinite;
+          border-radius: 50%;
+          pointer-events: none;
+        }
+        ._s-loader-container {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+          max-width: 220px;
+          opacity: 0;
+          transform: translateY(15px);
+          animation: _fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+        }
+        ._s-bar-track {
+          position: relative;
+          width: 100%;
+          height: 4px;
+          border-radius: 99px;
+          background: rgba(148, 163, 184, 0.12);
+          border: 1px solid rgba(148, 163, 184, 0.15);
+          overflow: hidden;
+          box-shadow: 0 0 10px rgba(14, 165, 233, 0.1), inset 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        ._s-bar {
+          position: absolute;
+          inset: 0;
+          border-radius: 99px;
+          background: linear-gradient(90deg, #38bdf8, #818cf8, #34d399, #38bdf8);
+          background-size: 200% 100%;
+          animation: _barProgress 2.2s linear infinite;
         }
       `}</style>
 
-      {/* Background glow layer */}
-      <div className="_splash-bg" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
+      <div className="_s-glow" />
+      <div className="_s-glow-2" />
+      <div className="_s-grid" />
 
-      {/* Grid */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        backgroundImage: 'linear-gradient(rgba(14,165,233,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(14,165,233,0.035) 1px, transparent 1px)',
-        backgroundSize: '48px 48px',
-        maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%)',
-        WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%)',
-      }} />
-
-      {/* Expanding rings */}
-      {[150, 220, 300].map((size, i) => (
-        <div key={size} style={{
-          position: 'absolute', width: size, height: size, borderRadius: '50%',
-          border: '1px solid rgba(14,165,233,0.14)',
-          animation: `_ringExp 3s ease-out ${i * 0.9}s infinite`,
-        }} />
-      ))}
-
-      {/* Floating logo */}
-      <div style={{
-        position: 'relative', zIndex: 1,
-        width: 82, height: 82, borderRadius: 26,
-        background: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 0 0 1px rgba(255,255,255,0.1), 0 24px 56px rgba(14,165,233,0.45), 0 0 100px rgba(99,102,241,0.2)',
-        animation: '_logoFlt 3.2s ease-in-out infinite, _fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both',
-        marginBottom: 26,
-      }}>
-        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(255,255,255,0.2)" />
-          <path d="M8 11.5c.5-1 1.5-2 3-2s2.5 1 3 2c.5 1.5.5 3.5 0 4.5s-2 1.5-3 1.5-2.5-.5-3-1.5c-.5-1-.5-3 0-4.5z" fill="none" />
-        </svg>
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 30 }}>
+        <div className="_s-orbital _s-orbital-1" />
+        <div className="_s-orbital _s-orbital-2" />
+        <div className="_s-logo">
+          <img 
+            src={`${import.meta.env.BASE_URL || '/'}logo.png`} 
+            alt="Simple Implants Logo" 
+            style={{ width: 96, height: 96, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(14, 165, 233, 0.25))' }} 
+          />
+        </div>
       </div>
 
-      {/* Brand name */}
-      <div style={{
-        position: 'relative', zIndex: 1,
-        fontFamily: 'Outfit, -apple-system, sans-serif', fontWeight: 900, fontSize: '1.65rem',
-        letterSpacing: '-0.04em', color: '#fff',
-        animation: '_fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.15s both', marginBottom: 5
-      }}>
-        <span style={{ background: 'linear-gradient(135deg,#38bdf8,#818cf8)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Simple</span>
-        {' '}Implant
-      </div>
-
-      {/* Tagline */}
-      <div style={{
-        position: 'relative', zIndex: 1,
-        fontFamily: 'Outfit, -apple-system, sans-serif', fontWeight: 700, fontSize: '0.68rem',
-        letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)',
-        animation: '_fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.3s both', marginBottom: 42
-      }}>
-        Dental Commerce Platform
-      </div>
-
-      {/* Shimmer bar */}
-      <div style={{
-        position: 'relative', zIndex: 1,
-        width: 168, height: 3, borderRadius: 99,
-        background: 'rgba(255,255,255,0.07)', overflow: 'hidden',
-        animation: '_fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.4s both'
-      }}>
-        <div style={{
-          position: 'absolute', inset: 0, borderRadius: 99,
-          background: 'linear-gradient(90deg, transparent, #0ea5e9, #6366f1, #0ea5e9, transparent)',
-          backgroundSize: '300% 100%',
-          animation: '_shimmer 1.6s linear infinite'
-        }} />
-      </div>
-
-      {/* Bouncing dots */}
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: 7, marginTop: 20, animation: '_fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.5s both' }}>
-        {[0, 0.22, 0.44].map((delay, i) => (
-          <div key={i} style={{
-            width: 5, height: 5, borderRadius: '50%',
-            background: 'rgba(56,189,248,0.55)',
-            animation: `_dotB 1.3s ease-in-out ${delay}s infinite`
-          }} />
-        ))}
+      <div className="_s-loader-container">
+        <div className="_s-bar-track">
+          <div className="_s-bar" />
+        </div>
       </div>
     </div>
   );

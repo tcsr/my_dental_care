@@ -969,6 +969,56 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '30px' }}>
+      
+      {/* Component Specific Style Overrides */}
+      <style>{`
+        .sales-grid-container {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 16px;
+          width: 100%;
+        }
+        @media (min-width: 992px) {
+          .sales-grid-container {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+          }
+        }
+        .sales-input {
+          width: 100%;
+          padding: 10px 14px !important;
+          font-size: 0.78rem !important;
+          border-radius: 10px !important;
+          border: 1.5px solid rgba(14, 165, 233, 0.15) !important;
+          outline: none !important;
+          background: rgba(255, 255, 255, 0.85) !important;
+          color: hsl(var(--text-primary)) !important;
+          font-family: 'Outfit' !important;
+          transition: all 0.25s ease !important;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01) !important;
+          box-sizing: border-box !important;
+        }
+        .sales-input:focus {
+          border-color: hsl(var(--primary)) !important;
+          box-shadow: 0 4px 14px rgba(14, 165, 233, 0.12) !important;
+          background: #fff !important;
+        }
+        .sales-card-premium {
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(14, 165, 233, 0.14) !important;
+          border-radius: 20px !important;
+          padding: 20px !important;
+          box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.03), 0 4px 10px -3px rgba(0, 0, 0, 0.01) !important;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .sales-card-premium:hover {
+          transform: translateY(-2px);
+          border-color: rgba(14, 165, 233, 0.28) !important;
+          box-shadow: 0 16px 36px -8px rgba(14, 165, 233, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.01) !important;
+        }
+      `}</style>
 
       {/* Modern Sub-Tab Navigation Bar */}
       <div className="tab-group">
@@ -1019,8 +1069,8 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
       {activeSubTab === 'orders' && (
         <>
           {/* Create Sales Order */}
-          <div className="glass-card" style={{ padding: '18px 20px', marginBottom: '20px', border: '1px solid hsl(var(--border-color))' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+          <div className="sales-card-premium" style={{ marginBottom: '24px', position: 'relative', zIndex: 15 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
               <div style={{ padding: '6px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
                 <ShoppingBag size={16} />
               </div>
@@ -1029,13 +1079,14 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
               </h3>
             </div>
 
-            <form onSubmit={handlePlaceOrder} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <form onSubmit={handlePlaceOrder} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('selectClient', lang)}</label>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('selectClient', lang)}</label>
                 <PremiumSelect 
                   value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required
                   disabled={isDoctor}
-                  style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', cursor: isDoctor ? 'not-allowed' : 'default' }}
+                  className="sales-input"
+                  style={{ cursor: isDoctor ? 'not-allowed' : 'default' }}
                 >
                   <option value="">-- Choose Clinic --</option>
                   {clients.map(c => (
@@ -1044,12 +1095,12 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                 </PremiumSelect>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('selectProduct', lang)}</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('selectProduct', lang)}</label>
                   <PremiumSelect 
                     value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} required
-                    style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+                    className="sales-input"
                   >
                     <option value="">-- Choose Product --</option>
                     {products.map(p => (
@@ -1058,19 +1109,19 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                   </PremiumSelect>
                 </div>
 
-                <div style={{ width: '70px' }}>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('quantity', lang)}</label>
+                <div style={{ width: '80px' }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('quantity', lang)}</label>
                   <input 
                     type="number" min="1" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value) || 1)} required
-                    style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
+                    className="sales-input"
                   />
                 </div>
 
-                <div style={{ width: '90px' }}>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>GST %</label>
+                <div style={{ width: '100px' }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase', letterSpacing: '0.03em' }}>GST %</label>
                   <PremiumSelect 
                     value={selectedGstRate} onChange={(e) => setSelectedGstRate(parseInt(e.target.value))} required
-                    style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+                    className="sales-input"
                   >
                     {gstRates.map((rate, idx) => (
                       <option key={idx} value={rate}>{rate}%</option>
@@ -1082,10 +1133,10 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
               {/* Batch selection drop-down */}
               {currentSelectedProduct && currentSelectedProduct.batches && currentSelectedProduct.batches.length > 0 && (
                 <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('selectBatch', lang)}</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('selectBatch', lang)}</label>
                   <PremiumSelect
                     value={selectedBatchNo} onChange={(e) => setSelectedBatchNo(e.target.value)}
-                    style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+                    className="sales-input"
                   >
                     <option value="">-- Auto-Allocate (FIFO) --</option>
                     {currentSelectedProduct.batches.map((b, idx) => (
@@ -1099,16 +1150,16 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
 
               {!isDoctor && (
                 <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>{t('customDiscount', lang)}</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('customDiscount', lang)}</label>
                   <input 
                     type="number" placeholder="Override standard tier rate discount" 
                     value={customDiscount} onChange={(e) => setCustomDiscount(e.target.value)}
-                    style={{ width: '100%', padding: '10px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }} 
+                    className="sales-input"
                   />
                 </div>
               )}
 
-              <button type="submit" className="btn-primary" style={{ padding: '12px', borderRadius: '10px', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginTop: '6px', fontFamily: 'Outfit' }}>
+              <button type="submit" className="btn-primary" style={{ padding: '12px', borderRadius: '10px', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginTop: '8px', fontFamily: 'Outfit', width: '100%' }}>
                 {t('confirmOrder', lang)}
               </button>
             </form>
@@ -1133,7 +1184,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
             </div>
 
             {/* Premium Full-Width Filters Row */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginBottom: '14px', position: 'relative', zIndex: 10 }}>
               {/* Search Container - 100% Full Width */}
               <div style={{ position: 'relative', width: '100%' }}>
                 <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-dim))', pointerEvents: 'none' }} />
@@ -1199,122 +1250,126 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                 message="No orders match your search or exist in the system." 
               />
             ) : (
-              displayedOrders.map(order => {
-                const client = clients.find(c => c.id === order.clientId);
-                const product = products.find(p => p.id === order.productIds[0]);
-              const challan = challans.find(ch => ch.orderId === order.id);
+              <div className="sales-grid-container" style={{ marginBottom: '14px' }}>
+                {displayedOrders.map(order => {
+                  const client = clients.find(c => c.id === order.clientId);
+                  const product = products.find(p => p.id === order.productIds[0]);
+                  const challan = challans.find(ch => ch.orderId === order.id);
 
-              if (!client || !product) return null;
+                  if (!client || !product) return null;
 
-              const totalOrderAmt = order.finalAmount + (order.gstPaid || 0);
-              const remainingDue = totalOrderAmt - (order.amountPaid || 0);
+                  const totalOrderAmt = order.finalAmount + (order.gstPaid || 0);
+                  const remainingDue = totalOrderAmt - (order.amountPaid || 0);
 
-              return (
-                <div key={order.id} className="glass-card" style={{ padding: '14px', border: '1px solid hsl(var(--border-color))' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <span style={{ fontSize: '0.55rem', color: 'hsl(var(--text-muted))' }}>Order #{order.id} • Batch: {order.batchNo}</span>
-                      <h4 style={{ fontSize: '0.82rem', fontWeight: 'bold', margin: '2px 0 0' }}>{client.name}</h4>
-                      <p style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))', margin: '2px 0' }}>
-                        {order.qty}x {product.sku} ({product.name})
-                      </p>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'hsl(var(--secondary))', display: 'block' }}>₹{totalOrderAmt.toLocaleString('en-IN')}</span>
-                      <span style={{ fontSize: '0.58rem', color: 'orange' }}>Due: ₹{remainingDue.toLocaleString('en-IN')}</span>
-                    </div>
-                  </div>
-
-                  {/* Delivery Challan Shipping details */}
-                  {challan ? (
-                    <div style={{ marginTop: '8px', background: 'hsl(var(--border-color) / 15%)', padding: '6px 8px', borderRadius: '6px', fontSize: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  return (
+                    <div key={order.id} className="sales-card-premium" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', boxSizing: 'border-box' }}>
                       <div>
-                        <span style={{ color: 'hsl(var(--text-primary))', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Truck size={12} /> Dispatch Status: {challan.status}
-                        </span>
-                        <div style={{ color: 'hsl(var(--text-muted))', marginTop: '2px' }}>
-                          Carrier: {challan.courierName} • Tracking: {challan.trackingNumber || 'N/A'}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                          <div>
+                            <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>Order #{order.id} • Batch: {order.batchNo}</span>
+                            <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: '2px 0 0', fontFamily: 'Outfit' }}>{client.name}</h4>
+                            <p style={{ fontSize: '0.74rem', color: 'hsl(var(--text-muted))', margin: '4px 0 0', fontWeight: 500 }}>
+                              {order.qty}x {product.sku} ({product.name})
+                            </p>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ fontSize: '0.82rem', fontWeight: '900', color: 'hsl(var(--secondary))', display: 'block', fontFamily: 'Outfit' }}>₹{totalOrderAmt.toLocaleString('en-IN')}</span>
+                            <span style={{ fontSize: '0.62rem', color: 'orange', fontWeight: 700 }}>Due: ₹{remainingDue.toLocaleString('en-IN')}</span>
+                          </div>
                         </div>
-                      </div>
-                      <button
-                        onClick={() => setSelectedChallan({ challan, order })}
-                        style={{ border: '1px solid hsl(var(--primary))', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.6rem', fontWeight: 'bold' }}
-                      >
-                        Print Challan
-                      </button>
-                    </div>
-                  ) : (
-                    !isDoctor && order.status !== 'Returned' && (
-                      <button
-                        onClick={() => {
-                          setChallanOrderId(order.id);
-                        }}
-                        style={{
-                          marginTop: '8px', border: 'none', background: 'none', color: 'hsl(var(--primary))', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px'
-                        }}
-                      >
-                        <Truck size={10} /> Dispatch Delivery Challan
-                      </button>
-                    )
-                  )}
 
-                  {/* Actions */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid hsl(var(--border-color))' }}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={() => setSelectedInvoiceOrder(order)}
-                        className="btn-primary"
-                        style={{ padding: '4px 8px', fontSize: '0.62rem', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
-                      >
-                        {t('viewInvoice', lang)}
-                      </button>
-                      {!isDoctor && remainingDue > 0 && order.status !== 'Returned' && (
-                        <button
-                          onClick={() => {
-                            setPaymentOrder(order);
-                            setCollectAmount(remainingDue);
-                          }}
-                          style={{
-                            background: 'hsl(var(--secondary) / 10%)', color: 'hsl(var(--secondary))', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.62rem', fontWeight: 'bold', cursor: 'pointer'
-                          }}
-                        >
-                          {t('collectPayment', lang)}
-                        </button>
-                      )}
-                      {isDoctor && remainingDue > 0 && order.status !== 'Returned' && (
-                        <button
-                          onClick={() => {
-                            setPaymentOrder(order);
-                            setCollectAmount(remainingDue.toString());
-                          }}
-                          style={{
-                            background: 'hsl(var(--secondary) / 10%)', color: 'hsl(var(--secondary))', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.62rem', fontWeight: 'bold', cursor: 'pointer'
-                          }}
-                        >
-                          💳 Pay Now
-                        </button>
-                      )}
-                    </div>
-
-                    {!isDoctor && (
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        {order.status !== 'Returned' && (
-                          <button
-                            onClick={() => handleProcessReturn(order.id)}
-                            style={{ background: 'none', border: 'none', color: 'orange', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer' }}
-                          >
-                            RMA Return
-                          </button>
+                        {/* Delivery Challan Shipping details */}
+                        {challan ? (
+                          <div style={{ marginTop: '10px', background: 'rgba(14, 165, 233, 0.05)', border: '1px solid rgba(14, 165, 233, 0.12)', padding: '8px 10px', borderRadius: '10px', fontSize: '0.68rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <span style={{ color: 'hsl(var(--text-primary))', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Truck size={12} color="#0ea5e9" /> Dispatch Status: {challan.status}
+                              </span>
+                              <div style={{ color: 'hsl(var(--text-muted))', marginTop: '2px', fontSize: '0.62rem' }}>
+                                Carrier: {challan.courierName} • Tracking: {challan.trackingNumber || 'N/A'}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setSelectedChallan({ challan, order })}
+                              style={{ border: '1.5px solid hsl(var(--primary))', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.6rem', fontWeight: 'bold', fontFamily: 'Outfit' }}
+                            >
+                              Print Challan
+                            </button>
+                          </div>
+                        ) : (
+                          !isDoctor && order.status !== 'Returned' && (
+                            <button
+                              onClick={() => {
+                                setChallanOrderId(order.id);
+                              }}
+                              style={{
+                                marginTop: '10px', border: 'none', background: 'none', color: 'hsl(var(--primary))', fontSize: '0.68rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'Outfit'
+                              }}
+                            >
+                              <Truck size={12} /> Dispatch Delivery Challan
+                            </button>
+                          )
                         )}
-                        <button onClick={() => handleDeleteOrder(order.id)} style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer' }}>
-                          <Trash2 size={13} />
-                        </button>
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })
+
+                      {/* Actions */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid rgba(14, 165, 233, 0.1)' }}>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={() => setSelectedInvoiceOrder(order)}
+                            className="btn-primary"
+                            style={{ padding: '6px 12px', fontSize: '0.68rem', borderRadius: '6px', border: 'none', cursor: 'pointer', fontFamily: 'Outfit' }}
+                          >
+                            {t('viewInvoice', lang)}
+                          </button>
+                          {!isDoctor && remainingDue > 0 && order.status !== 'Returned' && (
+                            <button
+                              onClick={() => {
+                                setPaymentOrder(order);
+                                setCollectAmount(remainingDue);
+                              }}
+                              style={{
+                                background: 'hsl(var(--secondary) / 10%)', color: 'hsl(var(--secondary))', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit'
+                              }}
+                            >
+                              {t('collectPayment', lang)}
+                            </button>
+                          )}
+                          {isDoctor && remainingDue > 0 && order.status !== 'Returned' && (
+                            <button
+                              onClick={() => {
+                                setPaymentOrder(order);
+                                setCollectAmount(remainingDue.toString());
+                              }}
+                              style={{
+                                background: 'hsl(var(--secondary) / 10%)', color: 'hsl(var(--secondary))', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit'
+                              }}
+                            >
+                              💳 Pay Now
+                            </button>
+                          )}
+                        </div>
+
+                        {!isDoctor && (
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                            {order.status !== 'Returned' && (
+                              <button
+                                onClick={() => handleProcessReturn(order.id)}
+                                style={{ background: 'none', border: 'none', color: 'orange', fontSize: '0.68rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit' }}
+                              >
+                                RMA Return
+                              </button>
+                            )}
+                            <button onClick={() => handleDeleteOrder(order.id)} style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
 
             {filteredOrders.length > ordersPerPage && (
@@ -1346,9 +1401,11 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
 
       {/* 2. Quotations subscreen */}
       {activeSubTab === 'quotes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Create Quote Card */}
+          <div className="sales-card-premium" style={{ position: 'relative', zIndex: 15 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
               <div style={{ padding: '6px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
                 <FileText size={16} />
               </div>
@@ -1356,48 +1413,63 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                 {t('createQuote', lang)}
               </h3>
             </div>
-            <form onSubmit={handleCreateQuote} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            
+            <form onSubmit={handleCreateQuote} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('selectClient', lang)}</label>
-                <PremiumSelect value={quoteClientId} onChange={(e) => setQuoteClientId(e.target.value)} required
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('selectClient', lang)}</label>
+                <PremiumSelect 
+                  value={quoteClientId} onChange={(e) => setQuoteClientId(e.target.value)} required
                   disabled={isDoctor}
-                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', cursor: isDoctor ? 'not-allowed' : 'default' }}>
+                  className="sales-input"
+                  style={{ cursor: isDoctor ? 'not-allowed' : 'default' }}
+                >
                   <option value="">-- Choose Clinic --</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </PremiumSelect>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Select Product Item:</label>
-                  <PremiumSelect value={quoteProductId} onChange={(e) => setQuoteProductId(e.target.value)} required
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Select Product Item:</label>
+                  <PremiumSelect 
+                    value={quoteProductId} onChange={(e) => setQuoteProductId(e.target.value)} required
+                    className="sales-input"
+                  >
                     <option value="">-- Choose --</option>
                     {products.map(p => <option key={p.id} value={p.id}>{p.sku} ({p.name})</option>)}
                   </PremiumSelect>
                 </div>
-                <div style={{ width: '70px' }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Qty:</label>
-                  <input type="number" min="1" value={quoteQty} onChange={(e) => setQuoteQty(parseInt(e.target.value) || 1)} required
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                
+                <div style={{ width: '80px' }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Qty:</label>
+                  <input 
+                    type="number" min="1" value={quoteQty} onChange={(e) => setQuoteQty(parseInt(e.target.value) || 1)} required
+                    className="sales-input"
+                  />
                 </div>
-                <div style={{ width: '95px' }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>GST %</label>
-                  <PremiumSelect value={quoteGstRate} onChange={(e) => setQuoteGstRate(parseInt(e.target.value))} required
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                
+                <div style={{ width: '100px' }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase', letterSpacing: '0.03em' }}>GST %</label>
+                  <PremiumSelect 
+                    value={quoteGstRate} onChange={(e) => setQuoteGstRate(parseInt(e.target.value))} required
+                    className="sales-input"
+                  >
                     {gstRates.map((rate, idx) => (
                       <option key={idx} value={rate}>{rate}%</option>
                     ))}
                   </PremiumSelect>
                 </div>
               </div>
-              <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit' }}>
+              
+              <button type="submit" className="btn-primary" style={{ padding: '12px', borderRadius: '10px', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit', width: '100%' }}>
                 Generate B2B Quotation Quote
               </button>
             </form>
           </div>
 
+          {/* Active Quotes List Area */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ padding: '6px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
                   <ClipboardList size={16} />
@@ -1409,9 +1481,11 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                 placeholder="Search quotes..." 
                 value={quoteSearchQuery} 
                 onChange={(e) => { setQuoteSearchQuery(e.target.value); setQuoteCurrentPage(1); }}
-                style={{ padding: '6px 10px', fontSize: '0.72rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', width: '150px' }}
+                className="sales-input"
+                style={{ width: '200px', height: '36px', padding: '6px 12px' }}
               />
             </div>
+
             {filteredQuotes.length === 0 ? (
               <EmptyStateCard 
                 icon={FileText} 
@@ -1419,52 +1493,55 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                 message="No proforma sales quotations match your search criteria." 
               />
             ) : (
-              displayedQuotes.map(q => {
-                const client = clients.find(c => c.id === q.clientId);
-                const product = products.find(p => p.id === q.productIds[0]);
-              if (!client || !product) return null;
+              <div className="sales-grid-container" style={{ marginBottom: '14px' }}>
+                {displayedQuotes.map(q => {
+                  const client = clients.find(c => c.id === q.clientId);
+                  const product = products.find(p => p.id === q.productIds[0]);
+                  if (!client || !product) return null;
 
-              return (
-                <div key={q.id} className="glass-card" style={{ padding: '12px', border: '1px solid hsl(var(--border-color))' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <span style={{ fontSize: '0.55rem', color: 'hsl(var(--text-dim))' }}>Quote #{q.id} • {new Date(q.dateCreated).toLocaleDateString()}</span>
-                      <h4 style={{ fontSize: '0.8rem', fontWeight: 'bold', margin: '2px 0 0' }}>{client.name}</h4>
-                    </div>
-                    <span style={{
-                      fontSize: '0.58rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px',
-                      background: q.status === 'Converted' ? 'hsl(var(--secondary) / 10%)' : 'hsl(var(--primary) / 10%)',
-                      color: q.status === 'Converted' ? 'hsl(var(--secondary))' : 'hsl(var(--primary))'
-                    }}>{q.status}</span>
-                  </div>
-                  <div style={{ marginTop: 'auto', paddingTop: '8px', fontSize: '0.72rem', color: 'hsl(var(--text-muted))', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      Qty: {q.qty}x {product.sku} ({product.name})
-                      <br />
-                      Total value: <strong style={{ color: 'hsl(var(--text-primary))' }}>₹{q.finalAmount.toLocaleString('en-IN')}</strong>
-                    </div>
-
-                    {q.status === 'Draft' && (
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button
-                          onClick={() => handleConvertQuoteToOrder(q.id)}
-                          className="btn-primary"
-                          style={{ padding: '4px 8px', fontSize: '0.62rem', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                        >
-                          {t('convertToOrder', lang)}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteQuote(q.id)}
-                          style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                  return (
+                    <div key={q.id} className="sales-card-premium" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', boxSizing: 'border-box' }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div>
+                            <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))', fontWeight: 600 }}>Quote #{q.id} • {new Date(q.dateCreated).toLocaleDateString()}</span>
+                            <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: '2px 0 0', fontFamily: 'Outfit' }}>{client.name}</h4>
+                          </div>
+                          <span style={{
+                            fontSize: '0.58rem', fontWeight: '800', padding: '3px 8px', borderRadius: '6px',
+                            background: q.status === 'Converted' ? 'hsl(var(--secondary) / 10%)' : 'hsl(var(--primary) / 10%)',
+                            color: q.status === 'Converted' ? 'hsl(var(--secondary))' : 'hsl(var(--primary))',
+                            letterSpacing: '0.03em'
+                          }}>{q.status}</span>
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: 'hsl(var(--text-muted))', fontWeight: 500, marginTop: '6px' }}>
+                          Qty: {q.qty}x {product.sku} ({product.name})
+                          <br />
+                          Total value: <strong style={{ color: 'hsl(var(--text-primary))' }}>₹{q.finalAmount.toLocaleString('en-IN')}</strong>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })
+
+                      {q.status === 'Draft' && (
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px', paddingTop: '8px', borderTop: '1px solid rgba(14, 165, 233, 0.1)' }}>
+                          <button
+                            onClick={() => handleConvertQuoteToOrder(q.id)}
+                            className="btn-primary"
+                            style={{ padding: '6px 12px', fontSize: '0.68rem', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'Outfit' }}
+                          >
+                            {t('convertToOrder', lang)}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteQuote(q.id)}
+                            style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
 
             {filteredQuotes.length > quotesPerPage && (
@@ -1496,11 +1573,11 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
 
       {/* 3. Clients subscreen */}
       {activeSubTab === 'clients' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* Register Client Form */}
-          <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+          <div className="sales-card-premium" style={{ position: 'relative', zIndex: 15 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
               <div style={{ padding: '6px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
                 <UserPlus size={16} />
               </div>
@@ -1508,38 +1585,38 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                 {t('registerClient', lang)}
               </h3>
             </div>
-            <form onSubmit={handleAddClient} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
+            <form onSubmit={handleAddClient} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('clientName', lang)}</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase' }}>{t('clientName', lang)}</label>
                   <input type="text" required value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Clinic name"
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                    className="sales-input" />
                 </div>
-                <div style={{ width: '100px' }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('clientType', lang)}</label>
+                <div style={{ width: '120px' }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase' }}>{t('clientType', lang)}</label>
                   <PremiumSelect value={clientType} onChange={(e) => setClientType(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                    className="sales-input">
                     <option value="Doctor">Doctor</option>
                     <option value="Hospital">Hospital</option>
                   </PremiumSelect>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Customer Category</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase' }}>Customer Category</label>
                   <PremiumSelect value={clientCategory} onChange={(e) => setClientCategory(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                    className="sales-input">
                     {CUSTOMER_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </PremiumSelect>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('discountTier', lang)}</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase' }}>{t('discountTier', lang)}</label>
                   <PremiumSelect value={discountTier} onChange={(e) => setDiscountTier(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                    className="sales-input">
                     <option value="Standard">Standard (0%)</option>
                     <option value="Gold">Gold (10%)</option>
                     <option value="Platinum">Platinum (15%)</option>
@@ -1547,43 +1624,43 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                   </PremiumSelect>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('creditLimit', lang)} (₹):</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase' }}>{t('creditLimit', lang)} (₹)</label>
                   <input type="number" value={customCreditLimit} onChange={(e) => setCustomCreditLimit(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                    className="sales-input" />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('email', lang)}</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase' }}>{t('email', lang)}</label>
                   <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                    className="sales-input" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('phone', lang)}</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase' }}>{t('phone', lang)}</label>
                   <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                    className="sales-input" />
                 </div>
               </div>
 
               <div>
-                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('address', lang)}</label>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase' }}>{t('address', lang)}</label>
                 <input type="text" value={address} onChange={(e) => setAddress(e.target.value)}
-                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                  className="sales-input" />
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{t('clinicState', lang)}</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase' }}>{t('clinicState', lang)}</label>
                   <PremiumSelect value={clientState} onChange={(e) => setClientState(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                    className="sales-input">
                     {allStatesUnique.map((stateName, idx) => (
                       <option key={idx} value={stateName}>{stateName}</option>
                     ))}
                   </PremiumSelect>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 'bold', display: 'block', marginBottom: '6px' }}>Logo / Photo</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '6px', color: 'hsl(var(--text-dim))', textTransform: 'uppercase' }}>Logo / Photo</label>
                   <div style={{
                     border: '2px dashed hsl(var(--border-color))',
                     borderRadius: '12px',
@@ -1592,17 +1669,19 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
-                    background: 'hsl(var(--bg-dark))',
+                    background: 'rgba(255, 255, 255, 0.5)',
                     cursor: 'pointer',
                     position: 'relative',
-                    transition: 'all 0.25s'
+                    transition: 'all 0.25s',
+                    height: '38px',
+                    boxSizing: 'border-box'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.borderColor = 'hsl(var(--primary))'}
                   onMouseLeave={(e) => e.currentTarget.style.borderColor = 'hsl(var(--border-color))'}
                   >
                     <Camera size={16} style={{ color: 'hsl(var(--text-muted))' }} />
                     <span style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', fontWeight: 'bold' }}>
-                      Drag or Select Image
+                      Select Logo/Photo
                     </span>
                     <input 
                       type="file" 
@@ -1666,7 +1745,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
             </div>
             
             {/* Search and Filters Controls */}
-            <div className="glass-card" style={{ padding: '12px 14px', background: 'hsl(var(--bg-card) / 50%)', border: '1px solid hsl(var(--border-color))', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="sales-card-premium" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', position: 'relative', zIndex: 10 }}>
               <div>
                 <input
                   type="text"
@@ -1676,20 +1755,22 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                     setClientSearchQuery(e.target.value);
                     setClientCurrentPage(1); // reset to page 1
                   }}
-                  style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+                  className="sales-input"
+                  style={{ height: '38px' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: '80px' }}>
-                  <label style={{ fontSize: '0.58rem', fontWeight: 'bold', display: 'block', marginBottom: '2px', color: 'hsl(var(--text-muted))' }}>Type</label>
+                  <label style={{ fontSize: '0.58rem', fontWeight: 'bold', display: 'block', marginBottom: '4px', color: 'hsl(var(--text-muted))' }}>Type</label>
                   <PremiumSelect
                     value={clientFilterType}
                     onChange={(e) => {
                       setClientFilterType(e.target.value);
                       setClientCurrentPage(1);
                     }}
-                    style={{ width: '100%', padding: '6px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+                    className="sales-input"
+                    style={{ padding: '6px 10px !important', height: '32px' }}
                   >
                     <option value="All">All Types</option>
                     <option value="Doctor">Doctor</option>
@@ -1698,14 +1779,15 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                 </div>
 
                 <div style={{ flex: 1, minWidth: '80px' }}>
-                  <label style={{ fontSize: '0.58rem', fontWeight: 'bold', display: 'block', marginBottom: '2px', color: 'hsl(var(--text-muted))' }}>Tier</label>
+                  <label style={{ fontSize: '0.58rem', fontWeight: 'bold', display: 'block', marginBottom: '4px', color: 'hsl(var(--text-muted))' }}>Tier</label>
                   <PremiumSelect
                     value={clientFilterTier}
                     onChange={(e) => {
                       setClientFilterTier(e.target.value);
                       setClientCurrentPage(1);
                     }}
-                    style={{ width: '100%', padding: '6px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+                    className="sales-input"
+                    style={{ padding: '6px 10px !important', height: '32px' }}
                   >
                     <option value="All">All Tiers</option>
                     <option value="Standard">Standard</option>
@@ -1716,14 +1798,15 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                 </div>
 
                 <div style={{ flex: 1, minWidth: '80px' }}>
-                  <label style={{ fontSize: '0.58rem', fontWeight: 'bold', display: 'block', marginBottom: '2px', color: 'hsl(var(--text-muted))' }}>State</label>
+                  <label style={{ fontSize: '0.58rem', fontWeight: 'bold', display: 'block', marginBottom: '4px', color: 'hsl(var(--text-muted))' }}>State</label>
                   <PremiumSelect
                     value={clientFilterState}
                     onChange={(e) => {
                       setClientFilterState(e.target.value);
                       setClientCurrentPage(1);
                     }}
-                    style={{ width: '100%', padding: '6px', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+                    className="sales-input"
+                    style={{ padding: '6px 10px !important', height: '32px' }}
                   >
                     <option value="All">All States</option>
                     {allStatesUnique.map((stateName, idx) => (
@@ -1766,102 +1849,106 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                       message="No clinics or doctor directories match the search criteria. Register a client below." 
                     />
                   ) : (
-                    paginatedClients.map(c => {
+                    <div className="sales-grid-container" style={{ marginBottom: '14px' }}>
+                      {paginatedClients.map(c => {
                         const outstanding = getClientOutstanding(c.id);
                         const limit = c.creditLimit || 200000;
                         const pctUsed = Math.min(100, (outstanding / limit) * 100);
                         const clientNotes = crmLogs.filter(log => log.clientId === c.id);
 
                         return (
-                        <div key={c.id} className="glass-card" style={{ padding: '14px', border: '1px solid hsl(var(--border-color))' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flex: 1 }}>
-                              {c.image ? (
-                                <img src={c.image} alt={c.name} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid hsl(var(--border-color))', flexShrink: 0 }} />
-                              ) : (
-                                <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.9rem', flexShrink: 0 }}>
-                                  {c.name.charAt(0)}
-                                </div>
-                              )}
-                              <div style={{ flex: 1 }}>
-                                <span style={{ fontSize: '0.55rem', color: 'hsl(var(--text-dim))' }}>Client ID: #{c.id} • State: {c.state || 'Telangana'} • {c.customerCategory || 'Other'}</span>
-                                <h4 style={{ fontSize: '0.82rem', fontWeight: 'bold', margin: '2px 0 0' }}>{c.name}</h4>
-                                <p style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))', margin: '2px 0' }}>
-                                  Tier: <strong style={{ color: 'hsl(var(--primary))' }}>{c.discountTier}</strong> • Contact: {c.contactPerson}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Circular Credit utilization Dial */}
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', marginRight: '8px' }}>
-                              <div style={{ position: 'relative', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <svg width="40" height="40" viewBox="0 0 36 36">
-                                  <path
-                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                    fill="none"
-                                    stroke="hsl(var(--border-color))"
-                                    strokeWidth="4"
-                                  />
-                                  <path
-                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                    fill="none"
-                                    stroke={pctUsed > 85 ? 'hsl(var(--color-hyper))' : 'hsl(var(--secondary))'}
-                                    strokeWidth="4"
-                                    strokeDasharray={`${pctUsed}, 100`}
-                                    strokeLinecap="round"
-                                  />
-                                </svg>
-                                <div style={{ position: 'absolute', fontSize: '0.58rem', fontWeight: '800', color: 'hsl(var(--text-primary))' }}>
-                                  {pctUsed.toFixed(0)}%
-                                </div>
-                              </div>
-                              <span style={{ fontSize: '0.5rem', color: 'hsl(var(--text-muted))', fontWeight: 'bold' }}>Credit Used</span>
-                            </div>
-
-                            <button onClick={() => startEditClient(c)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--primary))' }}>
-                              <Edit3 size={13} />
-                            </button>
-                          </div>
-
-                          {/* Credit limit numerical tracking */}
-                          <div style={{ marginTop: 'auto', borderTop: '1px dotted hsl(var(--border-color))', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem', color: 'hsl(var(--text-muted))' }}>
-                            <span>Outstanding: <strong style={{ color: 'hsl(var(--text-primary))' }}>₹{outstanding.toLocaleString('en-IN')}</strong></span>
-                            <span>Limit: <strong>₹{limit.toLocaleString('en-IN')}</strong></span>
-                          </div>
-
-                          {/* CRM logs timeline */}
-                          <div style={{ marginTop: '10px', background: 'hsl(var(--border-color) / 10%)', padding: '8px', borderRadius: '8px' }}>
-                          <span style={{ fontSize: '0.65rem', fontWeight: '800', color: 'hsl(var(--text-muted))', display: 'block', marginBottom: '4px' }}>Timeline Notes (CRM):</span>
-                          {clientNotes.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '6px' }}>
-                              {clientNotes.map((note, idx) => {
-                                const noteProduct = note.productId ? products.find(p => p.id === note.productId) : null;
-                                return (
-                                  <div key={idx} style={{ fontSize: '0.62rem', borderLeft: '2px solid hsl(var(--primary))', paddingLeft: '6px' }}>
-                                    <span style={{ color: 'hsl(var(--text-dim))', fontSize: '0.52rem' }}>{new Date(note.date).toLocaleDateString()} · {note.type || 'Visit'}:</span>
-                                    <div style={{ color: 'hsl(var(--text-primary))' }}>{note.notes}</div>
-                                    {noteProduct && (
-                                      <div style={{ color: 'hsl(var(--text-muted))', fontSize: '0.58rem', marginTop: 2 }}>Sample: {noteProduct.name} ×{note.qty || 1}</div>
-                                    )}
+                          <div key={c.id} className="sales-card-premium" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', boxSizing: 'border-box' }}>
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flex: 1 }}>
+                                  {c.image ? (
+                                    <img src={c.image} alt={c.name} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid hsl(var(--border-color))', flexShrink: 0 }} />
+                                  ) : (
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.9rem', flexShrink: 0 }}>
+                                      {c.name.charAt(0)}
+                                    </div>
+                                  )}
+                                  <div style={{ flex: 1 }}>
+                                    <span style={{ fontSize: '0.58rem', color: 'hsl(var(--text-dim))', fontWeight: 600 }}>ID: #{c.id} • {c.state || 'Telangana'} • {c.customerCategory || 'Other'}</span>
+                                    <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: '2px 0 0', fontFamily: 'Outfit' }}>{c.name}</h4>
+                                    <p style={{ fontSize: '0.74rem', color: 'hsl(var(--text-muted))', margin: '4px 0 0', fontWeight: 500 }}>
+                                      Tier: <strong style={{ color: 'hsl(var(--primary))' }}>{c.discountTier}</strong> • Contact: {c.contactPerson}
+                                    </p>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '6px' }}>No visit logs recorded.</span>
-                          )}
+                                </div>
+                                
+                                {/* Circular Credit utilization Dial */}
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', marginRight: '4px', flexShrink: 0 }}>
+                                  <div style={{ position: 'relative', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <svg width="40" height="40" viewBox="0 0 36 36">
+                                      <path
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        fill="none"
+                                        stroke="hsl(var(--border-color))"
+                                        strokeWidth="4"
+                                      />
+                                      <path
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        fill="none"
+                                        stroke={pctUsed > 85 ? 'hsl(var(--color-hyper))' : 'hsl(var(--secondary))'}
+                                        strokeWidth="4"
+                                        strokeDasharray={`${pctUsed}, 100`}
+                                        strokeLinecap="round"
+                                      />
+                                    </svg>
+                                    <div style={{ position: 'absolute', fontSize: '0.58rem', fontWeight: '800', color: 'hsl(var(--text-primary))' }}>
+                                      {pctUsed.toFixed(0)}%
+                                    </div>
+                                  </div>
+                                  <span style={{ fontSize: '0.5rem', color: 'hsl(var(--text-muted))', fontWeight: 'bold' }}>Credit Used</span>
+                                </div>
 
-                          <button
-                            onClick={() => setSelectedCrmClientId(c.id)}
-                            style={{ border: 'none', background: 'none', color: 'hsl(var(--primary))', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer' }}
-                          >
-                            + Log Interaction
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+                                <button onClick={() => startEditClient(c)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--primary))', padding: '4px' }}>
+                                  <Edit3 size={13} />
+                                </button>
+                              </div>
+
+                              {/* Credit limit numerical tracking */}
+                              <div style={{ marginTop: 'auto', borderTop: '1px dotted hsl(var(--border-color))', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'hsl(var(--text-muted))' }}>
+                                <span>Outstanding: <strong style={{ color: 'hsl(var(--text-primary))' }}>₹{outstanding.toLocaleString('en-IN')}</strong></span>
+                                <span>Limit: <strong>₹{limit.toLocaleString('en-IN')}</strong></span>
+                              </div>
+
+                              {/* CRM logs timeline */}
+                              <div style={{ marginTop: '10px', background: 'rgba(14, 165, 233, 0.04)', border: '1px solid rgba(14, 165, 233, 0.08)', padding: '10px', borderRadius: '12px' }}>
+                                <span style={{ fontSize: '0.68rem', fontWeight: '800', color: 'hsl(var(--text-muted))', display: 'block', marginBottom: '6px' }}>Timeline Notes (CRM):</span>
+                                {clientNotes.length > 0 ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                                    {clientNotes.map((note, idx) => {
+                                      const noteProduct = note.productId ? products.find(p => p.id === note.productId) : null;
+                                      return (
+                                        <div key={idx} style={{ fontSize: '0.68rem', borderLeft: '2px solid hsl(var(--primary))', paddingLeft: '8px' }}>
+                                          <span style={{ color: 'hsl(var(--text-dim))', fontSize: '0.58rem' }}>{new Date(note.date).toLocaleDateString()} · {note.type || 'Visit'}:</span>
+                                          <div style={{ color: 'hsl(var(--text-primary))', fontWeight: 500 }}>{note.notes}</div>
+                                          {noteProduct && (
+                                            <div style={{ color: 'hsl(var(--text-muted))', fontSize: '0.62rem', marginTop: 2 }}>Sample: {noteProduct.name} ×{note.qty || 1}</div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: '0.65rem', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '8px' }}>No visit logs recorded.</span>
+                                )}
+
+                                <button
+                                  onClick={() => setSelectedCrmClientId(c.id)}
+                                  style={{ border: 'none', background: 'none', color: 'hsl(var(--primary))', fontSize: '0.68rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit', padding: 0 }}
+                                >
+                                  + Log Interaction
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Pagination Controls */}
                   {totalPages > 1 && (
@@ -1918,7 +2005,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))' }}>
+            <div className="sales-card-premium">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ padding: '6px', borderRadius: '8px', background: 'hsl(var(--primary-glow))', color: 'hsl(var(--primary))' }}>
@@ -2196,55 +2283,55 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                   message="All B2B invoices are fully paid. The outstanding collections ledger is clear!" 
                 />
               ) : (
-                unpaidList.map(o => {
-                  const client = clients.find(c => c.id === o.clientId);
-                  if (!client) return null;
-                  const totalInvoice = o.finalAmount + (o.gstPaid || 0);
-                  const outstanding = totalInvoice - (o.amountPaid || 0);
+                <div className="sales-grid-container" style={{ marginTop: '4px' }}>
+                  {unpaidList.map(o => {
+                    const client = clients.find(c => c.id === o.clientId);
+                    if (!client) return null;
+                    const totalInvoice = o.finalAmount + (o.gstPaid || 0);
+                    const outstanding = totalInvoice - (o.amountPaid || 0);
 
-                  return (
-                    <div key={o.id} className="glass-card animate-fade-in" style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      border: '1px solid hsl(var(--border-color))', 
-                      padding: '12px 16px', 
-                      borderRadius: '12px',
-                      borderLeft: '4px solid #f59e0b',
-                      boxShadow: '0 4px 10px rgba(0,0,0,0.01)'
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Invoice #DPC-{o.id} • Due: {new Date(o.dueDate).toLocaleDateString('en-IN')}</span>
-                        <h4 style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'hsl(var(--text-primary))', margin: '4px 0 0', fontFamily: 'Outfit' }}>{client.name}</h4>
+                    return (
+                      <div key={o.id} className="sales-card-premium animate-fade-in" style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        borderLeft: '4px solid #f59e0b !important',
+                        padding: '16px',
+                        boxSizing: 'border-box'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Invoice #DPC-{o.id} • Due: {new Date(o.dueDate).toLocaleDateString('en-IN')}</span>
+                          <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: 'hsl(var(--text-primary))', margin: '4px 0 0', fontFamily: 'Outfit' }}>{client.name}</h4>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'hsl(var(--color-hyper))', display: 'block', fontFamily: 'Outfit' }}>₹{outstanding.toLocaleString('en-IN')}</span>
+                          <button
+                            onClick={() => {
+                              setPaymentOrder(o);
+                              setCollectAmount(outstanding);
+                            }}
+                            style={{ 
+                              border: 'none', 
+                              background: 'none', 
+                              color: 'hsl(var(--primary))', 
+                              fontSize: '0.68rem', 
+                              fontWeight: 'bold', 
+                              cursor: 'pointer', 
+                              fontFamily: 'Outfit', 
+                              padding: '4px 0 0',
+                              textDecoration: 'underline',
+                              transition: 'color 0.2s' 
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = 'hsl(var(--secondary))'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = 'hsl(var(--primary))'; }}
+                          >
+                            Collect Payment
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: '800', color: 'hsl(var(--color-hyper))', display: 'block', fontFamily: 'Outfit' }}>₹{outstanding.toLocaleString('en-IN')}</span>
-                        <button
-                          onClick={() => {
-                            setPaymentOrder(o);
-                            setCollectAmount(outstanding);
-                          }}
-                          style={{ 
-                            border: 'none', 
-                            background: 'none', 
-                            color: 'hsl(var(--primary))', 
-                            fontSize: '0.68rem', 
-                            fontWeight: 'bold', 
-                            cursor: 'pointer', 
-                            fontFamily: 'Outfit', 
-                            padding: '4px 0 0',
-                            textDecoration: 'underline',
-                            transition: 'color 0.2s' 
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = 'hsl(var(--secondary))'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = 'hsl(var(--primary))'; }}
-                        >
-                          Collect Payment
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
@@ -2289,7 +2376,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Collection Amount (₹):</label>
                 <input type="number" required value={collectAmount} onChange={(e) => setCollectAmount(e.target.value)}
-                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                  className="sales-input" />
               </div>
               <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: '6px' }}>
                 Apply Payment Receipt
@@ -2313,12 +2400,12 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Courier Partner Name:</label>
                 <input type="text" required placeholder="e.g. Blue Dart, Professional Couriers" value={courierName} onChange={(e) => setCourierName(e.target.value)}
-                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                  className="sales-input" />
               </div>
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>Tracking Number / Airway Bill:</label>
                 <input type="text" placeholder="e.g. BD-99882772" value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)}
-                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                  className="sales-input" />
               </div>
               <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: '6px' }}>
                 Generate Challan & Mark Dispatched
@@ -2342,7 +2429,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Interaction Type</label>
                 <PremiumSelect value={crmType} onChange={(e) => setCrmType(e.target.value)}
-                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                  className="sales-input">
                   {CRM_LOG_TYPES.map(ty => <option key={ty} value={ty}>{ty}</option>)}
                 </PremiumSelect>
               </div>
@@ -2352,7 +2439,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                   <div style={{ flex: 2 }}>
                     <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Sample Product</label>
                     <PremiumSelect value={crmSampleProductId} onChange={(e) => setCrmSampleProductId(e.target.value)}
-                      style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }}>
+                      className="sales-input">
                       <option value="">-- Select Product --</option>
                       {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </PremiumSelect>
@@ -2360,7 +2447,7 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Qty</label>
                     <input type="number" min="1" value={crmSampleQty} onChange={(e) => setCrmSampleQty(e.target.value)}
-                      style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))' }} />
+                      className="sales-input" />
                   </div>
                 </div>
               )}
@@ -2398,7 +2485,8 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
                   </button>
                 </div>
                 <textarea required rows="4" value={crmNote} onChange={(e) => setCrmNote(e.target.value)} placeholder="Enter details about phone calls, doctor visits, quotes discussed, or custom requests..."
-                  style={{ width: '100%', padding: '8px', fontSize: '0.78rem', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', outline: 'none', resize: 'vertical' }} />
+                  className="sales-input"
+                  style={{ minHeight: '80px', resize: 'vertical' }} />
               </div>
               <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: '6px' }}>
                 Save CRM Note

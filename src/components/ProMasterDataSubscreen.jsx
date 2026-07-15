@@ -16,7 +16,7 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
   const [states, setStates] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [gstRates, setGstRates] = useState(profile.gstRates || [5, 12, 18, 28]);
-  const [defaultGstRate, setDefaultGstRate] = useState(profile.defaultGstRate || 12);
+  const [defaultGstRate, setDefaultGstRate] = useState(profile.defaultGstRate !== undefined ? profile.defaultGstRate : 12);
   const [loading, setLoading] = useState(true);
   const [firstLoad, setFirstLoad] = useState(true);
 
@@ -59,7 +59,7 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
     const dbDefault = await db.userProfile.get(`${prefix}defaultGstRate`) || await db.userProfile.get('defaultGstRate');
 
     setGstRates(dbRates?.value || profile.gstRates || [5, 12, 18, 28]);
-    setDefaultGstRate(dbDefault?.value || profile.defaultGstRate || 12);
+    setDefaultGstRate(dbDefault?.value !== undefined ? dbDefault.value : (profile.defaultGstRate !== undefined ? profile.defaultGstRate : 12));
     setCommissionRate(((profile.commissionRate ?? 0.05) * 100).toString());
     setSalesQuota((profile.salesQuota || 500000).toString());
     setTorqueNarrow((profile.torqueNarrow ?? 20).toString());
@@ -286,12 +286,12 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
         }
         const prefix = authUser?.user?.id ? `${authUser.user.id}_` : '';
         if (data.gstRates) await db.userProfile.put({ key: `${prefix}gstRates`, value: data.gstRates });
-        if (data.defaultGstRate) await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: data.defaultGstRate });
+        if (data.defaultGstRate !== undefined) await db.userProfile.put({ key: `${prefix}defaultGstRate`, value: data.defaultGstRate });
         if (data.commissionRate !== undefined) await db.userProfile.put({ key: `${prefix}commissionRate`, value: data.commissionRate });
-        if (data.salesQuota) await db.userProfile.put({ key: `${prefix}salesQuota`, value: data.salesQuota });
-        if (data.torqueNarrow) await db.userProfile.put({ key: `${prefix}torqueNarrow`, value: data.torqueNarrow });
-        if (data.torqueStandard) await db.userProfile.put({ key: `${prefix}torqueStandard`, value: data.torqueStandard });
-        if (data.torqueWide) await db.userProfile.put({ key: `${prefix}torqueWide`, value: data.torqueWide });
+        if (data.salesQuota !== undefined) await db.userProfile.put({ key: `${prefix}salesQuota`, value: data.salesQuota });
+        if (data.torqueNarrow !== undefined) await db.userProfile.put({ key: `${prefix}torqueNarrow`, value: data.torqueNarrow });
+        if (data.torqueStandard !== undefined) await db.userProfile.put({ key: `${prefix}torqueStandard`, value: data.torqueStandard });
+        if (data.torqueWide !== undefined) await db.userProfile.put({ key: `${prefix}torqueWide`, value: data.torqueWide });
         loadData();
         alert('Settings imported successfully!');
       } catch (err) {
@@ -303,7 +303,94 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
   };
 
   return (
-    <div className="animate-fade-in" style={{ paddingBottom: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="animate-fade-in" style={{ paddingBottom: '30px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      
+      {/* Component Specific Style Overrides */}
+      <style>{`
+        .master-settings-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 20px;
+          width: 100%;
+          align-items: stretch;
+        }
+        @media (min-width: 992px) {
+          .master-settings-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+          }
+        }
+        .settings-card {
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(14, 165, 233, 0.14);
+          border-radius: 20px;
+          padding: 24px;
+          box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.03), 0 4px 10px -3px rgba(0, 0, 0, 0.01);
+          display: flex;
+          flex-direction: column;
+          box-sizing: border-box;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .settings-card:hover {
+          transform: translateY(-2px);
+          border-color: rgba(14, 165, 233, 0.28);
+          box-shadow: 0 16px 36px -8px rgba(14, 165, 233, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.01);
+        }
+        .settings-card-title {
+          font-size: 0.95rem;
+          color: hsl(var(--text-primary));
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 20px;
+          font-family: 'Outfit';
+          font-weight: 800;
+          letter-spacing: -0.01em;
+        }
+        .settings-card-title svg {
+          color: hsl(var(--primary));
+        }
+        .settings-list-container {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          max-height: 240px;
+          overflow-y: auto;
+          padding-right: 4px;
+        }
+        /* Custom scrollbar style */
+        .settings-list-container::-webkit-scrollbar {
+          width: 5px;
+        }
+        .settings-list-container::-webkit-scrollbar-track {
+          background: rgba(14, 165, 233, 0.02);
+          border-radius: 10px;
+        }
+        .settings-list-container::-webkit-scrollbar-thumb {
+          background: rgba(14, 165, 233, 0.15);
+          border-radius: 10px;
+        }
+        .settings-list-container::-webkit-scrollbar-thumb:hover {
+          background: rgba(14, 165, 233, 0.3);
+        }
+        .settings-list-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: rgba(240, 249, 255, 0.45);
+          border: 1px solid rgba(14, 165, 233, 0.08);
+          padding: 10px 14px;
+          border-radius: 12px;
+          font-size: 0.76rem;
+          transition: all 0.2s ease;
+        }
+        .settings-list-item:hover {
+          background: rgba(240, 249, 255, 0.85);
+          border-color: rgba(14, 165, 233, 0.18);
+        }
+      `}</style>
       
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -315,10 +402,10 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
           </h2>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.75rem', borderRadius: '8px', fontFamily: 'Outfit', fontWeight: 'bold', background: 'transparent', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-primary))', cursor: 'pointer' }}>
+          <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '0.75rem', borderRadius: '10px', fontFamily: 'Outfit', fontWeight: 'bold', background: 'transparent', border: '1.5px solid hsl(var(--border-color))', color: 'hsl(var(--text-primary))', cursor: 'pointer', transition: 'all 0.2s' }}>
             <Download size={14} /> Backup Settings
           </button>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.75rem', borderRadius: '8px', fontFamily: 'Outfit', fontWeight: 'bold', background: 'transparent', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-primary))', cursor: 'pointer', margin: 0 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '0.75rem', borderRadius: '10px', fontFamily: 'Outfit', fontWeight: 'bold', background: 'transparent', border: '1.5px solid hsl(var(--border-color))', color: 'hsl(var(--text-primary))', cursor: 'pointer', margin: 0, transition: 'all 0.2s' }}>
             <Upload size={14} /> Restore Settings
             <input type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
           </label>
@@ -328,165 +415,163 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
       {loading ? (
         <PremiumLoader text="Loading Master Data..." />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="master-settings-grid">
           
-          <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '20px', alignItems: 'stretch', width: '100%' }}>
-            
-            <div style={{ flex: '1 1 280px', minWidth: '280px', boxSizing: 'border-box' }}>
-              <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))', height: '100%' }}>
-                <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontFamily: 'Outfit', fontWeight: '800' }}>
-                <MapPin size={16} /> {t('stateList', lang)}
-              </h3>
+          {/* === Card 1: State Directory === */}
+          <div className="settings-card">
+            <h3 className="settings-card-title">
+              <MapPin size={16} /> {t('stateList', lang)}
+            </h3>
 
-              <form onSubmit={handleAddState} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                <PremiumSelect
-                  required value={newStateName} onChange={(e) => setNewStateName(e.target.value)}
-                  style={{ flex: 1, padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
-                >
-                  {availableStates.length === 0 && <option value="">No remaining States/UTs to add</option>}
-                  {availableStates.map((st, idx) => (
-                    <option key={idx} value={st}>{st}</option>
-                  ))}
-                </PremiumSelect>
-                <button type="submit" disabled={availableStates.length === 0} className="btn-primary" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '0.75rem', fontWeight: 'bold', cursor: availableStates.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'Outfit' }}>
-                  {t('addState', lang)}
-                </button>
-              </form>
+            <form onSubmit={handleAddState} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <PremiumSelect
+                required value={newStateName} onChange={(e) => setNewStateName(e.target.value)}
+                style={{ flex: 1, padding: '10px 14px', fontSize: '0.78rem', borderRadius: '10px', border: '1.5px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+              >
+                {availableStates.length === 0 && <option value="">No remaining States/UTs to add</option>}
+                {availableStates.map((st, idx) => (
+                  <option key={idx} value={st}>{st}</option>
+                ))}
+              </PremiumSelect>
+              <button type="submit" disabled={availableStates.length === 0} className="btn-primary" style={{ padding: '10px 18px', borderRadius: '10px', border: 'none', fontSize: '0.75rem', fontWeight: 'bold', cursor: availableStates.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'Outfit' }}>
+                {t('addState', lang)}
+              </button>
+            </form>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {states.length === 0 ? (
-                  <EmptyStateCard 
-                    icon={MapPin} 
-                    title="No States Registered" 
-                    message="No regional states have been registered in the system yet." 
-                  />
-                ) : (
-                  states.map(s => (
-                    <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'hsl(var(--border-color) / 10%)', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem' }}>
-                      <span style={{ fontWeight: 'bold', color: 'hsl(var(--text-primary))' }}>{s.name}</span>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          onClick={() => { setEditingState(s); setEditStateName(s.name); }}
-                          style={{ background: 'none', border: 'none', color: 'hsl(var(--primary))', cursor: 'pointer' }}
-                        >
-                          <Edit3 size={12} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteState(s.id, s.name)}
-                          style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer' }}
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            </div>
-
-            <div style={{ flex: '1 1 280px', minWidth: '280px', boxSizing: 'border-box' }}>
-              <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))', height: '100%' }}>
-                <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontFamily: 'Outfit', fontWeight: '800' }}>
-                <span style={{ fontSize: '1.1rem', marginRight: '2px' }}>%</span> GST Rate Manager
-              </h3>
-
-              <form onSubmit={handleAddGstRate} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                <input
-                  type="number" required placeholder="GST Percentage (e.g. 18)" value={newGstRate} onChange={(e) => setNewGstRate(e.target.value)} min="0" max="100"
-                  style={{ flex: 1, padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+            <div className="settings-list-container">
+              {states.length === 0 ? (
+                <EmptyStateCard 
+                  icon={MapPin} 
+                  title="No States Registered" 
+                  message="No regional states have been registered in the system yet." 
                 />
-                <button type="submit" className="btn-primary" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit' }}>
-                  Add GST Rate
-                </button>
-              </form>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {gstRates.map((rate, idx) => {
-                  const isDefault = rate === defaultGstRate;
-                  return (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'hsl(var(--border-color) / 10%)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: 'bold', color: 'hsl(var(--text-primary))' }}>{rate}%</span>
-                        {isDefault ? (
-                          <span style={{ fontSize: '0.58rem', background: 'hsl(var(--secondary) / 10%)', color: 'hsl(var(--secondary))', padding: '1px 6px', borderRadius: '4px', fontWeight: 'bold' }}>DEFAULT</span>
-                        ) : (
-                          <button
-                            onClick={() => handleSetDefaultGstRate(rate)}
-                            style={{ border: 'none', background: 'none', color: 'hsl(var(--text-muted))', fontSize: '0.58rem', cursor: 'pointer', textDecoration: 'underline' }}
-                          >
-                            Set Default
-                          </button>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          onClick={() => { setEditingGstRate(rate); setEditGstRateValue(rate.toString()); }}
-                          style={{ background: 'none', border: 'none', color: 'hsl(var(--primary))', cursor: 'pointer' }}
-                        >
-                          <Edit3 size={12} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteGstRate(rate)}
-                          style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer' }}
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
+              ) : (
+                states.map(s => (
+                  <div key={s.id} className="settings-list-item">
+                    <span style={{ fontWeight: 'bold', color: 'hsl(var(--text-primary))' }}>{s.name}</span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => { setEditingState(s); setEditStateName(s.name); }}
+                        style={{ background: 'none', border: 'none', color: 'hsl(var(--primary))', cursor: 'pointer' }}
+                      >
+                        <Edit3 size={12} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteState(s.id, s.name)}
+                        style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer' }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                ))
+              )}
             </div>
-            </div>
-
           </div>
 
-          <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))' }}>
-            <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontFamily: 'Outfit', fontWeight: '800' }}>
-              <span style={{ fontSize: '1.1rem', marginRight: '2px' }}>⚙️</span> Sales & Clinical Settings
+          {/* === Card 2: GST Rate Manager === */}
+          <div className="settings-card">
+            <h3 className="settings-card-title">
+              <span style={{ fontSize: '1.1rem', marginRight: '2px', color: 'hsl(var(--primary))', display: 'inline-block' }}>%</span> GST Rate Manager
             </h3>
-            <form onSubmit={handleSaveSalesClinicalSettings} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '4px' }}>Sales Commission Rate (%)</label>
-                  <input type="number" required min="0" max="100" step="0.1" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)}
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+
+            <form onSubmit={handleAddGstRate} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <input
+                type="number" required placeholder="GST Percentage (e.g. 18)" value={newGstRate} onChange={(e) => setNewGstRate(e.target.value)} min="0" max="100"
+                style={{ flex: 1, padding: '10px 14px', fontSize: '0.78rem', borderRadius: '10px', border: '1.5px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+              />
+              <button type="submit" className="btn-primary" style={{ padding: '10px 18px', borderRadius: '10px', border: 'none', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit' }}>
+                Add GST Rate
+              </button>
+            </form>
+
+            <div className="settings-list-container">
+              {gstRates.map((rate, idx) => {
+                const isDefault = rate === defaultGstRate;
+                return (
+                  <div key={idx} className="settings-list-item">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 'bold', color: 'hsl(var(--text-primary))' }}>{rate}%</span>
+                      {isDefault ? (
+                        <span style={{ fontSize: '0.58rem', background: 'hsl(var(--secondary) / 10%)', color: 'hsl(var(--secondary))', padding: '2px 8px', borderRadius: '6px', fontWeight: '800', letterSpacing: '0.03em' }}>DEFAULT</span>
+                      ) : (
+                        <button
+                          onClick={() => handleSetDefaultGstRate(rate)}
+                          style={{ border: 'none', background: 'none', color: 'hsl(var(--text-muted))', fontSize: '0.58rem', cursor: 'pointer', textDecoration: 'underline', fontWeight: 600 }}
+                        >
+                          Set Default
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => { setEditingGstRate(rate); setEditGstRateValue(rate.toString()); }}
+                        style={{ background: 'none', border: 'none', color: 'hsl(var(--primary))', cursor: 'pointer' }}
+                      >
+                        <Edit3 size={12} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteGstRate(rate)}
+                        style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer' }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* === Card 3: Sales & Clinical Settings === */}
+          <div className="settings-card">
+            <h3 className="settings-card-title">
+              <span style={{ fontSize: '1.1rem', marginRight: '2px', color: 'hsl(var(--primary))' }}>⚙️</span> Sales & Clinical Settings
+            </h3>
+            <form onSubmit={handleSaveSalesClinicalSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 160px' }}>
+                    <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Sales Commission Rate (%)</label>
+                    <input type="number" required min="0" max="100" step="0.1" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)}
+                      style={{ width: '100%', padding: '10px 14px', fontSize: '0.78rem', borderRadius: '10px', border: '1.5px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ flex: '1 1 160px' }}>
+                    <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Sales Quota Target (₹)</label>
+                    <input type="number" required min="0" value={salesQuota} onChange={(e) => setSalesQuota(e.target.value)}
+                      style={{ width: '100%', padding: '10px 14px', fontSize: '0.78rem', borderRadius: '10px', border: '1.5px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                  </div>
                 </div>
-                <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '4px' }}>Sales Quota Target (₹)</label>
-                  <input type="number" required min="0" value={salesQuota} onChange={(e) => setSalesQuota(e.target.value)}
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                <div>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Recommended Implant Torque (Ncm)</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <input type="number" required min="0" placeholder="Narrow" value={torqueNarrow} onChange={(e) => setTorqueNarrow(e.target.value)}
+                        style={{ width: '100%', padding: '10px 14px', fontSize: '0.78rem', borderRadius: '10px', border: '1.5px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                      <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))', display: 'block', marginTop: '4px', textAlign: 'center', fontWeight: 600 }}>Narrow (3.3mm)</span>
+                    </div>
+                    <div>
+                      <input type="number" required min="0" placeholder="Standard" value={torqueStandard} onChange={(e) => setTorqueStandard(e.target.value)}
+                        style={{ width: '100%', padding: '10px 14px', fontSize: '0.78rem', borderRadius: '10px', border: '1.5px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                      <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))', display: 'block', marginTop: '4px', textAlign: 'center', fontWeight: 600 }}>Standard (4.0mm)</span>
+                    </div>
+                    <div>
+                      <input type="number" required min="0" placeholder="Wide" value={torqueWide} onChange={(e) => setTorqueWide(e.target.value)}
+                        style={{ width: '100%', padding: '10px 14px', fontSize: '0.78rem', borderRadius: '10px', border: '1.5px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                      <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))', display: 'block', marginTop: '4px', textAlign: 'center', fontWeight: 600 }}>Wide (5.0mm)</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', color: 'hsl(var(--text-dim))', display: 'block', marginBottom: '4px' }}>Recommended Implant Torque (Ncm)</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                  <div>
-                    <input type="number" required min="0" placeholder="Narrow" value={torqueNarrow} onChange={(e) => setTorqueNarrow(e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
-                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))', display: 'block', marginTop: '2px', textAlign: 'center' }}>Narrow (3.3mm)</span>
-                  </div>
-                  <div>
-                    <input type="number" required min="0" placeholder="Standard" value={torqueStandard} onChange={(e) => setTorqueStandard(e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
-                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))', display: 'block', marginTop: '2px', textAlign: 'center' }}>Standard (4.0mm)</span>
-                  </div>
-                  <div>
-                    <input type="number" required min="0" placeholder="Wide" value={torqueWide} onChange={(e) => setTorqueWide(e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
-                    <span style={{ fontSize: '0.6rem', color: 'hsl(var(--text-dim))', display: 'block', marginTop: '2px', textAlign: 'center' }}>Wide (5.0mm)</span>
-                  </div>
-                </div>
-              </div>
-              <button type="submit" disabled={savingSettings} className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontSize: '0.78rem', fontWeight: 'bold', cursor: savingSettings ? 'not-allowed' : 'pointer', fontFamily: 'Outfit', opacity: savingSettings ? 0.6 : 1 }}>
+              <button type="submit" disabled={savingSettings} className="btn-primary" style={{ padding: '12px', borderRadius: '10px', border: 'none', fontSize: '0.78rem', fontWeight: 'bold', cursor: savingSettings ? 'not-allowed' : 'pointer', fontFamily: 'Outfit', opacity: savingSettings ? 0.6 : 1, marginTop: '20px', width: '100%' }}>
                 {savingSettings ? 'Saving...' : 'Save Settings'}
               </button>
             </form>
           </div>
 
-          <div className="glass-card" style={{ padding: '16px', border: '1px solid hsl(var(--border-color))' }}>
-            <h3 style={{ fontSize: '0.92rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontFamily: 'Outfit', fontWeight: '800' }}>
+          {/* === Card 4: Warehouse List === */}
+          <div className="settings-card">
+            <h3 className="settings-card-title">
               <Warehouse size={16} /> {t('warehouseList', lang)}
             </h3>
 
@@ -494,19 +579,19 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   type="text" required placeholder="Warehouse name (e.g. Chennai Hub)" value={newWhName} onChange={(e) => setNewWhName(e.target.value)}
-                  style={{ flex: 1, padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+                  style={{ flex: 1, padding: '10px 14px', fontSize: '0.78rem', borderRadius: '10px', border: '1.5px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
                 />
                 <input
                   type="text" placeholder="Address (Optional)" value={newWhAddress} onChange={(e) => setNewWhAddress(e.target.value)}
-                  style={{ flex: 1, padding: '8px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
+                  style={{ flex: 1, padding: '10px 14px', fontSize: '0.78rem', borderRadius: '10px', border: '1.5px solid hsl(var(--border-color))', outline: 'none', background: 'transparent', color: 'hsl(var(--text-primary))' }}
                 />
               </div>
-              <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '8px', border: 'none', fontSize: '0.78rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit' }}>
+              <button type="submit" className="btn-primary" style={{ padding: '10px', borderRadius: '10px', border: 'none', fontSize: '0.78rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit', width: '100%' }}>
                 {t('addWarehouse', lang)}
               </button>
             </form>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="settings-list-container">
               {warehouses.length === 0 ? (
                 <EmptyStateCard 
                   icon={Warehouse} 
@@ -515,7 +600,7 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
                 />
               ) : (
                 warehouses.map(w => (
-                  <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'hsl(var(--border-color) / 10%)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem' }}>
+                  <div key={w.id} className="settings-list-item">
                     <div>
                       <div style={{ fontWeight: 'bold', color: 'hsl(var(--text-primary))' }}>{w.name}</div>
                       {w.address && <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))' }}>{w.address}</div>}
