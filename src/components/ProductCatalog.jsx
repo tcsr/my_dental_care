@@ -14,7 +14,7 @@ const CATEGORIES = [
   'All', 'Implants', 'Instruments', 'Materials', 'PPE', 'Equipment', 'Consumables',
   // Expanded implant-type taxonomy (additive — existing products keep their current category)
   'Root Form', 'Compression', 'Basal', 'Basal SS', 'Compression MU', 'Basal MU',
-  'Genweld', 'Instant Provisionals', 'General Instruments', 'Bone Graft'
+  'Genweld', 'Instant Provisionals', 'General Instruments', 'Bone Graft', 'Bone Plate', 'Fixation Screw'
 ];
 
 function ToothIcon(props) {
@@ -43,6 +43,8 @@ const CAT = {
   'Instant Provisionals': { bg: 'rgba(8,145,178,0.12)', color: '#0891b2', icon: Clock },
   'General Instruments': { bg: 'rgba(100,116,139,0.12)', color: '#64748b', icon: Wrench },
   'Bone Graft': { bg: 'rgba(20,184,166,0.12)', color: '#14b8a6', icon: Syringe },
+  'Bone Plate': { bg: 'rgba(100,116,139,0.12)', color: '#64748b', icon: Grid3x3 },
+  'Fixation Screw': { bg: 'rgba(120,113,108,0.12)', color: '#78716c', icon: Wrench },
 };
 const DEFAULT_CAT = { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', icon: Package };
 
@@ -174,6 +176,7 @@ export default function ProductCatalog({
   const [catConfig, setCatConfig] = useState(CAT);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
+  const [subtype, setSubtype] = useState('all'); // 'all' | 'one_piece' | 'two_piece'
   const [placing, setPlacing] = useState(false);
   const [orderDone, setOrderDone] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -250,13 +253,17 @@ export default function ProductCatalog({
   const filtered = useMemo(() => products.filter(p => {
     if (p.active === false) return false;
     const mappedCat = getCategoryKey(p.category);
-    const matchCat = category.toLowerCase() === 'all' || 
-                     p.category?.toLowerCase() === category.toLowerCase() || 
+    const matchCat = category.toLowerCase() === 'all' ||
+                     p.category?.toLowerCase() === category.toLowerCase() ||
                      mappedCat?.toLowerCase() === category.toLowerCase();
+    const matchSubtype =
+      category.toLowerCase() !== 'implants' ||
+      subtype === 'all' ||
+      p.implant_subtype === subtype;
     const q = search.toLowerCase();
     const matchSearch = !q || p.name?.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q)) || (p.sku && p.sku.toLowerCase().includes(q));
-    return matchCat && matchSearch;
-  }), [products, search, category]);
+    return matchCat && matchSubtype && matchSearch;
+  }), [products, search, category, subtype]);
 
   const ratingStats = useMemo(() => {
     let totalCount = 0;
@@ -1078,7 +1085,7 @@ export default function ProductCatalog({
                   <button
                     key={cat}
                     className="cat-chip"
-                    onClick={() => setCategory(cat)}
+                    onClick={() => { setCategory(cat); if (cat.toLowerCase() !== 'implants') setSubtype('all'); }}
                     style={{
                       flexShrink: 0,
                       padding: '8px 18px',
@@ -1116,6 +1123,34 @@ export default function ProductCatalog({
               </div>
             </div>
           </div>
+
+          {category.toLowerCase() === 'implants' && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              {[
+                { k: 'all', label: 'All types' },
+                { k: 'one_piece', label: 'One-piece' },
+                { k: 'two_piece', label: 'Two-piece' },
+              ].map(({ k, label }) => (
+                <button
+                  key={k}
+                  onClick={() => setSubtype(k)}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: 12,
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    fontFamily: 'Outfit',
+                    cursor: 'pointer',
+                    border: subtype === k ? '1.5px solid #6366f1' : '1.5px solid rgba(99,102,241,0.2)',
+                    background: subtype === k ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.7)',
+                    color: subtype === k ? '#6366f1' : 'hsl(var(--text-muted))',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Product grid */}
           {filtered.length === 0 ? (
