@@ -240,7 +240,7 @@ export default function ProductManagement() {
 
       const supabasePayload = {
         name: form.name.trim(),
-        category: form.category === 'Implant' ? 'Implants' : form.category === 'Abutment' ? 'Materials' : 'Instruments',
+        category: form.category === 'Implant' ? 'Implants' : form.category === 'Abutment' ? 'Materials' : form.category,
         price: priceNum,
         stock_qty: stockQty,
         sku: form.sku.trim(),
