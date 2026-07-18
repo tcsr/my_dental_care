@@ -31,6 +31,8 @@ const CAT_CONFIG = {
   'Instant Provisionals': { bg: 'rgba(8,145,178,0.12)',  color: '#0891b2', icon: '⏱️' },
   'General Instruments':  { bg: 'rgba(100,116,139,0.12)', color: '#64748b', icon: '🔧' },
   'Bone Graft':           { bg: 'rgba(20,184,166,0.12)', color: '#14b8a6', icon: '💉' },
+  'Bone Plate':           { bg: 'rgba(100,116,139,0.12)', color: '#64748b', icon: '🦴' },
+  'Fixation Screw':       { bg: 'rgba(120,113,108,0.12)', color: '#78716c', icon: '🔩' },
 };
 const DEFAULT_CAT_CONFIG = { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', icon: '📦' };
 
@@ -733,8 +735,7 @@ export default function ProductManagement() {
                   </PremiumSelect>
                 </Field>
 
-                {isB2b && (form.category === 'Implant' || form.category === 'Implants' ||
-                  ['Root Form','Compression','Basal','Basal SS','Compression MU','Basal MU'].includes(form.category)) && (
+                {isB2b && getCategoryKey(form.category) === 'Implants' && (
                   <Field label="Implant Subtype">
                     <PremiumSelect value={form.implant_subtype} onChange={e => setForm(f => ({ ...f, implant_subtype: e.target.value }))} className="form-select">
                       <option value="">— none —</option>
