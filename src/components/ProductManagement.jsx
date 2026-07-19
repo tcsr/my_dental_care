@@ -102,7 +102,7 @@ const B2B_CATEGORIES = [
   'Genweld', 'Instant Provisionals', 'General Instruments', 'Bone Graft', 'Bone Plate', 'Fixation Screw'
 ];
 const EMPTY_B2C = { name: '', category: 'Implants', price: '', stock_qty: '', description: '', active: true, image_url: '' };
-const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0', sizes: '', implant_subtype: '', is_featured: false, description: '' };
+const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0', sizes: '', implant_subtype: '', is_featured: false, description: '', variants: [] };
 const STERILIZATION_METHODS = ['ETO', 'Autoclave', 'Gamma'];
 
 function Field({ label, children }) {
@@ -122,6 +122,7 @@ function Field({ label, children }) {
 const inputStyle = { width: '100%', padding: '12px 16px', background: 'hsl(var(--bg-dark))', border: '1.5px solid hsl(var(--border-color))', borderRadius: 12, fontSize: '0.88rem', color: 'hsl(var(--text-primary))', outline: 'none', fontFamily: 'Outfit', boxSizing: 'border-box', transition: 'all 0.2s ease' };
 
 export default function ProductManagement() {
+  // eslint-disable-next-line no-unused-vars
   const [subTab, setSubTab] = useState('b2b'); // B2B Rep Catalog
   
   const products = useStore(state => state.products);
@@ -178,6 +179,7 @@ export default function ProductManagement() {
 
   useEffect(() => {
     if (categories && categories.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCategoriesList(categories.map(c => c.name));
       const colors = {};
       categories.forEach(c => {
@@ -196,8 +198,18 @@ export default function ProductManagement() {
     setModal('add');
   };
 
-  const openEdit = (p) => {
+  const openEdit = async (p) => {
+    let variants = [];
     if (subTab === 'b2b') {
+      const prodId = p.supabase_id || p.id;
+      if (prodId) {
+        try {
+          const { data } = await supabase.from('product_variants').select('*').eq('product_id', prodId).order('created_at');
+          if (data) variants = data;
+        } catch (e) {
+          console.warn('Failed to load variants:', e);
+        }
+      }
       setForm({
         name: p.name || '',
         category: p.category || 'Implant',
@@ -215,7 +227,8 @@ export default function ProductManagement() {
         warrantyPct: p.warrantyPct ?? '100',
         bendableAngle: p.bendableAngle ?? '0',
         sizes: p.sizes || '',
-        implant_subtype: p.implant_subtype || ''
+        implant_subtype: p.implant_subtype || '',
+        variants: variants
       });
     } else {
       setForm({
@@ -289,13 +302,35 @@ export default function ProductManagement() {
               stock: stockQty,
               location: form.batchLocation || 'Main Warehouse'
             }
-          ]
+          ],
+          variants: (form.variants || []).map(v => ({
+            diameter: v.diameter || null,
+            length: v.length || null,
+            sku: v.sku || null,
+            stock_qty: parseInt(v.stock_qty) || 0,
+            price_delta: parseFloat(v.price_delta) || 0,
+            active: v.active !== false
+          }))
         };
         const newId = await db.b2bProducts.add(newProduct);
         try {
           const { data: inserted, error } = await supabase.from('products').insert(supabasePayload).select().single();
           if (!error && inserted) {
             await db.b2bProducts.update(newId, { supabase_id: inserted.id });
+            
+            if (form.variants && form.variants.length > 0) {
+              const varPayloads = form.variants.map(v => ({
+                product_id: inserted.id,
+                diameter: v.diameter || null,
+                length: v.length || null,
+                sku: v.sku || null,
+                stock_qty: parseInt(v.stock_qty) || 0,
+                price_delta: parseFloat(v.price_delta) || 0,
+                active: v.active !== false
+              }));
+              const { data: insertedVars } = await supabase.from('product_variants').insert(varPayloads).select();
+              await db.b2bProducts.update(newId, { variants: insertedVars || varPayloads });
+            }
           }
         } catch (e) {
           console.error('Supabase insert failed:', e);
@@ -319,17 +354,64 @@ export default function ProductManagement() {
           sizes: form.sizes?.trim() || '',
           implant_subtype: form.implant_subtype || null,
           description: form.description?.trim() || '',
-          is_featured: !!form.is_featured
+          is_featured: !!form.is_featured,
+          variants: (form.variants || []).map(v => ({
+            id: v.id,
+            diameter: v.diameter || null,
+            length: v.length || null,
+            sku: v.sku || null,
+            stock_qty: parseInt(v.stock_qty) || 0,
+            price_delta: parseFloat(v.price_delta) || 0,
+            active: v.active !== false
+          }))
         });
         const localProd = await db.b2bProducts.get(modal.id);
         try {
+          let productId = localProd.supabase_id;
           if (localProd && localProd.supabase_id) {
             await supabase.from('products').update(supabasePayload).eq('id', localProd.supabase_id);
           } else {
             const { data: inserted } = await supabase.from('products').insert(supabasePayload).select().single();
             if (inserted) {
+              productId = inserted.id;
               await db.b2bProducts.update(modal.id, { supabase_id: inserted.id });
             }
+          }
+
+          if (productId) {
+            // Sync variants in Supabase
+            const { data: current } = await supabase.from('product_variants').select('id').eq('product_id', productId);
+            const keepIds = (form.variants || []).map(v => v.id).filter(Boolean);
+            const deleteIds = (current || []).map(c => c.id).filter(id => !keepIds.includes(id));
+            
+            if (deleteIds.length > 0) {
+              await supabase.from('product_variants').delete().in('id', deleteIds);
+            }
+
+            const savedVariants = [];
+            for (const v of (form.variants || [])) {
+              const vPayload = {
+                product_id: productId,
+                diameter: v.diameter || null,
+                length: v.length || null,
+                sku: v.sku || null,
+                stock_qty: parseInt(v.stock_qty) || 0,
+                price_delta: parseFloat(v.price_delta) || 0,
+                active: v.active !== false
+              };
+
+              if (v.id) {
+                const { data: updated } = await supabase.from('product_variants').update(vPayload).eq('id', v.id).select();
+                const firstUpdated = (updated && Array.isArray(updated)) ? updated[0] : (updated || null);
+                savedVariants.push(firstUpdated || { ...vPayload, id: v.id });
+              } else {
+                const { data: inserted } = await supabase.from('product_variants').insert(vPayload).select();
+                const firstInserted = (inserted && Array.isArray(inserted)) ? inserted[0] : (inserted || null);
+                savedVariants.push(firstInserted || vPayload);
+              }
+            }
+
+            await db.b2bProducts.update(modal.id, { variants: savedVariants });
           }
         } catch (e) {
           console.error('Supabase update failed:', e);
@@ -800,6 +882,154 @@ export default function ProductManagement() {
                         <input type="number" value={form.bendableAngle} onChange={e => setForm(f => ({ ...f, bendableAngle: e.target.value }))} placeholder="20" className="form-input" />
                       </Field>
                     </div>
+                  </div>
+                )}
+
+                {/* Structured Variants Section */}
+                {isB2b && (
+                  <div style={{ background: 'hsl(var(--border-color) / 10%)', padding: 12, borderRadius: 12, border: '1px solid hsl(var(--border-color))', display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ fontSize: '0.72rem', fontWeight: 800, margin: 0, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>Structured Size Variants (Advanced)</h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newVar = { diameter: '', length: '', sku: '', stock_qty: 0, price_delta: 0, active: true };
+                          setForm(f => ({
+                            ...f,
+                            variants: [...(f.variants || []), newVar]
+                          }));
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 8,
+                          border: 'none',
+                          background: '#0ea5e9',
+                          color: '#fff',
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          fontFamily: 'Outfit'
+                        }}
+                      >
+                        + Add Variant
+                      </button>
+                    </div>
+
+                    {(form.variants || []).length === 0 ? (
+                      <div style={{ fontSize: '0.7rem', color: 'hsl(var(--text-dim))', fontStyle: 'italic', textAlign: 'center', padding: '10px 0' }}>
+                        No structured variants defined. Product will use standard size comma string and main price/stock.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {(form.variants || []).map((v, idx) => (
+                          <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 0.5fr 0.3fr', gap: 6, alignItems: 'center', background: 'hsl(var(--bg-dark))', padding: 8, borderRadius: 8, border: '1px solid hsl(var(--border-color))' }}>
+                            <div>
+                              <label style={{ fontSize: '0.55rem', color: 'hsl(var(--text-muted))', fontWeight: 700 }}>Dia</label>
+                              <input
+                                value={v.diameter || ''}
+                                onChange={e => {
+                                  const updated = [...form.variants];
+                                  updated[idx] = { ...updated[idx], diameter: e.target.value };
+                                  setForm(f => ({ ...f, variants: updated }));
+                                }}
+                                placeholder="3.5"
+                                className="form-input"
+                                style={{ padding: '6px 8px', fontSize: '0.75rem', height: 28 }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '0.55rem', color: 'hsl(var(--text-muted))', fontWeight: 700 }}>Len</label>
+                              <input
+                                value={v.length || ''}
+                                onChange={e => {
+                                  const updated = [...form.variants];
+                                  updated[idx] = { ...updated[idx], length: e.target.value };
+                                  setForm(f => ({ ...f, variants: updated }));
+                                }}
+                                placeholder="10mm"
+                                className="form-input"
+                                style={{ padding: '6px 8px', fontSize: '0.75rem', height: 28 }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '0.55rem', color: 'hsl(var(--text-muted))', fontWeight: 700 }}>SKU</label>
+                              <input
+                                value={v.sku || ''}
+                                onChange={e => {
+                                  const updated = [...form.variants];
+                                  updated[idx] = { ...updated[idx], sku: e.target.value };
+                                  setForm(f => ({ ...f, variants: updated }));
+                                }}
+                                placeholder="SKU-VAR"
+                                className="form-input"
+                                style={{ padding: '6px 8px', fontSize: '0.75rem', height: 28 }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '0.55rem', color: 'hsl(var(--text-muted))', fontWeight: 700 }}>Stock</label>
+                              <input
+                                type="number"
+                                value={v.stock_qty ?? 0}
+                                onChange={e => {
+                                  const updated = [...form.variants];
+                                  updated[idx] = { ...updated[idx], stock_qty: parseInt(e.target.value) || 0 };
+                                  setForm(f => ({ ...f, variants: updated }));
+                                }}
+                                className="form-input"
+                                style={{ padding: '6px 8px', fontSize: '0.75rem', height: 28 }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '0.55rem', color: 'hsl(var(--text-muted))', fontWeight: 700 }}>Delta (₹)</label>
+                              <input
+                                type="number"
+                                value={v.price_delta ?? 0}
+                                onChange={e => {
+                                  const updated = [...form.variants];
+                                  updated[idx] = { ...updated[idx], price_delta: parseFloat(e.target.value) || 0 };
+                                  setForm(f => ({ ...f, variants: updated }));
+                                }}
+                                className="form-input"
+                                style={{ padding: '6px 8px', fontSize: '0.75rem', height: 28 }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.55rem', color: 'hsl(var(--text-muted))', fontWeight: 700, marginBottom: 2 }}>Act</span>
+                              <input
+                                type="checkbox"
+                                checked={v.active !== false}
+                                onChange={e => {
+                                  const updated = [...form.variants];
+                                  updated[idx] = { ...updated[idx], active: e.target.checked };
+                                  setForm(f => ({ ...f, variants: updated }));
+                                }}
+                                style={{ cursor: 'pointer' }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.55rem', color: 'transparent', fontWeight: 700, marginBottom: 2 }}>Del</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = (form.variants || []).filter((_, i) => i !== idx);
+                                  setForm(f => ({ ...f, variants: updated }));
+                                }}
+                                style={{
+                                  border: 'none',
+                                  background: 'none',
+                                  color: '#ef4444',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  fontSize: '0.85rem'
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 

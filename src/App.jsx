@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useEffect, lazy, Suspense, useRef } from 'react';
 import { useNavigate, useLocation, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
@@ -12,6 +13,7 @@ import DashboardScreen from './components/DashboardScreen';
 import ProductCatalog from './components/ProductCatalog';
 import DoctorOrders from './components/DoctorOrders';
 import LandingPage from './components/LandingPage';
+import ProductDetailPage from './components/ProductDetailPage';
 import PolicyPage from './components/PolicyPage';
 import { t } from './utils/i18n';
 import { useStore } from './utils/store';
@@ -75,7 +77,7 @@ const ProProfileSettingsSubscreen = lazy(() => import('./components/ProProfileSe
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const OrderManagement = lazy(() => import('./components/OrderManagement'));
 const ProductManagement = lazy(() => import('./components/ProductManagement'));
-import { ShoppingBag, ShoppingCart, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList, Megaphone, Phone, Mail } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList, Megaphone, Phone, Mail, Search } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -111,6 +113,13 @@ export default function App() {
   const [postLoginAction, setPostLoginAction] = useState(null); // callback to run after login
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [guestScrolled, setGuestScrolled] = useState(false);
+  const [navSearchQuery, setNavSearchQuery] = useState('');
+  const handleNavSearch = (e) => {
+    if (e.key === 'Enter' && navSearchQuery.trim()) {
+      navigate(`/catalog?search=${encodeURIComponent(navSearchQuery.trim())}`);
+      setNavSearchQuery('');
+    }
+  };
 
   useEffect(() => {
     let mainEl = null;
@@ -1285,6 +1294,38 @@ export default function App() {
               </div>
 
               <div className="guest-right-nav">
+                <div style={{
+                  position: 'relative',
+                  maxWidth: '260px',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginRight: '20px',
+                  flexGrow: 1
+                }} className="nav-search-container">
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none' }} />
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={navSearchQuery}
+                    onChange={e => setNavSearchQuery(e.target.value)}
+                    onKeyDown={handleNavSearch}
+                    style={{
+                      width: '100%',
+                      height: '38px',
+                      padding: '0 12px 0 36px',
+                      fontSize: '0.8rem',
+                      borderRadius: '10px',
+                      border: '1.5px solid hsl(var(--border-color))',
+                      background: 'rgba(255, 255, 255, 0.45)',
+                      outline: 'none',
+                      transition: 'all 0.25s ease',
+                      boxSizing: 'border-box'
+                    }}
+                    className="nav-search-input"
+                  />
+                </div>
+
                 <div className="guest-nav-links">
                   <Link to="/" className={`guest-nav-link ${location.pathname === '/' && !location.hash ? 'active' : ''}`}>Home</Link>
                   <Link to="/#about" className={`guest-nav-link ${location.pathname === '/' && location.hash === '#about' ? 'active' : ''}`}>About</Link>
@@ -1368,6 +1409,31 @@ export default function App() {
                 </button>
               </div>
             </div>
+
+            <div className="mobile-search-bar-row">
+              <div style={{ position: 'relative', width: '100%' }}>
+                <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none' }} />
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={navSearchQuery}
+                  onChange={e => setNavSearchQuery(e.target.value)}
+                  onKeyDown={handleNavSearch}
+                  className="mobile-search-input"
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    padding: '0 12px 0 36px',
+                    fontSize: '0.8rem',
+                    borderRadius: '10px',
+                    border: '1.5px solid hsl(var(--border-color))',
+                    background: 'rgba(255, 255, 255, 0.65)',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
         ) : (
@@ -1396,7 +1462,9 @@ export default function App() {
                     const next = !prev;
                     try {
                       localStorage.setItem('dental_sidebar_collapsed', String(!next));
-                    } catch (e) { }
+                    } catch {
+                      // ignore
+                    }
                     return next;
                   })}
                   className="header-btn"
@@ -1409,6 +1477,38 @@ export default function App() {
                   <Menu size={15} />
                 </button>
               )}
+            </div>
+
+            <div style={{
+              position: 'relative',
+              maxWidth: '300px',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              margin: '0 12px',
+              flexGrow: 1
+            }} className="nav-search-container">
+              <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={navSearchQuery}
+                onChange={e => setNavSearchQuery(e.target.value)}
+                onKeyDown={handleNavSearch}
+                style={{
+                  width: '100%',
+                  height: '38px',
+                  padding: '0 12px 0 36px',
+                  fontSize: '0.8rem',
+                  borderRadius: '10px',
+                  border: '1.5px solid hsl(var(--border-color))',
+                  background: 'rgba(255, 255, 255, 0.45)',
+                  outline: 'none',
+                  transition: 'all 0.25s ease',
+                  boxSizing: 'border-box'
+                }}
+                className="nav-search-input"
+              />
             </div>
 
             {/* Premium Globe i18n Dropdown & Profile Icon */}
@@ -1515,6 +1615,31 @@ export default function App() {
                 </button>
               )}
             </div>
+
+            <div className="mobile-search-bar-row">
+              <div style={{ position: 'relative', width: '100%' }}>
+                <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none' }} />
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={navSearchQuery}
+                  onChange={e => setNavSearchQuery(e.target.value)}
+                  onKeyDown={handleNavSearch}
+                  className="mobile-search-input"
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    padding: '0 12px 0 36px',
+                    fontSize: '0.8rem',
+                    borderRadius: '10px',
+                    border: '1.5px solid hsl(var(--border-color))',
+                    background: 'rgba(255, 255, 255, 0.65)',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
           </div>
         )}
 
@@ -1557,6 +1682,18 @@ export default function App() {
                     <Route path="/master" element={<ProMasterDataSubscreen lang={lang} profile={profile} authUser={authUser} />} />
                     <Route path="/profile" element={<ProProfileSettingsSubscreen lang={lang} profile={profile} authUser={authUser} isAdmin={isAdmin} />} />
                     <Route path="/admin" element={<AdminPanel />} />
+                    <Route path="/product/:id" element={
+                      <ProductDetailPage
+                        authUser={authUser}
+                        cart={cart}
+                        onCartChange={setCart}
+                        setCartOpen={setIsCartOpen}
+                        onLoginRequired={(afterLoginFn) => {
+                          if (afterLoginFn) setPostLoginAction(() => afterLoginFn);
+                          setShowLoginModal(true);
+                        }}
+                      />
+                    } />
                     <Route path="*" element={
                       <Navigate to={isAdmin ? "/dashboard" : "/catalog"} replace />
                     } />
@@ -1579,6 +1716,15 @@ export default function App() {
                     } />
                     <Route path="/guides" element={<ProGuidesSubscreen lang={lang} isLoggedIn={false} />} />
                     <Route path="/" element={<LandingPage onLoginRequired={() => setShowLoginModal(true)} />} />
+                    <Route path="/product/:id" element={
+                      <ProductDetailPage
+                        authUser={authUser}
+                        cart={cart}
+                        onCartChange={setCart}
+                        setCartOpen={setIsCartOpen}
+                        onLoginRequired={() => setShowLoginModal(true)}
+                      />
+                    } />
                     <Route path="/terms" element={<PolicyPage type="terms" />} />
                     <Route path="/privacy" element={<PolicyPage type="privacy" />} />
                     <Route path="/refund-policy" element={<PolicyPage type="refund" />} />

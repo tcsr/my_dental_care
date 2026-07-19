@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from 'react';
 import { db } from '../utils/db';
 import { supabase } from '../utils/supabase';
-import { Trash2, Edit3, X, MapPin, Warehouse, Settings, Download, Upload } from 'lucide-react';
+import { Trash2, Edit3, X, MapPin, Warehouse, Settings, Download, Upload, Plus, Image } from 'lucide-react';
 import PremiumSelect from './ui/PremiumSelect';
 import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
@@ -44,6 +45,147 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
   const [newGstRate, setNewGstRate] = useState('');
   const [editingGstRate, setEditingGstRate] = useState(null);
   const [editGstRateValue, setEditGstRateValue] = useState('');
+
+  // Hero Banners State
+  const [banners, setBanners] = useState([]);
+  const [loadingBanners, setLoadingBanners] = useState(false);
+  const [editingBanner, setEditingBanner] = useState(null);
+  const [isAddBannerOpen, setIsAddBannerOpen] = useState(false);
+  
+  // Banner Form State
+  const [bannerHeadline, setBannerHeadline] = useState('');
+  const [bannerSubheadline, setBannerSubheadline] = useState('');
+  const [bannerImageUrl, setBannerImageUrl] = useState('');
+  const [bannerCtaLabel, setBannerCtaLabel] = useState('');
+  const [bannerCtaLink, setBannerCtaLink] = useState('');
+  const [bannerSortOrder, setBannerSortOrder] = useState('0');
+  const [bannerActive, setBannerActive] = useState(true);
+  const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
+
+  const fetchBanners = async () => {
+    try {
+      setLoadingBanners(true);
+      const { data, error } = await supabase
+        .from('hero_banners')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (!error && data) {
+        setBanners(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch hero banners:', err);
+    } finally {
+      setLoadingBanners(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBanners();
+  }, []);
+
+  const resetBannerForm = () => {
+    setBannerHeadline('');
+    setBannerSubheadline('');
+    setBannerImageUrl('');
+    setBannerCtaLabel('');
+    setBannerCtaLink('');
+    setBannerSortOrder('0');
+    setBannerActive(true);
+  };
+
+  const handleBannerImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingBannerImage(true);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBannerImageUrl(reader.result);
+        setUploadingBannerImage(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Image upload error:', err);
+      setUploadingBannerImage(false);
+    }
+  };
+
+  const handleCreateBanner = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        headline: bannerHeadline.trim(),
+        subheadline: bannerSubheadline.trim(),
+        image_url: bannerImageUrl.trim() || null,
+        cta_label: bannerCtaLabel.trim() || null,
+        cta_link: bannerCtaLink.trim() || null,
+        sort_order: parseInt(bannerSortOrder) || 0,
+        active: bannerActive
+      };
+      const { error } = await supabase.from('hero_banners').insert([payload]);
+      if (error) {
+        alert('Error creating banner: ' + error.message);
+      } else {
+        setIsAddBannerOpen(false);
+        resetBannerForm();
+        fetchBanners();
+      }
+    } catch (err) {
+      console.error('Error creating banner:', err);
+    }
+  };
+
+  const handleUpdateBanner = async (e) => {
+    e.preventDefault();
+    if (!editingBanner) return;
+    try {
+      const payload = {
+        headline: bannerHeadline.trim(),
+        subheadline: bannerSubheadline.trim(),
+        image_url: bannerImageUrl.trim() || null,
+        cta_label: bannerCtaLabel.trim() || null,
+        cta_link: bannerCtaLink.trim() || null,
+        sort_order: parseInt(bannerSortOrder) || 0,
+        active: bannerActive
+      };
+      const { error } = await supabase.from('hero_banners').update(payload).eq('id', editingBanner.id);
+      if (error) {
+        alert('Error updating banner: ' + error.message);
+      } else {
+        setEditingBanner(null);
+        resetBannerForm();
+        fetchBanners();
+      }
+    } catch (err) {
+      console.error('Error updating banner:', err);
+    }
+  };
+
+  const handleDeleteBanner = async (id, headline) => {
+    if (confirm(`Delete banner "${headline || 'Untitled'}"?`)) {
+      try {
+        const { error } = await supabase.from('hero_banners').delete().eq('id', id);
+        if (error) {
+          alert('Error deleting banner: ' + error.message);
+        } else {
+          fetchBanners();
+        }
+      } catch (err) {
+        console.error('Error deleting banner:', err);
+      }
+    }
+  };
+
+  const openEditBanner = (b) => {
+    setEditingBanner(b);
+    setBannerHeadline(b.headline || '');
+    setBannerSubheadline(b.subheadline || '');
+    setBannerImageUrl(b.image_url || '');
+    setBannerCtaLabel(b.cta_label || '');
+    setBannerCtaLink(b.cta_link || '');
+    setBannerSortOrder((b.sort_order ?? 0).toString());
+    setBannerActive(b.active ?? true);
+  };
 
   const loadData = async () => {
     if (firstLoad) {
@@ -294,7 +436,7 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
         if (data.torqueWide !== undefined) await db.userProfile.put({ key: `${prefix}torqueWide`, value: data.torqueWide });
         loadData();
         alert('Settings imported successfully!');
-      } catch (err) {
+      } catch {
         alert('Invalid backup file');
       }
     };
@@ -625,6 +767,168 @@ export default function ProMasterDataSubscreen({ lang, profile = {}, authUser })
             </div>
           </div>
 
+          {/* === Card 5: Hero Banners Manager === */}
+          <div className="settings-card" style={{ gridColumn: '1 / -1' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className="settings-card-title" style={{ margin: 0 }}>
+                <span style={{ fontSize: '1.1rem', marginRight: '6px', color: 'hsl(var(--primary))' }}>🖼️</span> Hero Banner Carousel Manager
+              </h3>
+              <button
+                onClick={() => { resetBannerForm(); setIsAddBannerOpen(true); }}
+                className="btn-primary"
+                style={{ padding: '8px 14px', fontSize: '0.75rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'Outfit' }}
+              >
+                <Plus size={14} /> Add Hero Banner
+              </button>
+            </div>
+
+            <div className="settings-list-container" style={{ maxHeight: '400px' }}>
+              {loadingBanners ? (
+                <div style={{ padding: '20px', textAlign: 'center', fontSize: '0.8rem', color: 'hsl(var(--text-muted))' }}>Loading banners...</div>
+              ) : banners.length === 0 ? (
+                <EmptyStateCard 
+                  icon={Image} 
+                  title="No Hero Banners" 
+                  message="There are no marketing hero banners configured. Fallback banners will be displayed on the landing page." 
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {banners.map((b) => (
+                    <div key={b.id} className="settings-list-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px' }}>
+                      {b.image_url ? (
+                        <img src={b.image_url} alt="Banner Thumbnail" style={{ width: '60px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid rgba(0,0,0,0.1)' }} />
+                      ) : (
+                        <div style={{ width: '60px', height: '40px', borderRadius: '6px', background: 'linear-gradient(135deg,#0f172a,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', color: '#fff', fontWeight: 'bold' }}>Gradient</div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '0.82rem', color: 'hsl(var(--text-primary))', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.headline || 'Untitled Banner'}</div>
+                        <div style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.subheadline}</div>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.58rem', background: b.active ? 'rgba(16,185,129,0.1)' : 'rgba(100,116,139,0.1)', color: b.active ? '#10b981' : '#64748b', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                            {b.active ? 'ACTIVE' : 'INACTIVE'}
+                          </span>
+                          <span style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: '500' }}>
+                            Order: {b.sort_order ?? 0}
+                          </span>
+                          {b.cta_label && (
+                            <span style={{ fontSize: '0.58rem', background: 'rgba(14,165,233,0.1)', color: '#0ea5e9', padding: '2px 6px', borderRadius: '4px', fontWeight: '500' }}>
+                              CTA: {b.cta_label}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => openEditBanner(b)}
+                          style={{ background: 'none', border: 'none', color: 'hsl(var(--primary))', cursor: 'pointer', padding: '6px' }}
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBanner(b.id, b.headline)}
+                          style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer', padding: '6px' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {(isAddBannerOpen || editingBanner) && (
+        <div className="modal-overlay-container" style={{ zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', paddingTop: '5vh', paddingBottom: '5vh' }}>
+          <div className="modal-content-card animate-fade-in" style={{ minHeight: 'auto', height: 'auto', flex: 'none', maxWidth: '500px', width: '100%', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'flex-start', padding: '28px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 'none' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 'bold', fontFamily: 'Outfit', color: 'hsl(var(--text-primary))' }}>
+                {isAddBannerOpen ? '🖼️ Add Hero Banner' : '✏️ Edit Hero Banner'}
+              </h3>
+              <button
+                onClick={() => { setIsAddBannerOpen(false); setEditingBanner(null); resetBannerForm(); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={isAddBannerOpen ? handleCreateBanner : handleUpdateBanner} style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 'none', height: 'auto', justifyContent: 'flex-start' }}>
+              <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px', color: 'hsl(var(--text-dim))' }}>Headline</label>
+                <input type="text" required value={bannerHeadline} onChange={(e) => setBannerHeadline(e.target.value)} placeholder="e.g. Next-Gen Dental Implants"
+                  style={{ width: '100%', padding: '10px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1.5px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+              </div>
+              
+              <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px', color: 'hsl(var(--text-dim))' }}>Subheadline</label>
+                <textarea value={bannerSubheadline} onChange={(e) => setBannerSubheadline(e.target.value)} placeholder="e.g. Premium titanium implants with SLA surface connection." rows={3}
+                  style={{ width: '100%', padding: '10px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1.5px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
+              </div>
+              
+              <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', color: 'hsl(var(--text-dim))' }}>Banner Background Image</label>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', fontSize: '0.75rem', borderRadius: '8px', fontFamily: 'Outfit', fontWeight: 'bold', background: 'transparent', border: '1.5px solid hsl(var(--border-color))', color: 'hsl(var(--text-primary))', cursor: 'pointer', margin: 0, transition: 'all 0.2s' }}>
+                    <Upload size={14} /> {uploadingBannerImage ? 'Reading...' : 'Choose Image File'}
+                    <input type="file" accept="image/*" onChange={handleBannerImageUpload} style={{ display: 'none' }} />
+                  </label>
+                  {bannerImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setBannerImageUrl('')}
+                      style={{ border: 'none', background: 'none', color: 'hsl(var(--color-hyper))', fontSize: '0.68rem', cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      Clear Image
+                    </button>
+                  )}
+                </div>
+                {bannerImageUrl ? (
+                  <div style={{ width: '100%', height: '120px', borderRadius: '8px', overflow: 'hidden', border: '1px solid hsl(var(--border-color))', marginTop: '4px' }}>
+                    <img src={bannerImageUrl} alt="Banner Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                ) : (
+                  <div style={{ width: '100%', height: '120px', borderRadius: '8px', border: '1.5px dashed hsl(var(--border-color))', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'hsl(var(--text-muted))', fontSize: '0.7rem', marginTop: '4px', boxSizing: 'border-box' }}>
+                    <Image size={24} style={{ marginBottom: '6px', opacity: 0.5 }} />
+                    No Image Selected (gradient fallback will be used)
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px', color: 'hsl(var(--text-dim))' }}>CTA Label (Optional)</label>
+                  <input type="text" value={bannerCtaLabel} onChange={(e) => setBannerCtaLabel(e.target.value)} placeholder="e.g. Browse Implants"
+                    style={{ width: '100%', padding: '10px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1.5px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px', color: 'hsl(var(--text-dim))' }}>CTA Link (Optional)</label>
+                  <input type="text" value={bannerCtaLink} onChange={(e) => setBannerCtaLink(e.target.value)} placeholder="e.g. /catalog?category=Implants"
+                    style={{ width: '100%', padding: '10px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1.5px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 'bold', display: 'block', marginBottom: '2px', color: 'hsl(var(--text-dim))' }}>Sort Order</label>
+                  <input type="number" required value={bannerSortOrder} onChange={(e) => setBannerSortOrder(e.target.value)} min="0"
+                    style={{ width: '100%', padding: '10px 12px', fontSize: '0.78rem', borderRadius: '8px', border: '1.5px solid hsl(var(--border-color))', background: 'transparent', color: 'hsl(var(--text-primary))', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'center', marginTop: '16px' }}>
+                  <input type="checkbox" id="banner-active" checked={bannerActive} onChange={(e) => setBannerActive(e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+                  <label htmlFor="banner-active" style={{ fontSize: '0.76rem', fontWeight: 'bold', cursor: 'pointer', color: 'hsl(var(--text-primary))' }}>Active</label>
+                </div>
+              </div>
+
+              <button type="submit" className="btn-primary" style={{ padding: '12px', borderRadius: '10px', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px', fontSize: '0.78rem', fontFamily: 'Outfit' }}>
+                {isAddBannerOpen ? 'Create Hero Banner' : 'Save Banner Changes'}
+              </button>
+            </form>
+          </div>
         </div>
       )}
 

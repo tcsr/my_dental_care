@@ -776,6 +776,7 @@ export default function OrderManagement() {
                                 <span style={{ fontWeight: 700, color: 'hsl(var(--text-primary))' }}>
                                   {item.product?.name || 'Product Item'}
                                   {item.size && <span style={{ color: '#0ea5e9', fontWeight: 800, fontSize: '0.68rem', marginLeft: 6 }}>({item.size})</span>}
+                                  {item.variant?.sku && <span style={{ color: 'hsl(var(--text-muted))', fontSize: '0.64rem', marginLeft: 6 }}>[SKU: {item.variant.sku}]</span>}
                                 </span>
                                 <span style={{ fontSize: '0.62rem', color: 'hsl(var(--text-dim))', marginTop: 1 }}>
                                   Category: {item.product?.category || 'General'} · Qty: {item.qty}

@@ -13,7 +13,7 @@ export const useStore = create((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('*, product_variants(*)')
         .order('name');
       console.log('Zustand fetchProducts:', { data, error });
       if (!error && data) set({ products: data });
@@ -26,7 +26,7 @@ export const useStore = create((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('*, order_items(qty, unit_price, size, product_id, product:products(name, category))')
+        .select('*, order_items(qty, unit_price, size, product_id, variant_id, product:products(name, category), variant:product_variants(sku, diameter, length))')
         .order('created_at', { ascending: false });
       if (!error && data) set({ orders: data });
     } catch (e) {

@@ -328,6 +328,7 @@ function OrderCard({ order, formatCurrency, onCancel, copiedOrderId, onCopy }) {
                     <span style={{ fontWeight: 800, color: 'hsl(var(--text-primary))' }}>
                       {item.product?.name || 'Product'}
                       {item.size && <span style={{ color: '#0ea5e9', fontWeight: 800, fontSize: '0.68rem', marginLeft: 6 }}>({item.size})</span>}
+                      {item.variant?.sku && <span style={{ color: 'hsl(var(--text-muted))', fontSize: '0.64rem', marginLeft: 6 }}>[SKU: {item.variant.sku}]</span>}
                     </span>
                     <span style={{ fontSize: '0.64rem', color: 'hsl(var(--text-dim))', marginTop: 2 }}>
                       Qty: {item.qty} · Category: {item.product?.category || 'General'}
@@ -436,7 +437,7 @@ export default function DoctorOrders({ authUser, onGoToCatalog }) {
     try {
       const { data } = await supabase
         .from('orders')
-        .select('*, order_items(qty, unit_price, size, product:products(name, category))')
+        .select('*, order_items(qty, unit_price, size, product:products(name, category), variant:product_variants(sku))')
         .eq('doctor_id', authUser.user.id)
         .order('created_at', { ascending: false });
       setOrders(data || []);

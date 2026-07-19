@@ -2666,6 +2666,7 @@ body.is-browser .floating-cart-pill:hover {
   border: 1.5px solid transparent !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   display: inline-block !important;
+  white-space: nowrap !important;
 }
 
 .guest-nav-link:hover {
@@ -2939,4 +2940,49 @@ body.is-browser .floating-cart-pill:hover {
 
 .carousel-control-btn:active {
   transform: scale(0.92) !important;
+}
+
+/* Premium Navbar Search Input styling and mobile hiding */
+.nav-search-input:focus,
+.mobile-search-input:focus {
+  border-color: #0ea5e9 !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15) !important;
+}
+
+.mobile-search-bar-row {
+  display: none;
+  width: 100%;
+  padding: 8px 20px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .nav-search-container {
+    display: none !important;
+  }
+  .mobile-search-bar-row {
+    display: block;
+  }
+  .guest-header {
+    height: auto !important;
+    padding-bottom: 12px !important;
+  }
+  .app-header {
+    height: auto !important;
+    padding-bottom: 12px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+}
+
+/* Premium Carousel Products Row Centering */
+.carousel-products-row {
+  justify-content: center !important;
+}
+
+@media (max-width: 640px) {
+  .carousel-products-row {
+    justify-content: flex-start !important;
+  }
 }

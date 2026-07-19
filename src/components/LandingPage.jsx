@@ -3,23 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Store, LogIn, ShieldCheck, Users, Package, Award,
   ChevronLeft, ChevronRight, Target, Eye,
-  Phone, Mail, MapPin, Send, ArrowRight, ShoppingCart,
+  Phone, Mail, MapPin, Send, ShoppingCart,
   Headphones, BookOpen, Globe, FileText, Calendar, GraduationCap,
   CheckCircle, Sparkles
 } from 'lucide-react';
 import Footer from './Footer';
-import { supabase } from '../utils/supabase';
-
-const FALLBACK_PRODUCTS = [
-  { name: 'Two Piece Dental Implant', category: 'Implant', price: 3500, image: '/products/two-piece-implant.jpeg', desc: 'Titanium Gr5 (Ti6Al4V) with SLA surface finish. Sterilized with Gamma rays.' },
-  { name: 'Abutment', category: 'Abutment', price: 1800, image: '/products/abutment.jpeg', desc: 'Titanium Gr5 polished finish. Straight, Angled 15°, or Angled 25° for prosthetic restorative connections.' },
-  { name: 'Two Piece Implant Kit (ApexKonnect)', category: 'Surgical Tool', price: 8500, image: '/products/apexkonnect-kit.jpeg', desc: 'Serialized surgical kit with precise drills, guide keys, and drivers for the ApexKonnect implant line.' },
-  { name: 'Dental Implant Kit (Torque Ratchet Set)', category: 'Surgical Tool', price: 6000, image: '/products/dental-implant-kit.jpeg', desc: 'Complete torque ratchet kit containing essential drivers, keys, and wrenches in a sterilizable compact tray.' },
-  { name: 'Torque Wrench (with driver heads)', category: 'Surgical Tool', price: 4500, image: '/products/torque-wrench.jpeg', desc: 'Premium adjustable torque wrench with a full set of driver heads for secure abutment tightening.' },
-  { name: 'Implant Driver', category: 'Surgical Tool', price: 1500, image: '/products/implant-driver.jpeg', desc: 'High-quality implant driver tool for manual or contra-angled handpiece insertion.' },
-  { name: 'Tapping Drill', category: 'Surgical Tool', price: 1200, image: '/products/tapping-drill.jpeg', desc: 'Precisely manufactured tapping drill for dense cortical bone site preparation.' },
-  { name: 'Lance Drill', category: 'Surgical Tool', price: 900, image: '/products/lance-drill.jpeg', desc: 'Initial point drill for precise marking and initial osteotomy site creation.' }
-];
+import { useStore } from '../utils/store';
 
 const STATS = [
   { icon: Package, value: '10000+', label: 'Products Delivered', color: '#0ea5e9' },
@@ -54,207 +43,471 @@ function Reveal({ children, delay = 0 }) {
   );
 }
 
-const resolveCarouselImage = (img) => {
-  if (!img) return '';
-  let s = String(img).trim().split('|')[0].trim();
-  // comma-separate only for non-data URIs (data URIs legitimately contain commas)
-  if (!s.startsWith('data:') && s.includes(',')) s = s.split(',')[0].trim();
-  if (/^(https?:|data:|blob:)/.test(s)) return s;
-  const base = import.meta.env.BASE_URL || '/';
-  return base + (s.startsWith('/') ? s.slice(1) : s);
-};
+const FALLBACK_ONE_PIECE = [
+  { id: 'fb-op-1', name: 'Mono Implant 3.5mm', category: 'Compression', price: 2900, image_url: '/products/two-piece-implant.jpeg' },
+  { id: 'fb-op-2', name: 'Mono Implant 4.2mm', category: 'Compression', price: 2900, image_url: '/products/two-piece-implant.jpeg' },
+  { id: 'fb-op-3', name: 'Basal Implant 4.0mm', category: 'Basal', price: 3200, image_url: '/products/two-piece-implant.jpeg' },
+  { id: 'fb-op-4', name: 'Basal Implant 4.5mm', category: 'Basal', price: 3200, image_url: '/products/two-piece-implant.jpeg' },
+  { id: 'fb-op-kit', name: 'Basal Surgical Kit', category: 'Instruments', price: 15000, image_url: '/products/dental-implant-kit.jpeg', isKit: true }
+];
 
-function Carousel() {
+const FALLBACK_TWO_PIECE = [
+  { id: 'fb-tp-1', name: 'Root Form Classic 3.5mm', category: 'Root Form', price: 2500, image_url: '/products/two-piece-implant.jpeg' },
+  { id: 'fb-tp-2', name: 'Root Form Classic 4.3mm', category: 'Root Form', price: 2500, image_url: '/products/two-piece-implant.jpeg' },
+  { id: 'fb-tp-3', name: 'Root Form Classic 5.0mm', category: 'Root Form', price: 2500, image_url: '/products/two-piece-implant.jpeg' },
+  { id: 'fb-tp-kit', name: 'Standard Surgical Kit', category: 'Instruments', price: 18000, image_url: '/products/apexkonnect-kit.jpeg', isKit: true }
+];
+
+const FALLBACK_PLATES_SCREWS = [
+  { id: 'fb-ps-1', name: 'L-Plate 4 Hole', category: 'Bone Plate', price: 1200, image_url: '/products/bone-plates.jpeg' },
+  { id: 'fb-ps-2', name: 'Straight Plate 6 Hole', category: 'Bone Plate', price: 1500, image_url: '/products/bone-plates.jpeg' },
+  { id: 'fb-ps-3', name: 'Fixation Screw 2.0mm', category: 'Fixation Screw', price: 350, image_url: '/products/bone-screws.jpeg' }
+];
+
+function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unused-vars
   const [index, setIndex] = useState(0);
-  const [products, setProducts] = useState(FALLBACK_PRODUCTS);
-  const [hoveredIdx, setHoveredIdx] = useState(null);
-  const containerRef = useRef(null);
-  const [containerW, setContainerW] = useState(400);
+  const [activeProductIndex, setActiveProductIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
+  const { products, fetchProducts } = useStore();
 
   useEffect(() => {
-    const measure = () => {
-      if (containerRef.current) setContainerW(containerRef.current.offsetWidth);
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    if (containerRef.current) ro.observe(containerRef.current);
-    return () => ro.disconnect();
-  }, []);
+    fetchProducts();
+  }, [fetchProducts]);
 
   useEffect(() => {
-    async function fetchFeatured() {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('active', true)
-          .eq('is_featured', true)
-          .order('name');
-        if (!error && data && data.length > 0) {
-          const mapped = data.map(p => ({
-            ...p,
-            desc: p.description || '',
-            image: p.image_url || '',
-          }));
-          setProducts(mapped);
-        }
-        // else: keep FALLBACK_PRODUCTS (no featured rows, or error) — never blank
-      } catch (e) {
-        console.error('Carousel featured fetch failed:', e);
-      }
+    setActiveProductIndex(0);
+  }, [index]);
+
+  // Group products dynamically
+  const activeProducts = (products || []).filter(p => p.active !== false);
+
+  // Group 1: One Piece Implants
+  const onePieceImplants = activeProducts.filter(p =>
+    ['basal', 'basal ss', 'basal mu', 'compression', 'compression mu'].includes((p.category || '').toLowerCase())
+  ).slice(0, 4);
+  const basalKit = activeProducts.find(p =>
+    (p.category || '').toLowerCase() === 'instruments' || 
+    (p.category || '').toLowerCase() === 'general instruments' || 
+    (p.name || '').toLowerCase().includes('kit')
+  );
+  const onePieceGroup = [...onePieceImplants];
+  if (basalKit) onePieceGroup.push(basalKit);
+  const slide1Products = onePieceGroup.length >= 2 ? onePieceGroup.slice(0, 5) : FALLBACK_ONE_PIECE;
+
+  // Group 2: Two Piece Implants
+  const twoPieceImplants = activeProducts.filter(p =>
+    (p.category || '').toLowerCase() === 'root form'
+  ).slice(0, 3);
+  const standardKit = activeProducts.find(p =>
+    p.id !== basalKit?.id &&
+    ((p.category || '').toLowerCase() === 'instruments' || (p.name || '').toLowerCase().includes('kit'))
+  ) || basalKit;
+  const twoPieceGroup = [...twoPieceImplants];
+  if (standardKit) twoPieceGroup.push(standardKit);
+  const slide2Products = twoPieceGroup.length >= 2 ? twoPieceGroup.slice(0, 4) : FALLBACK_TWO_PIECE;
+
+  // Group 3: Bone plate + Screw
+  const platesScrews = activeProducts.filter(p =>
+    ['bone plate', 'fixation screw', 'bone graft'].includes((p.category || '').toLowerCase()) ||
+    (p.name || '').toLowerCase().includes('plate') ||
+    (p.name || '').toLowerCase().includes('screw')
+  ).slice(0, 3);
+  const slide3Products = platesScrews.length >= 2 ? platesScrews.slice(0, 3) : FALLBACK_PLATES_SCREWS;
+
+  const slides = [
+    {
+      id: 'one-piece',
+      headline: 'One Piece Implants',
+      subheadline: 'Monobloc implants designed for immediate loading and maximum convenience.',
+      products: slide1Products,
+      bg: 'linear-gradient(135deg, #0b1329 0%, #172442 50%, #0b1329 100%)',
+    },
+    {
+      id: 'two-piece',
+      headline: 'Two Piece Implants',
+      subheadline: 'Classic root-form implants featuring high stability and standard surgical protocols.',
+      products: slide2Products,
+      bg: 'linear-gradient(135deg, #0a1826 0%, #162f45 50%, #0a1826 100%)',
+    },
+    {
+      id: 'plates-screws',
+      headline: 'Bone Plate + Screw',
+      subheadline: 'Precision surgical bone plates and fixation screws for stable osteosynthesis.',
+      products: slide3Products,
+      bg: 'linear-gradient(135deg, #0b1c19 0%, #173b35 50%, #0b1c19 100%)',
     }
-    fetchFeatured();
-  }, []);
+  ];
 
-  const perView = containerW < 500 ? 1 : containerW < 820 ? 2 : 3;
-  const gap = 20;
-  const maxIndex = Math.max(0, products.length - perView);
-
-  useEffect(() => { setIndex(i => Math.min(i, maxIndex)); }, [maxIndex]);
+  const total = slides.length;
 
   useEffect(() => {
-    const t = setInterval(() => setIndex(i => (i >= maxIndex ? 0 : i + 1)), 4500);
+    if (total <= 1 || isHovered) return;
+    const t = setInterval(() => {
+      setIndex((i) => (i >= total - 1 ? 0 : i + 1));
+    }, 6000);
     return () => clearInterval(t);
-  }, [maxIndex]);
+  }, [total, isHovered]);
 
-  const sidePad = 10;
-  const cardW = (containerW - sidePad * 2 - gap * (perView - 1)) / perView;
+  if (total === 0) return null;
+
+  const currentSlide = slides[index];
+
+  // Progress bar width cycles 0→100% over 6s per slide
+  const SLIDE_DURATION = 6000;
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%', overflow: 'hidden', padding: '36px 0 40px', margin: '-36px 0 -40px' }}>
+    <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: 'clamp(380px, 46vw, 500px)',
+        borderRadius: 28,
+        overflow: 'hidden',
+        boxShadow: '0 32px 72px -12px rgba(15,23,42,0.38), 0 0 0 1px rgba(255,255,255,0.07)',
+        background: '#080e1a',
+      }}
+    >
+      {/* ── Animated gradient background per slide ── */}
       <div style={{
-        display: 'flex',
-        gap,
-        transform: `translateX(-${index * (cardW + gap)}px)`,
-        transition: 'transform 0.55s cubic-bezier(0.16, 1, 0.3, 1)',
-        width: 'max-content',
-        padding: '0 10px'
-      }}>
-        {products.map((prod, i) => {
-          const isHov = hoveredIdx === i;
-          const imgSrc = resolveCarouselImage(prod.image);
-          return (
-            <div
-              key={i}
-              onClick={() => navigate(`/catalog?product=${encodeURIComponent(prod.name)}`)}
-              onMouseEnter={() => setHoveredIdx(i)}
-              onMouseLeave={() => setHoveredIdx(null)}
-              style={{
-                width: cardW,
-                flexShrink: 0,
-                background: isHov
-                  ? 'rgba(255, 255, 255, 0.95)'
-                  : 'rgba(255, 255, 255, 0.70)',
-                borderRadius: 24,
-                padding: 20,
-                border: isHov ? '1.5px solid rgba(14, 165, 233, 0.4)' : '1.5px solid rgba(255, 255, 255, 0.4)',
-                boxShadow: isHov
-                  ? '0 30px 60px -15px rgba(14, 165, 233, 0.22), 0 12px 30px -10px rgba(99, 102, 241, 0.15)'
-                  : '0 10px 30px -10px rgba(15, 23, 42, 0.08)',
-                cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', gap: 14,
-                minHeight: 320, boxSizing: 'border-box',
-                backdropFilter: 'blur(30px)',
-                WebkitBackdropFilter: 'blur(30px)',
-                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                transform: isHov ? 'translateY(-8px) scale(1.02)' : 'none',
-              }}
-            >
-              {/* Image area */}
-              <div style={{
-                height: 150, borderRadius: 16,
-                background: isHov
-                  ? 'linear-gradient(160deg, rgba(14,165,233,0.06), rgba(99,102,241,0.04))'
-                  : 'linear-gradient(160deg, rgba(241,245,249,0.9), rgba(248,250,252,0.5))',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                overflow: 'hidden', padding: 10,
-                border: isHov ? '1px solid rgba(14,165,233,0.14)' : '1px solid rgba(0,0,0,0.04)',
-                transition: 'all 0.35s ease',
+        position: 'absolute', inset: 0,
+        background: currentSlide.bg,
+        transition: 'background 1s ease-in-out',
+        zIndex: 0,
+      }} />
+
+      {/* ── Subtle dot-grid texture ── */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+        zIndex: 1, pointerEvents: 'none',
+      }} />
+
+      {/* ── Glow orbs ── */}
+      <div style={{ position: 'absolute', top: '-20%', right: '5%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(14,165,233,0.22) 0%, transparent 65%)', filter: 'blur(60px)', zIndex: 1, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-25%', left: '15%', width: 340, height: 340, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 65%)', filter: 'blur(50px)', zIndex: 1, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '20%', left: '-5%', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 65%)', filter: 'blur(40px)', zIndex: 1, pointerEvents: 'none' }} />
+
+
+
+      {/* ── MAIN CONTENT: split left/right ── */}
+      <div
+        key={index}
+        style={{
+          position: 'relative', zIndex: 2,
+          height: '100%',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          maxWidth: 1140,
+          margin: '0 auto',
+          padding: '0 clamp(24px, 4vw, 56px)',
+          boxSizing: 'border-box',
+          animation: 'carouselIn 0.6s cubic-bezier(0.16,1,0.3,1) both',
+        }}
+        className="carousel-main-grid"
+      >
+        {/* ── LEFT: Text + CTA ── */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          gap: 14, paddingRight: 'clamp(16px,3vw,40px)', paddingBottom: 32,
+        }}>
+
+          {/* Label pill */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, width: 'fit-content' }}>
+            <span style={{
+              fontSize: '0.62rem', fontWeight: 800,
+              color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.12em',
+              background: 'rgba(14,165,233,0.12)',
+              border: '1px solid rgba(14,165,233,0.3)',
+              padding: '4px 12px', borderRadius: 999,
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}>
+              <Sparkles size={10} strokeWidth={2.5} />
+              {currentSlide.id === 'one-piece' ? 'One Piece System' : currentSlide.id === 'two-piece' ? 'Two Piece System' : 'Fixation System'}
+            </span>
+          </div>
+
+          {/* Headline */}
+          <h2 style={{
+            fontFamily: 'Outfit', fontWeight: 900,
+            fontSize: 'clamp(1.55rem, 3.2vw, 2.4rem)',
+            lineHeight: 1.08, margin: 0,
+            letterSpacing: '-0.025em',
+            background: 'linear-gradient(140deg, #ffffff 30%, #bae6fd 75%, #a5b4fc 100%)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>
+            {currentSlide.headline}
+          </h2>
+
+          {/* Sub */}
+          <p style={{
+            fontSize: 'clamp(0.8rem, 1.6vw, 0.9rem)',
+            color: 'rgba(226,232,240,0.72)',
+            lineHeight: 1.55, margin: 0, fontWeight: 500,
+            maxWidth: 360,
+          }}>
+            {currentSlide.subheadline}
+          </p>
+
+          {/* Trust badges */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+            {['Ti Grade 5', 'ISO Certified', 'Gamma Sterilized'].map(b => (
+              <span key={b} style={{
+                fontSize: '0.58rem', fontWeight: 800,
+                color: 'rgba(186,230,253,0.85)',
+                background: 'rgba(14,165,233,0.08)',
+                border: '1px solid rgba(14,165,233,0.22)',
+                padding: '3px 10px', borderRadius: 999,
+                display: 'flex', alignItems: 'center', gap: 4,
+                letterSpacing: '0.06em', textTransform: 'uppercase',
               }}>
-                <img
-                  src={imgSrc}
-                  alt={prod.name}
-                  style={{
-                    maxHeight: '100%', maxWidth: '100%', objectFit: 'contain',
-                    transform: isHov ? 'scale(1.10)' : 'scale(1)',
-                    transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                    filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.10))',
+                <CheckCircle size={9} strokeWidth={2.5} style={{ flexShrink: 0 }} />{b}
+              </span>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <button
+            onClick={() => navigate('/catalog')}
+            style={{
+              marginTop: 8,
+              alignSelf: 'flex-start',
+              padding: '11px 24px',
+              borderRadius: 14,
+              border: '1px solid rgba(255,255,255,0.15)',
+              background: 'linear-gradient(135deg, #0ea5e9 0%, #4f46e5 100%)',
+              color: '#fff',
+              fontSize: '0.8rem', fontWeight: 800, fontFamily: 'Outfit',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 8,
+              boxShadow: '0 8px 24px -4px rgba(14,165,233,0.5)',
+              letterSpacing: '0.01em',
+              transition: 'all 0.25s ease',
+            }}
+            className="carousel-cta-btn"
+          >
+            <Store size={14} strokeWidth={2.5} /> Browse Catalog
+          </button>
+        </div>
+
+        {/* ── RIGHT: Feature product + chip row ── */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          gap: 12, paddingBottom: 32, paddingTop: 24,
+          alignItems: 'stretch',
+          minWidth: 0,
+          width: '100%',
+        }}>
+          {/* Feature card — dynamically previews selected product */}
+          {(() => {
+            const fp = currentSlide.products[activeProductIndex] || currentSlide.products[0];
+            if (!fp) return null;
+            const rawUrl = fp.image_url || fp.image;
+            const baseUrl = import.meta.env.BASE_URL || '/';
+            const imgUrl = rawUrl ? (rawUrl.startsWith('http') || rawUrl.startsWith('data:') ? rawUrl : `${baseUrl}${rawUrl.replace(/^\//, '')}`) : '';
+            return (
+              <div
+                key={`${index}-${activeProductIndex}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (fp.id && !String(fp.id).startsWith('fb-')) navigate(`/product/${fp.id}`);
+                  else navigate(`/product/${fp.id}?name=${encodeURIComponent(fp.name)}`);
+                }}
+                className="carousel-feature-card"
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 20,
+                  background: 'linear-gradient(135deg, rgba(14,165,233,0.12) 0%, rgba(99,102,241,0.09) 50%, rgba(255,255,255,0.04) 100%)',
+                  border: '1px solid rgba(14,165,233,0.32)',
+                  borderRadius: 22, padding: '18px 22px',
+                  cursor: 'pointer', boxSizing: 'border-box',
+                  backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                  boxShadow: '0 16px 40px rgba(0,0,0,0.32), 0 0 0 1px rgba(14,165,233,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)',
+                  position: 'relative', overflow: 'hidden',
+                  animation: 'carouselIn 0.5s cubic-bezier(0.16,1,0.3,1) both',
+                }}
+              >
+                {/* Glow sweep behind card */}
+                <div style={{ position:'absolute', top:'-30%', left:'-10%', width:'60%', height:'160%', background:'radial-gradient(ellipse, rgba(14,165,233,0.14) 0%, transparent 70%)', pointerEvents:'none', zIndex:0 }} />
+
+                {/* Featured badge */}
+                <div style={{ position:'absolute', top:10, right:14, fontSize:'0.5rem', fontWeight:900, color:'#fff', background:'linear-gradient(135deg,#0ea5e9,#6366f1)', padding:'2px 9px', borderRadius:999, textTransform:'uppercase', letterSpacing:'0.1em', boxShadow:'0 2px 8px rgba(14,165,233,0.4)', zIndex:2 }}>
+                  Featured
+                </div>
+
+                {/* Image with halo */}
+                <div style={{ position:'relative', zIndex:1, flexShrink:0 }}>
+                  <div style={{ position:'absolute', inset:-8, borderRadius:'50%', background:'radial-gradient(circle, rgba(14,165,233,0.35) 0%, transparent 70%)', filter:'blur(10px)', zIndex:0 }} className="halo-glow" />
+                  <div style={{
+                    width: 86, height: 86, borderRadius: 20, position:'relative', zIndex:1,
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: 10, boxSizing: 'border-box',
+                    boxShadow: '0 10px 28px rgba(0,0,0,0.25), 0 0 0 2px rgba(14,165,233,0.4)',
+                    border: '1px solid rgba(255,255,255,0.9)',
+                  }}>
+                    {imgUrl
+                      ? <img src={imgUrl} alt={fp.name} style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain', transition:'transform 0.35s ease' }} className="feature-img" />
+                      : <Package size={32} color="#0ea5e9" />}
+                  </div>
+                </div>
+
+                {/* Text */}
+                <div style={{ flex:1, minWidth:0, position:'relative', zIndex:1 }}>
+                  <div style={{ fontSize:'0.58rem', fontWeight:900, color:'#38bdf8', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:5, display:'flex', alignItems:'center', gap:5 }}>
+                    <span style={{ width:5, height:5, borderRadius:'50%', background:'#38bdf8', display:'inline-block', boxShadow:'0 0 6px #38bdf8' }} />
+                    {fp.category}
+                  </div>
+                  <div style={{ fontSize:'clamp(0.9rem,1.8vw,1.05rem)', fontWeight:900, color:'#fff', fontFamily:'Outfit', lineHeight:1.15, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textShadow:'0 2px 8px rgba(0,0,0,0.3)' }}>
+                    {fp.name}
+                  </div>
+                  <div style={{ fontSize:'0.64rem', color:'rgba(255,255,255,0.6)', fontWeight:500, marginTop:4, display:'flex', alignItems:'center', gap:6 }}>
+                    <span>Click to view technical specifications</span>
+                    <ChevronRight size={12} style={{ opacity: 0.7 }} />
+                  </div>
+                </div>
+
+                <div style={{ flexShrink:0, width:32, height:32, borderRadius:'50%', background:'rgba(14,165,233,0.18)', border:'1px solid rgba(14,165,233,0.35)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1 }} className="feature-arrow">
+                  <ChevronRight size={16} color="#38bdf8" strokeWidth={2.5} />
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Chip row — all products in current slide */}
+          <div style={{
+            display: 'flex', gap: 10, width: '100%',
+            overflowX: 'auto', overflowY: 'visible', scrollbarWidth: 'none', flexWrap: 'nowrap',
+            WebkitOverflowScrolling: 'touch',
+            paddingTop: 10, marginTop: -10,
+            paddingBottom: 4,
+          }} className="carousel-products-row">
+            {currentSlide.products.map((p, idx) => {
+              const rawUrl = p.image_url || p.image;
+              const baseUrl = import.meta.env.BASE_URL || '/';
+              const imgUrl = rawUrl ? (rawUrl.startsWith('http') || rawUrl.startsWith('data:') ? rawUrl : `${baseUrl}${rawUrl.replace(/^\//, '')}`) : '';
+              const isKit = (p.category || '').toLowerCase().includes('instrument') || (p.name || '').toLowerCase().includes('kit');
+              const chipAccent = isKit ? '#a78bfa' : '#38bdf8';
+              const chipGlow = isKit ? 'rgba(167,139,250,0.25)' : 'rgba(14,165,233,0.22)';
+              const isActive = idx === activeProductIndex;
+              return (
+                <div
+                  key={p.id}
+                  onMouseEnter={() => setActiveProductIndex(idx)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (p.id && !String(p.id).startsWith('fb-')) navigate(`/product/${p.id}`);
+                    else navigate(`/product/${p.id}?name=${encodeURIComponent(p.name)}`);
                   }}
-                />
-              </div>
-              {/* Info */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                <span style={{
-                  fontSize: '0.58rem', fontWeight: 850,
-                  color: isHov ? '#0284c7' : '#64748b',
-                  textTransform: 'uppercase', letterSpacing: '0.08em',
-                  background: isHov ? 'linear-gradient(135deg, rgba(14,165,233,0.15), rgba(99,102,241,0.15))' : 'rgba(100,116,139,0.06)',
-                  padding: '4px 12px', borderRadius: 20, width: 'fit-content',
-                  transition: 'all 0.3s ease',
-                  border: isHov ? '1px solid rgba(14,165,233,0.2)' : '1px solid rgba(0,0,0,0.02)'
-                }}>
-                  {prod.category}
-                </span>
-                <h4 style={{
-                  fontFamily: 'Outfit', fontWeight: 800, fontSize: '0.92rem',
-                  color: isHov ? '#0f172a' : '#1e293b',
-                  margin: 0, lineHeight: 1.35,
-                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                }}>{prod.name}</h4>
-                <p style={{
-                  fontSize: '0.72rem', color: '#64748b', lineHeight: 1.45, margin: 0, flex: 1,
-                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                }}>{prod.desc}</p>
-              </div>
-              {/* Footer */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 'auto', paddingTop: 4 }}>
-                <span style={{
-                  fontSize: '0.7rem', fontWeight: 800, color: 'white',
-                  background: isHov
-                    ? 'linear-gradient(135deg, #0ea5e9, #4f46e5)'
-                    : 'linear-gradient(135deg, #64748b, #475569)',
-                  padding: '8px 16px', borderRadius: 20,
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                  boxShadow: isHov ? '0 8px 20px -6px rgba(14,165,233,0.5)' : 'none',
-                }}>
-                  View Details <ArrowRight size={12} style={{ transform: isHov ? 'translateX(3px)' : 'none', transition: 'transform 0.3s' }} />
-                </span>
-              </div>
-            </div>
-          );
-        })}
+                  className={`carousel-chip ${isActive ? 'active' : ''}`}
+                  style={{
+                    flexShrink: 0,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                    background: isActive 
+                      ? 'linear-gradient(160deg, rgba(14,165,233,0.18) 0%, rgba(99,102,241,0.12) 100%)' 
+                      : 'linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)',
+                    border: isActive 
+                      ? `1.5px solid ${chipAccent}` 
+                      : `1px solid rgba(255,255,255,0.12)`,
+                    borderRadius: 18, padding: '14px 12px 12px',
+                    cursor: 'pointer', minWidth: 100,
+                    boxShadow: isActive 
+                      ? `0 8px 24px rgba(0,0,0,0.28), 0 0 15px ${chipAccent}50` 
+                      : `0 6px 18px rgba(0,0,0,0.22)`,
+                    transition: 'all 0.32s cubic-bezier(0.16,1,0.3,1)',
+                    backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+                    position: 'relative', overflow: 'hidden',
+                    transform: isActive ? 'translateY(-5px) scale(1.03)' : 'translateY(0) scale(1)',
+                  }}
+                >
+                  {/* Subtle top accent glow */}
+                  <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', width:'70%', height:2, background:`linear-gradient(90deg, transparent, ${chipAccent}, transparent)`, borderRadius:1, zIndex:0 }} />
+
+                  {/* Active bottom marker */}
+                  {isActive && (
+                    <div style={{ position:'absolute', bottom:0, left:'50%', transform:'translateX(-50%)', width:20, height:3, background:chipAccent, borderRadius:'3px 3px 0 0', boxShadow:`0 -2px 8px ${chipAccent}` }} />
+                  )}
+
+                  {/* Image */}
+                  <div style={{
+                    width: 56, height: 56, borderRadius: 14, flexShrink: 0, position:'relative', zIndex:1,
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(240,249,255,0.9) 100%)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: 7, boxSizing: 'border-box',
+                    boxShadow: isActive 
+                      ? `0 6px 16px rgba(0,0,0,0.2), 0 0 16px ${chipAccent}60` 
+                      : `0 6px 16px rgba(0,0,0,0.2), 0 0 12px ${chipGlow}`,
+                    border: isActive 
+                      ? `1.5px solid ${chipAccent}` 
+                      : `1.5px solid ${chipAccent}40`,
+                  }}>
+                    {imgUrl
+                      ? <img src={imgUrl} alt={p.name} style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain' }} />
+                      : <Package size={22} color={chipAccent} />}
+                  </div>
+
+                  {/* Name */}
+                  <div style={{ fontSize:'0.64rem', fontWeight:isActive ? 900 : 800, color: isActive ? '#fff' : 'rgba(241,245,249,0.92)', lineHeight:1.25, textAlign:'center', maxWidth:88, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', zIndex:1 }}>
+                    {p.name}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Controls */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 24 }}>
-        <button
-          className="carousel-control-btn"
-          onClick={() => setIndex(i => Math.max(0, i - 1))}
-        ><ChevronLeft size={16} /></button>
-        <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-          {Array.from({ length: maxIndex + 1 }).map((_, i) => (
-            <span
-              key={i}
-              onClick={() => setIndex(i)}
-              style={{
-                width: i === index ? 24 : 7,
-                height: 7,
-                borderRadius: 4,
-                background: i === index ? 'linear-gradient(135deg,#0ea5e9,#6366f1)' : 'rgba(14,165,233,0.2)',
-                cursor: 'pointer',
-                transition: 'all 0.3s',
-                display: 'inline-block'
-              }}
-            />
-          ))}
+      {/* ── Progress bar ── */}
+      {!isHovered && (
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: 'rgba(255,255,255,0.07)', zIndex: 10 }}>
+          <div
+            key={`progress-${index}`}
+            style={{
+              height: '100%',
+              background: 'linear-gradient(90deg, #0ea5e9, #6366f1)',
+              animation: `progressBar ${SLIDE_DURATION}ms linear both`,
+              transformOrigin: 'left',
+              boxShadow: '0 0 8px rgba(14,165,233,0.6)',
+            }}
+          />
         </div>
-        <button
-          className="carousel-control-btn"
-          onClick={() => setIndex(i => Math.min(maxIndex, i + 1))}
-        ><ChevronRight size={16} /></button>
-      </div>
+      )}
+
+      {/* ── Slide navigation arrows ── */}
+      {total > 1 && (
+        <>
+          <div onClick={() => setIndex((i) => (i === 0 ? total - 1 : i - 1))} className="banner-arrow-btn" style={{ left: 18 }}>
+            <ChevronLeft size={20} />
+          </div>
+          <div onClick={() => setIndex((i) => (i === total - 1 ? 0 : i + 1))} className="banner-arrow-btn" style={{ right: 18 }}>
+            <ChevronRight size={20} />
+          </div>
+
+          {/* Slide counter */}
+          <div style={{
+            position: 'absolute', bottom: 16, right: 24, zIndex: 10,
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            {slides.map((_, i) => (
+              <span
+                key={i}
+                onClick={() => setIndex(i)}
+                style={{
+                  width: i === index ? 28 : 8, height: 8, borderRadius: 4,
+                  background: i === index ? 'linear-gradient(135deg,#0ea5e9,#6366f1)' : 'rgba(255,255,255,0.28)',
+                  cursor: 'pointer',
+                  transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)',
+                  display: 'inline-block',
+                  boxShadow: i === index ? '0 0 10px rgba(14,165,233,0.55)' : 'none',
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -307,23 +560,81 @@ export default function LandingPage({ onLoginRequired }) {
           .lp-contact-form-row { grid-template-columns: 1fr !important; }
           .hero-btn-primary, .hero-btn-secondary { width: 100%; justify-content: center !important; }
         }
+        @keyframes carouselIn {
+          from { opacity:0; transform:translateX(18px); }
+          to   { opacity:1; transform:translateX(0); }
+        }
+        @keyframes progressBar {
+          from { width: 0%; }
+          to   { width: 100%; }
+        }
+        .banner-arrow-btn {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%) scale(1);
+          width: 40px; height: 40px;
+          border-radius: 50%;
+          border: 1px solid rgba(255,255,255,0.18);
+          background: rgba(15,23,42,0.52);
+          color: rgba(255,255,255,0.8);
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          z-index: 10;
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.28);
+          outline: none;
+        }
+        .banner-arrow-btn:hover {
+          color: #fff;
+          transform: translateY(-50%) scale(1.12);
+          border-color: rgba(14,165,233,0.5);
+          background: linear-gradient(135deg, #0ea5e9, #6366f1);
+          box-shadow: 0 8px 24px rgba(14,165,233,0.45);
+        }
+        .banner-arrow-btn:active { transform: translateY(-50%) scale(0.94); }
+        .carousel-products-row::-webkit-scrollbar { display: none; }
+        .carousel-feature-card:hover {
+          background: linear-gradient(135deg, rgba(14,165,233,0.16) 0%, rgba(99,102,241,0.12) 50%, rgba(255,255,255,0.07) 100%) !important;
+          border-color: rgba(14,165,233,0.6) !important;
+          box-shadow: 0 24px 56px rgba(0,0,0,0.45), 0 0 0 1.5px rgba(14,165,233,0.5), 0 0 40px rgba(14,165,233,0.2) !important;
+          transform: translateY(-4px);
+        }
+        .carousel-feature-card:hover .feature-img { transform: scale(1.1) !important; }
+        .carousel-feature-card:active { transform: translateY(-1px) scale(0.99); }
+        .carousel-chip:hover {
+          background: linear-gradient(160deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%) !important;
+          border-color: rgba(56,189,248,0.55) !important;
+          box-shadow: 0 12px 28px rgba(0,0,0,0.35), 0 0 20px rgba(14,165,233,0.3) !important;
+          transform: translateY(-5px) scale(1.03);
+        }
+        .carousel-chip:active { transform: translateY(-1px) scale(0.97); }
+        .carousel-cta-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 32px -4px rgba(14,165,233,0.7) !important;
+          background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%) !important;
+        }
+        .carousel-cta-btn:active { transform: translateY(0) scale(0.97); }
+        @media(max-width: 768px) {
+          .carousel-main-grid {
+            grid-template-columns: 1fr !important;
+            padding: 0 20px !important;
+            overflow-y: auto;
+            gap: 0;
+          }
+          .carousel-main-grid > div:first-child { padding-bottom: 0 !important; padding-top: 24px; }
+          .carousel-main-grid > div:last-child  { padding-top: 10px !important; padding-bottom: 28px; }
+          .carousel-cta-btn { display: none !important; }
+        }
       `}</style>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
 
-        {/* ═══════════ PRODUCT CAROUSEL (TOPMOST) ═══════════ */}
-        <section className="lp-section" style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px 32px' }}>
+        {/* ═══════════ HERO BANNER CAROUSEL (TOPMOST) ═══════════ */}
+        <section style={{ width: '100%', padding: '24px clamp(20px, 3vw, 48px) 16px', boxSizing: 'border-box' }}>
           <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Our Range</span>
-              <h2 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: 'clamp(1.5rem, 2.5vw, 1.9rem)', color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
-                Comprehensive Product <span style={{ background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Categories</span>
-              </h2>
-              <p style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 500, maxWidth: 480, margin: '0 auto' }}>
-                Precision-engineered solutions for every clinical need. Click any product to view full details & sizes.
-              </p>
-            </div>
-            <Carousel />
+            <HeroBannerSlider onLoginRequired={onLoginRequired} />
           </Reveal>
         </section>
 

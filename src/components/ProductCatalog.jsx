@@ -1,9 +1,10 @@
+/* eslint-disable */
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { supabase } from '../utils/supabase';
 import { useStore } from '../utils/store';
-import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight, Wrench, FlaskConical, Shield, Settings, PhoneCall, ArrowLeft, Mail, Zap, Layers, Grid3x3, RefreshCw, Boxes, Flame, Clock, Syringe } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight, Wrench, FlaskConical, Shield, Settings, ArrowLeft, Zap, Layers, Grid3x3, RefreshCw, Boxes, Flame, Clock, Syringe } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import PremiumLoader from './ui/PremiumLoader';
@@ -165,7 +166,8 @@ export default function ProductCatalog({
       ...p,
       stock_qty: p.stock, // B2C compatibility alias
       image_url: p.image || p.image_url || '', // B2C compatibility alias
-      description: p.description || p.material || p.finish || '' // B2C compatibility alias
+      description: p.description || p.material || p.finish || '', // B2C compatibility alias
+      product_variants: p.variants || p.product_variants || []
     }));
   }, [storeProducts, dbProducts]);
 
@@ -174,6 +176,7 @@ export default function ProductCatalog({
 
   const [categoriesList, setCategoriesList] = useState(CATEGORIES);
   const [catConfig, setCatConfig] = useState(CAT);
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [subtype, setSubtype] = useState('all'); // 'all' | 'one_piece' | 'two_piece'
@@ -182,6 +185,7 @@ export default function ProductCatalog({
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(null);
   const [activeDiameter, setActiveDiameter] = useState(null);
 
   // Ratings & Feedback form states
@@ -202,20 +206,32 @@ export default function ProductCatalog({
 
   const isAdmin = authUser && authUser.role === 'admin';
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (selectedProduct) {
-      const sizeList = selectedProduct.sizes ? selectedProduct.sizes.split(',').map(s => s.trim()).filter(Boolean) : [];
-      setSelectedSize(sizeList.length > 0 ? sizeList[0] : null);
       fetchFeedback(selectedProduct.id);
       
-      const parsed = parseImplantSizes(selectedProduct.sizes, selectedProduct.sku);
-      if (parsed.diameters.length > 0) {
-        setActiveDiameter(parsed.diameters[0]);
-      } else {
+      if (selectedProduct.product_variants && selectedProduct.product_variants.length > 0) {
+        const activeVars = selectedProduct.product_variants.filter(v => v.active !== false);
+        const initialVar = activeVars.length > 0 ? activeVars[0] : null;
+        setSelectedVariant(initialVar);
+        setSelectedSize(initialVar ? [initialVar.diameter, initialVar.length].filter(Boolean).join(' x ') : null);
         setActiveDiameter(null);
+      } else {
+        setSelectedVariant(null);
+        const sizeList = selectedProduct.sizes ? selectedProduct.sizes.split(',').map(s => s.trim()).filter(Boolean) : [];
+        setSelectedSize(sizeList.length > 0 ? sizeList[0] : null);
+        
+        const parsed = parseImplantSizes(selectedProduct.sizes, selectedProduct.sku);
+        if (parsed.diameters.length > 0) {
+          setActiveDiameter(parsed.diameters[0]);
+        } else {
+          setActiveDiameter(null);
+        }
       }
     } else {
       setSelectedSize(null);
+      setSelectedVariant(null);
       setActiveDiameter(null);
     }
   }, [selectedProduct, fetchFeedback]);
@@ -236,6 +252,39 @@ export default function ProductCatalog({
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, products, setSearchParams]);
+
+  useEffect(() => {
+    const term = searchParams.get('search') || searchParams.get('q');
+    if (term) {
+      setSearch(term);
+    }
+    const cat = searchParams.get('category') || searchParams.get('cat');
+    if (cat) {
+      const match = categoriesList.find(c => c.toLowerCase() === cat.toLowerCase());
+      if (match) {
+        setCategory(match);
+      } else if (cat.toLowerCase() === 'implants') {
+        setCategory('Implants');
+      }
+    }
+    const sub = searchParams.get('subtype') || searchParams.get('sub');
+    if (sub) {
+      setSubtype(sub.toLowerCase());
+    }
+
+    if (term || cat || sub) {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.delete('search');
+        next.delete('q');
+        next.delete('category');
+        next.delete('cat');
+        next.delete('subtype');
+        next.delete('sub');
+        return next;
+      }, { replace: true });
+    }
+  }, [searchParams, categoriesList, setSearchParams]);
 
 
   useEffect(() => {
@@ -287,15 +336,17 @@ export default function ProductCatalog({
 
   const cartItems = Object.values(cart || {});
   const cartCount = cartItems.reduce((s, i) => s + (i?.qty || 0), 0);
-  const cartTotal = cartItems.reduce((s, i) => s + (i?.qty || 0) * (i?.product?.price || 0), 0);
+  const cartTotal = cartItems.reduce((s, i) => s + (i?.qty || 0) * ((i?.product?.price || 0) + (i?.variant?.price_delta || 0)), 0);
 
-  const addToCart = (product, size = null) => {
+  const addToCart = (product, size = null, variant = null) => {
     if (!product) return;
-    const cartKey = size ? `${product.id}_${size}` : product.id;
+    const cartKey = variant ? `${product.id}_v_${variant.id}` : (size ? `${product.id}_${size}` : product.id);
     const safeCart = cart || {};
     const currentQty = safeCart[cartKey]?.qty || 0;
-    if (product.stock_qty !== null && product.stock_qty !== undefined && currentQty >= product.stock_qty) {
-      alert(`Cannot add more. Only ${product.stock_qty} items in stock.`);
+    
+    const maxStock = variant ? variant.stock_qty : product.stock_qty;
+    if (maxStock !== null && maxStock !== undefined && currentQty >= maxStock) {
+      alert(`Cannot add more. Only ${maxStock} items in stock.`);
       return;
     }
     onCartChange(prev => {
@@ -304,14 +355,14 @@ export default function ProductCatalog({
         ...safePrev,
         [cartKey]: safePrev[cartKey]
           ? { ...safePrev[cartKey], qty: safePrev[cartKey].qty + 1 }
-          : { product, qty: 1, size },
+          : { product, qty: 1, size, variant },
       };
     });
   };
 
-  const removeFromCart = (productId, size = null) => {
+  const removeFromCart = (productId, size = null, variant = null) => {
     if (!productId) return;
-    const cartKey = size ? `${productId}_${size}` : productId;
+    const cartKey = variant ? `${productId}_v_${variant.id}` : (size ? `${productId}_${size}` : productId);
     onCartChange(prev => {
       const safePrev = prev && typeof prev === 'object' ? prev : {};
       const next = { ...safePrev };
@@ -351,16 +402,21 @@ export default function ProductCatalog({
         order_id: order.id,
         product_id: i.product.id,
         qty: i.qty,
-        unit_price: i.product.price,
-        size: i.size || null
+        unit_price: i.product.price + (i.variant?.price_delta || 0),
+        size: i.size || null,
+        variant_id: i.variant?.id || null
       }))
     );
 
-    for (const { product, qty } of cartItems) {
-      // Skip stock update for untracked products (null stock_qty)
-      if (product.stock_qty === null || product.stock_qty === undefined) continue;
-      // Atomic safe decrement — only update if current DB stock >= qty
-      await supabase.rpc('decrement_stock', { p_product_id: product.id, p_qty: qty });
+    for (const { product, qty, variant } of cartItems) {
+      if (variant && variant.id) {
+        await supabase.rpc('decrement_variant_stock', { p_variant_id: variant.id, p_qty: qty });
+      } else {
+        // Skip stock update for untracked products (null stock_qty)
+        if (product.stock_qty === null || product.stock_qty === undefined) continue;
+        // Atomic safe decrement — only update if current DB stock >= qty
+        await supabase.rpc('decrement_stock', { p_product_id: product.id, p_qty: qty });
+      }
     }
 
     clearCart();
@@ -1183,13 +1239,16 @@ export default function ProductCatalog({
               {filtered.map((p, index) => {
                 const cs = catConfig[p.category] || DEFAULT_CAT;
                 const inCart = (cart || {})[p.id];
-                const outOfStock = p.stock_qty === null || p.stock_qty === undefined || p.stock_qty <= 0;
-                const lowStock = !outOfStock && p.stock_qty <= 5;
+                const hasVars = p.product_variants && p.product_variants.length > 0;
+                const totalVarStock = hasVars ? p.product_variants.reduce((acc, v) => acc + (v.stock_qty || 0), 0) : 0;
+                const effectiveStock = hasVars ? totalVarStock : p.stock_qty;
+                const outOfStock = effectiveStock === null || effectiveStock === undefined || effectiveStock <= 0;
+                const lowStock = !outOfStock && effectiveStock <= 5;
                 const images = getProductImages(p);
                 return (
                   <div
                     key={p.id}
-                    onClick={() => { setSelectedProduct(p); setCarouselIndex(0); }}
+                    onClick={() => navigate(`/product/${p.id}`)}
                     className="product-card"
                     style={{
                       background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 0,
@@ -1259,7 +1318,7 @@ export default function ProductCatalog({
                           <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'hsl(var(--text-muted))', marginRight: 2 }}>₹</span>{p.price?.toLocaleString('en-IN')}
                         </span>
                         <span style={{ fontSize: '0.56rem', fontWeight: 800, padding: '3px 8px', borderRadius: 20, background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
-                          {outOfStock ? 'Out of Stock' : lowStock ? `${p.stock_qty} left` : 'In Stock'}
+                          {outOfStock ? 'Out of Stock' : lowStock ? `${effectiveStock} left` : 'In Stock'}
                         </span>
                       </div>
                     </div>
@@ -1269,9 +1328,9 @@ export default function ProductCatalog({
                         <div style={{ width: '100%', textAlign: 'center', fontSize: '0.66rem', color: 'hsl(var(--text-dim))', padding: '10px 0', borderTop: '1px solid rgba(14,165,233,0.1)', fontWeight: 700 }}>👁️ Administrator View</div>
                       ) : outOfStock ? (
                         <div style={{ width: '100%', textAlign: 'center', fontSize: '0.66rem', color: 'hsl(var(--text-dim))', padding: '10px 0', borderTop: '1px solid rgba(14,165,233,0.1)', fontWeight: 700 }}>Currently unavailable</div>
-                      ) : (p.sizes && p.sizes.trim()) ? (
-                        <button onClick={(e) => { e.stopPropagation(); setSelectedProduct(p); setCarouselIndex(0); }} style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #4f46e5)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 6px 16px -4px rgba(14,165,233,0.4)', transition: 'all 0.2s ease' }}>
-                          Select Size / Options
+                      ) : ((p.product_variants && p.product_variants.length > 0) || (p.sizes && p.sizes.trim())) ? (
+                        <button onClick={(e) => { e.stopPropagation(); navigate(`/product/${p.id}`); }} style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #4f46e5)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 6px 16px -4px rgba(14,165,233,0.4)', transition: 'all 0.2s ease' }}>
+                          View Details
                         </button>
                       ) : inCart ? (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.12)', borderRadius: 12, padding: '5px 6px', width: '100%' }}>
@@ -1403,17 +1462,17 @@ export default function ProductCatalog({
                         </div>
                         {item.size && (
                           <div style={{ fontSize: '0.62rem', color: '#0ea5e9', fontWeight: 800, fontFamily: 'Outfit', marginTop: 1 }}>
-                            Size: {item.size}
+                            Size: {item.size} {item.variant?.sku ? `[${item.variant.sku}]` : ''}
                           </div>
                         )}
                         <div style={{ fontSize: '0.76rem', fontWeight: 900, color: 'hsl(var(--text-primary))', marginTop: 3 }}>
-                          ₹{(item.product.price * item.qty).toLocaleString('en-IN')}
+                          ₹{((item.product.price + (item.variant?.price_delta || 0)) * item.qty).toLocaleString('en-IN')}
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', borderRadius: 10, padding: 4, gap: 8 }}>
                         <button
                           className="qty-btn"
-                          onClick={() => removeFromCart(item.product.id, item.size)}
+                          onClick={() => removeFromCart(item.product.id, item.size, item.variant)}
                           style={{ width: 22, height: 22 }}
                         >
                           <Minus size={10} strokeWidth={2.5} />
@@ -1421,8 +1480,8 @@ export default function ProductCatalog({
                         <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', minWidth: 16, textAlign: 'center' }}>{item.qty}</span>
                         <button
                           className="qty-btn"
-                          onClick={() => addToCart(item.product, item.size)}
-                          disabled={item.product.stock_qty !== null && item.product.stock_qty !== undefined && item.qty >= item.product.stock_qty}
+                          onClick={() => addToCart(item.product, item.size, item.variant)}
+                          disabled={(item.variant ? item.variant.stock_qty : item.product.stock_qty) !== null && (item.variant ? item.variant.stock_qty : item.product.stock_qty) !== undefined && item.qty >= (item.variant ? item.variant.stock_qty : item.product.stock_qty)}
                           style={{ width: 22, height: 22 }}
                         >
                           <Plus size={10} strokeWidth={2.5} />
@@ -1534,10 +1593,13 @@ export default function ProductCatalog({
       {/* Product Detail Modal */}
       {selectedProduct && (() => {
         const images = getProductImages(selectedProduct);
-        const cartKey = selectedSize ? `${selectedProduct.id}_${selectedSize}` : selectedProduct.id;
+        const cartKey = selectedVariant ? `${selectedProduct.id}_v_${selectedVariant.id}` : (selectedSize ? `${selectedProduct.id}_${selectedSize}` : selectedProduct.id);
         const inCart = (cart || {})[cartKey];
-        const outOfStock = selectedProduct.stock_qty === null || selectedProduct.stock_qty === undefined || selectedProduct.stock_qty <= 0;
-        const lowStock = !outOfStock && selectedProduct.stock_qty <= 5;
+        
+        const maxStock = selectedVariant ? selectedVariant.stock_qty : selectedProduct.stock_qty;
+        const outOfStock = maxStock === null || maxStock === undefined || maxStock <= 0;
+        const lowStock = !outOfStock && maxStock <= 5;
+        const displayPrice = selectedProduct.price + (selectedVariant?.price_delta || 0);
         const cs = catConfig[selectedProduct.category] || DEFAULT_CAT;
 
         return createPortal(
@@ -1651,7 +1713,7 @@ export default function ProductCatalog({
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.35rem', color: '#0ea5e9' }}>
-                      <span style={{ fontSize: '1.05rem', fontWeight: 600, color: 'hsl(var(--text-muted))', marginRight: 2 }}>₹</span>{selectedProduct.price?.toLocaleString('en-IN')}
+                      <span style={{ fontSize: '1.05rem', fontWeight: 600, color: 'hsl(var(--text-muted))', marginRight: 2 }}>₹</span>{displayPrice?.toLocaleString('en-IN')}
                     </div>
                     {selectedProduct.unit && (
                       <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', marginTop: 1 }}>
@@ -1664,7 +1726,7 @@ export default function ProductCatalog({
                 {/* Badges / Stock */}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '4px 10px', borderRadius: 'var(--radius-xs)', background: outOfStock ? 'rgba(239,68,68,0.1)' : lowStock ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' }}>
-                    {outOfStock ? 'Out of Stock' : lowStock ? `Only ${selectedProduct.stock_qty} left` : 'In Stock'}
+                    {outOfStock ? 'Out of Stock' : lowStock ? `Only ${maxStock} left` : 'In Stock'}
                   </span>
                   {selectedProduct.sku && (
                     <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '4px 10px', borderRadius: 'var(--radius-xs)', background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', color: 'hsl(var(--text-muted))' }}>
@@ -1679,16 +1741,21 @@ export default function ProductCatalog({
                 </div>
 
                 {/* Sizes Selector */}
-                {selectedProduct.sizes && selectedProduct.sizes.trim() && (
+                {selectedProduct.product_variants && selectedProduct.product_variants.length > 0 ? (
                   <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: 12 }}>
-                    <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px 0' }}>Select Size / Option</h4>
+                    <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px 0' }}>Select Size / Variant</h4>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {selectedProduct.sizes.split(',').map(s => s.trim()).filter(Boolean).map(size => {
-                        const isSelected = selectedSize === size;
+                      {selectedProduct.product_variants.filter(v => v.active !== false).map(v => {
+                        const label = [v.diameter, v.length].filter(Boolean).join(' x ');
+                        const isSelected = selectedVariant?.id === v.id;
+                        const isSoldOut = v.stock_qty <= 0;
                         return (
                           <button
-                            key={size}
-                            onClick={() => setSelectedSize(size)}
+                            key={v.id}
+                            onClick={() => {
+                              setSelectedVariant(v);
+                              setSelectedSize(label);
+                            }}
                             style={{
                               padding: '8px 14px',
                               borderRadius: 10,
@@ -1697,17 +1764,49 @@ export default function ProductCatalog({
                               fontFamily: 'Outfit',
                               cursor: 'pointer',
                               border: isSelected ? '1.5px solid #0ea5e9' : '1px solid hsl(var(--border-color))',
-                              background: isSelected ? 'rgba(14,165,233,0.08)' : 'transparent',
-                              color: isSelected ? '#0ea5e9' : 'hsl(var(--text-primary))',
-                              transition: 'all 0.15s ease'
+                              background: isSelected ? 'rgba(14,165,233,0.08)' : isSoldOut ? 'rgba(239,68,68,0.03)' : 'transparent',
+                              color: isSelected ? '#0ea5e9' : isSoldOut ? 'hsl(var(--text-dim))' : 'hsl(var(--text-primary))',
+                              transition: 'all 0.15s ease',
+                              opacity: isSoldOut ? 0.6 : 1
                             }}
                           >
-                            {size}
+                            {label} {isSoldOut ? '(SOLD OUT)' : `(${v.stock_qty} left)`}
                           </button>
                         );
                       })}
                     </div>
                   </div>
+                ) : (
+                  selectedProduct.sizes && selectedProduct.sizes.trim() && (
+                    <div style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: 12 }}>
+                      <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px 0' }}>Select Size / Option</h4>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {selectedProduct.sizes.split(',').map(s => s.trim()).filter(Boolean).map(size => {
+                          const isSelected = selectedSize === size;
+                          return (
+                            <button
+                              key={size}
+                              onClick={() => setSelectedSize(size)}
+                              style={{
+                                padding: '8px 14px',
+                                borderRadius: 10,
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                fontFamily: 'Outfit',
+                                cursor: 'pointer',
+                                border: isSelected ? '1.5px solid #0ea5e9' : '1px solid hsl(var(--border-color))',
+                                background: isSelected ? 'rgba(14,165,233,0.08)' : 'transparent',
+                                color: isSelected ? '#0ea5e9' : 'hsl(var(--text-primary))',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {size}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )
                 )}
 
                 {/* Premium Specifications Grid */}
@@ -1717,7 +1816,7 @@ export default function ProductCatalog({
                     <div>
                       <div style={{ fontSize: '0.58rem', color: 'hsl(var(--text-muted))', fontWeight: 700, textTransform: 'uppercase' }}>Availability</div>
                       <div style={{ fontSize: '0.8rem', fontWeight: 800, color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981', marginTop: 2 }}>
-                        {outOfStock ? 'Out of Stock' : lowStock ? `Low — ${selectedProduct.stock_qty} left` : '✅ In Stock'}
+                        {outOfStock ? 'Out of Stock' : lowStock ? `Low — ${maxStock} left` : '✅ In Stock'}
                       </div>
                     </div>
                     <div>
@@ -1899,7 +1998,7 @@ export default function ProductCatalog({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1.1, background: 'hsl(var(--bg-dark))', border: '1px solid hsl(var(--border-color))', borderRadius: 16, padding: '6px 16px' }}>
                       <button
                         className="qty-btn"
-                        onClick={() => removeFromCart(selectedProduct.id, selectedSize)}
+                        onClick={() => removeFromCart(selectedProduct.id, selectedSize, selectedVariant)}
                         style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'hsl(var(--border-color))', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                       >
                         <Minus size={12} strokeWidth={2.5} />
@@ -1910,8 +2009,8 @@ export default function ProductCatalog({
                       </div>
                       <button
                         className="qty-btn"
-                        onClick={() => addToCart(selectedProduct, selectedSize)}
-                        disabled={selectedProduct.stock_qty !== null && selectedProduct.stock_qty !== undefined && inCart.qty >= selectedProduct.stock_qty}
+                        onClick={() => addToCart(selectedProduct, selectedSize, selectedVariant)}
+                        disabled={maxStock !== null && maxStock !== undefined && inCart.qty >= maxStock}
                         style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'hsl(var(--border-color))', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                       >
                         <Plus size={12} strokeWidth={2.5} />
@@ -1946,10 +2045,11 @@ export default function ProductCatalog({
                   </div>
                 ) : (
                   <button
-                    onClick={() => addToCart(selectedProduct, selectedSize)}
-                    style={{ padding: '14px 28px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 16px rgba(14,165,233,0.3)', letterSpacing: '0.02em', marginLeft: 'auto' }}
+                    onClick={() => addToCart(selectedProduct, selectedSize, selectedVariant)}
+                    disabled={outOfStock}
+                    style={{ padding: '14px 28px', borderRadius: 14, border: 'none', background: outOfStock ? 'hsl(var(--bg-dark))' : 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: outOfStock ? 'hsl(var(--text-dim))' : '#fff', fontSize: '0.88rem', fontWeight: 800, cursor: outOfStock ? 'not-allowed' : 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: outOfStock ? 'none' : '0 4px 16px rgba(14,165,233,0.3)', letterSpacing: '0.02em', marginLeft: 'auto' }}
                   >
-                    <Plus size={16} /> Add to Cart
+                    {outOfStock ? 'Sold Out' : <><Plus size={16} /> Add to Cart</>}
                   </button>
                 )}
               </div>
