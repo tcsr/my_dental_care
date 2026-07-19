@@ -102,7 +102,7 @@ const B2B_CATEGORIES = [
   'Genweld', 'Instant Provisionals', 'General Instruments', 'Bone Graft', 'Bone Plate', 'Fixation Screw'
 ];
 const EMPTY_B2C = { name: '', category: 'Implants', price: '', stock_qty: '', description: '', active: true, image_url: '' };
-const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0', sizes: '', implant_subtype: '' };
+const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0', sizes: '', implant_subtype: '', is_featured: false, description: '' };
 const STERILIZATION_METHODS = ['ETO', 'Autoclave', 'Gamma'];
 
 function Field({ label, children }) {
@@ -206,6 +206,8 @@ export default function ProductManagement() {
         purchaseCost: p.purchaseCost || '',
         minStock: p.minStock || 5,
         isSerialized: !!p.isSerialized,
+        is_featured: !!p.is_featured,
+        description: p.description || '',
         image: p.image || '',
         material: p.material || '',
         finish: p.finish || '',
@@ -251,7 +253,9 @@ export default function ProductManagement() {
         image_url: form.image || '',
         active: true,
         sizes: form.sizes?.trim() || '',
-        implant_subtype: form.implant_subtype || null
+        implant_subtype: form.implant_subtype || null,
+        description: form.description?.trim() || null,
+        is_featured: !!form.is_featured
       };
 
       if (modal === 'add') {
@@ -276,6 +280,8 @@ export default function ProductManagement() {
           bendableAngle: parseFloat(form.bendableAngle) || 0,
           sizes: form.sizes?.trim() || '',
           implant_subtype: form.implant_subtype || null,
+          is_featured: !!form.is_featured,
+          description: form.description?.trim() || '',
           batches: [
             {
               batchNo: finalBatchNo,
@@ -311,7 +317,9 @@ export default function ProductManagement() {
           warrantyPct: parseFloat(form.warrantyPct) || 0,
           bendableAngle: parseFloat(form.bendableAngle) || 0,
           sizes: form.sizes?.trim() || '',
-          implant_subtype: form.implant_subtype || null
+          implant_subtype: form.implant_subtype || null,
+          description: form.description?.trim() || '',
+          is_featured: !!form.is_featured
         });
         const localProd = await db.b2bProducts.get(modal.id);
         try {
@@ -726,6 +734,19 @@ export default function ProductManagement() {
                   </>
                 )}
 
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <input
+                    type="checkbox"
+                    id="modal_featured"
+                    checked={!!form.is_featured}
+                    onChange={e => setForm(f => ({ ...f, is_featured: e.target.checked }))}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <label htmlFor="modal_featured" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'hsl(var(--text-primary))', cursor: 'pointer' }}>
+                    Featured on landing carousel
+                  </label>
+                </div>
+
                 <Field label="Category">
                   <PremiumSelect value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="form-select">
                     {isB2b 
@@ -734,6 +755,13 @@ export default function ProductManagement() {
                     }
                   </PremiumSelect>
                 </Field>
+
+                {isB2b && (
+                  <Field label="Description">
+                    <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Short marketing description shown on the landing carousel" rows={3}
+                      className="form-textarea" style={{ resize: 'none', lineHeight: 1.5 }} />
+                  </Field>
+                )}
 
                 {isB2b && getCategoryKey(form.category) === 'Implants' && (
                   <Field label="Implant Subtype">

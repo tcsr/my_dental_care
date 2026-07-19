@@ -8,7 +8,7 @@ import {
   CheckCircle, Sparkles
 } from 'lucide-react';
 import Footer from './Footer';
-import { db } from '../utils/db';
+import { supabase } from '../utils/supabase';
 
 const FALLBACK_PRODUCTS = [
   { name: 'Two Piece Dental Implant', category: 'Implant', price: 3500, image: '/products/two-piece-implant.jpeg', desc: 'Titanium Gr5 (Ti6Al4V) with SLA surface finish. Sterilized with Gamma rays.' },
@@ -54,6 +54,16 @@ function Reveal({ children, delay = 0 }) {
   );
 }
 
+const resolveCarouselImage = (img) => {
+  if (!img) return '';
+  let s = String(img).trim().split('|')[0].trim();
+  // comma-separate only for non-data URIs (data URIs legitimately contain commas)
+  if (!s.startsWith('data:') && s.includes(',')) s = s.split(',')[0].trim();
+  if (/^(https?:|data:|blob:)/.test(s)) return s;
+  const base = import.meta.env.BASE_URL || '/';
+  return base + (s.startsWith('/') ? s.slice(1) : s);
+};
+
 function Carousel() {
   const [index, setIndex] = useState(0);
   const [products, setProducts] = useState(FALLBACK_PRODUCTS);
@@ -73,19 +83,28 @@ function Carousel() {
   }, []);
 
   useEffect(() => {
-    async function fetchProducts() {
+    async function fetchFeatured() {
       try {
-        const prodList = await db.b2bProducts.toArray();
-        if (prodList && prodList.length > 0) {
-          const mapped = prodList.map((p, idx) => {
-            const fb = FALLBACK_PRODUCTS[idx] || FALLBACK_PRODUCTS[0];
-            return { ...p, desc: p.desc || fb.desc };
-          });
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('active', true)
+          .eq('is_featured', true)
+          .order('name');
+        if (!error && data && data.length > 0) {
+          const mapped = data.map(p => ({
+            ...p,
+            desc: p.description || '',
+            image: p.image_url || '',
+          }));
           setProducts(mapped);
         }
-      } catch (e) { console.error(e); }
+        // else: keep FALLBACK_PRODUCTS (no featured rows, or error) — never blank
+      } catch (e) {
+        console.error('Carousel featured fetch failed:', e);
+      }
     }
-    fetchProducts();
+    fetchFeatured();
   }, []);
 
   const perView = containerW < 500 ? 1 : containerW < 820 ? 2 : 3;
@@ -114,7 +133,7 @@ function Carousel() {
       }}>
         {products.map((prod, i) => {
           const isHov = hoveredIdx === i;
-          const imgSrc = `${import.meta.env.BASE_URL || '/'}${prod.image?.startsWith('/') ? prod.image.slice(1) : prod.image}`;
+          const imgSrc = resolveCarouselImage(prod.image);
           return (
             <div
               key={i}
@@ -189,14 +208,7 @@ function Carousel() {
                 }}>{prod.desc}</p>
               </div>
               {/* Footer */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 4 }}>
-                <span style={{
-                  fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.1rem',
-                  color: isHov ? '#0ea5e9' : '#0f172a',
-                  transition: 'color 0.3s ease',
-                }}>
-                  ₹{prod.price.toLocaleString('en-IN')}
-                </span>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 'auto', paddingTop: 4 }}>
                 <span style={{
                   fontSize: '0.7rem', fontWeight: 800, color: 'white',
                   background: isHov
