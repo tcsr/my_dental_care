@@ -56,10 +56,12 @@ function Reveal({ children, delay = 0 }) {
 
 const resolveCarouselImage = (img) => {
   if (!img) return '';
-  const first = String(img).split('|')[0].split(',')[0].trim();
-  if (/^(https?:|data:|blob:)/.test(first)) return first;
+  let s = String(img).trim().split('|')[0].trim();
+  // comma-separate only for non-data URIs (data URIs legitimately contain commas)
+  if (!s.startsWith('data:') && s.includes(',')) s = s.split(',')[0].trim();
+  if (/^(https?:|data:|blob:)/.test(s)) return s;
   const base = import.meta.env.BASE_URL || '/';
-  return base + (first.startsWith('/') ? first.slice(1) : first);
+  return base + (s.startsWith('/') ? s.slice(1) : s);
 };
 
 function Carousel() {
