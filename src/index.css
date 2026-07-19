@@ -2551,7 +2551,7 @@ body.is-browser .floating-cart-pill:hover {
   position: sticky;
   top: 0;
   z-index: 1000;
-  overflow: hidden;
+  overflow: visible;
   background: rgba(240, 249, 255, 0.88) !important;
   backdrop-filter: blur(20px) saturate(190%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
