@@ -102,7 +102,7 @@ const B2B_CATEGORIES = [
   'Genweld', 'Instant Provisionals', 'General Instruments', 'Bone Graft', 'Bone Plate', 'Fixation Screw'
 ];
 const EMPTY_B2C = { name: '', category: 'Implants', price: '', stock_qty: '', description: '', active: true, image_url: '' };
-const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0', sizes: '', implant_subtype: '', is_featured: false };
+const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0', sizes: '', implant_subtype: '', is_featured: false, description: '' };
 const STERILIZATION_METHODS = ['ETO', 'Autoclave', 'Gamma'];
 
 function Field({ label, children }) {
@@ -207,6 +207,7 @@ export default function ProductManagement() {
         minStock: p.minStock || 5,
         isSerialized: !!p.isSerialized,
         is_featured: !!p.is_featured,
+        description: p.description || '',
         image: p.image || '',
         material: p.material || '',
         finish: p.finish || '',
@@ -253,6 +254,7 @@ export default function ProductManagement() {
         active: true,
         sizes: form.sizes?.trim() || '',
         implant_subtype: form.implant_subtype || null,
+        description: form.description?.trim() || null,
         is_featured: !!form.is_featured
       };
 
@@ -279,6 +281,7 @@ export default function ProductManagement() {
           sizes: form.sizes?.trim() || '',
           implant_subtype: form.implant_subtype || null,
           is_featured: !!form.is_featured,
+          description: form.description?.trim() || '',
           batches: [
             {
               batchNo: finalBatchNo,
@@ -315,6 +318,7 @@ export default function ProductManagement() {
           bendableAngle: parseFloat(form.bendableAngle) || 0,
           sizes: form.sizes?.trim() || '',
           implant_subtype: form.implant_subtype || null,
+          description: form.description?.trim() || '',
           is_featured: !!form.is_featured
         });
         const localProd = await db.b2bProducts.get(modal.id);
@@ -751,6 +755,13 @@ export default function ProductManagement() {
                     }
                   </PremiumSelect>
                 </Field>
+
+                {isB2b && (
+                  <Field label="Description">
+                    <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Short marketing description shown on the landing carousel" rows={3}
+                      className="form-textarea" style={{ resize: 'none', lineHeight: 1.5 }} />
+                  </Field>
+                )}
 
                 {isB2b && getCategoryKey(form.category) === 'Implants' && (
                   <Field label="Implant Subtype">
