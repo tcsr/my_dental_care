@@ -31,6 +31,8 @@ const CAT_CONFIG = {
   'Instant Provisionals': { bg: 'rgba(8,145,178,0.12)',  color: '#0891b2', icon: '⏱️' },
   'General Instruments':  { bg: 'rgba(100,116,139,0.12)', color: '#64748b', icon: '🔧' },
   'Bone Graft':           { bg: 'rgba(20,184,166,0.12)', color: '#14b8a6', icon: '💉' },
+  'Bone Plate':           { bg: 'rgba(100,116,139,0.12)', color: '#64748b', icon: '🦴' },
+  'Fixation Screw':       { bg: 'rgba(120,113,108,0.12)', color: '#78716c', icon: '🔩' },
 };
 const DEFAULT_CAT_CONFIG = { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', icon: '📦' };
 
@@ -97,10 +99,10 @@ const B2B_CATEGORIES = [
   'Implant', 'Abutment', 'Crown', 'Bridge', 'Surgical Tool',
   // Expanded implant-type taxonomy (additive — existing products keep their current category)
   'Root Form', 'Compression', 'Basal', 'Basal SS', 'Compression MU', 'Basal MU',
-  'Genweld', 'Instant Provisionals', 'General Instruments', 'Bone Graft'
+  'Genweld', 'Instant Provisionals', 'General Instruments', 'Bone Graft', 'Bone Plate', 'Fixation Screw'
 ];
 const EMPTY_B2C = { name: '', category: 'Implants', price: '', stock_qty: '', description: '', active: true, image_url: '' };
-const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0', sizes: '' };
+const EMPTY_B2B = { name: '', category: 'Implant', sku: '', price: '', purchaseCost: '', stock: '', minStock: '5', isSerialized: false, initialSerial: '', batchNo: '', batchExpiry: '', batchLocation: 'Main Warehouse', image: '', material: '', finish: '', sterilization: 'ETO', warrantyPct: '100', bendableAngle: '0', sizes: '', implant_subtype: '' };
 const STERILIZATION_METHODS = ['ETO', 'Autoclave', 'Gamma'];
 
 function Field({ label, children }) {
@@ -210,7 +212,8 @@ export default function ProductManagement() {
         sterilization: p.sterilization || 'ETO',
         warrantyPct: p.warrantyPct ?? '100',
         bendableAngle: p.bendableAngle ?? '0',
-        sizes: p.sizes || ''
+        sizes: p.sizes || '',
+        implant_subtype: p.implant_subtype || ''
       });
     } else {
       setForm({
@@ -239,7 +242,7 @@ export default function ProductManagement() {
 
       const supabasePayload = {
         name: form.name.trim(),
-        category: form.category === 'Implant' ? 'Implants' : form.category === 'Abutment' ? 'Materials' : 'Instruments',
+        category: form.category === 'Implant' ? 'Implants' : form.category === 'Abutment' ? 'Materials' : form.category,
         price: priceNum,
         stock_qty: stockQty,
         sku: form.sku.trim(),
@@ -247,7 +250,8 @@ export default function ProductManagement() {
         is_serialized: form.isSerialized,
         image_url: form.image || '',
         active: true,
-        sizes: form.sizes?.trim() || ''
+        sizes: form.sizes?.trim() || '',
+        implant_subtype: form.implant_subtype || null
       };
 
       if (modal === 'add') {
@@ -271,6 +275,7 @@ export default function ProductManagement() {
           warrantyPct: parseFloat(form.warrantyPct) || 0,
           bendableAngle: parseFloat(form.bendableAngle) || 0,
           sizes: form.sizes?.trim() || '',
+          implant_subtype: form.implant_subtype || null,
           batches: [
             {
               batchNo: finalBatchNo,
@@ -305,7 +310,8 @@ export default function ProductManagement() {
           sterilization: form.sterilization || 'ETO',
           warrantyPct: parseFloat(form.warrantyPct) || 0,
           bendableAngle: parseFloat(form.bendableAngle) || 0,
-          sizes: form.sizes?.trim() || ''
+          sizes: form.sizes?.trim() || '',
+          implant_subtype: form.implant_subtype || null
         });
         const localProd = await db.b2bProducts.get(modal.id);
         try {
@@ -728,6 +734,16 @@ export default function ProductManagement() {
                     }
                   </PremiumSelect>
                 </Field>
+
+                {isB2b && getCategoryKey(form.category) === 'Implants' && (
+                  <Field label="Implant Subtype">
+                    <PremiumSelect value={form.implant_subtype} onChange={e => setForm(f => ({ ...f, implant_subtype: e.target.value }))} className="form-select">
+                      <option value="">— none —</option>
+                      <option value="one_piece">One-piece</option>
+                      <option value="two_piece">Two-piece</option>
+                    </PremiumSelect>
+                  </Field>
+                )}
 
                 {isB2b && (
                   <div style={{ background: 'hsl(var(--border-color) / 10%)', padding: 12, borderRadius: 12, border: '1px solid hsl(var(--border-color))', display: 'flex', flexDirection: 'column', gap: 12 }}>
