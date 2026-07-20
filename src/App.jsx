@@ -77,7 +77,7 @@ const ProProfileSettingsSubscreen = lazy(() => import('./components/ProProfileSe
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const OrderManagement = lazy(() => import('./components/OrderManagement'));
 const ProductManagement = lazy(() => import('./components/ProductManagement'));
-import { ShoppingBag, ShoppingCart, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList, Megaphone, Phone, Mail, Search } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Package, Bell, Activity, Menu, X, Trash2, Film, Globe, Settings, User, ArrowUp, ArrowDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, AlertCircle, Info, MessageSquare, ShieldCheck, LayoutDashboard, LogOut, LogIn, ChevronRight, Store, ClipboardList, Megaphone, Phone, Mail, Search, Sun, Moon } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -93,6 +93,13 @@ export default function App() {
     }
   };
   const [isDbReady, setIsDbReady] = useState(false);
+  const [guestTheme, setGuestTheme] = useState(() => localStorage.getItem('guestTheme') || 'light');
+  const [isSpeedDialOpen, setIsSpeedDialOpen] = useState(false);
+  const toggleGuestTheme = () => {
+    const next = guestTheme === 'dark' ? 'light' : 'dark';
+    setGuestTheme(next);
+    localStorage.setItem('guestTheme', next);
+  };
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     try {
       const saved = localStorage.getItem('dental_sidebar_collapsed');
@@ -1274,8 +1281,18 @@ export default function App() {
       <div className="main-layout-container">
         {/* Main Premium Layout Wrapper */}
         {!isLoggedIn ? (
-          <div className={`app-header guest-header ${guestScrolled ? 'scrolled' : ''}`}>
-            <div className="guest-header-inner">
+          <div
+            className={`app-header guest-header ${guestScrolled ? 'scrolled' : ''}`}
+            style={{
+              background: guestScrolled
+                ? 'linear-gradient(135deg, #061220 0%, #0d2440 50%, #061220 100%)'
+                : 'linear-gradient(135deg, #081729 0%, #112d4e 50%, #081729 100%)',
+              borderBottom: '1.5px solid #0ea5e9',
+              boxShadow: '0 8px 32px rgba(14, 165, 233, 0.22), 0 0 25px rgba(14, 165, 233, 0.15)',
+              transition: 'all 0.35s ease'
+            }}
+          >
+            <div className="guest-header-inner" style={{ padding: '0 clamp(12px, 1.5vw, 24px)', maxWidth: '100%' }}>
               <div className="guest-brand-wrapper">
                 <button
                   onClick={() => setIsSidebarOpen(prev => !prev)}
@@ -1303,7 +1320,7 @@ export default function App() {
                   marginRight: '20px',
                   flexGrow: 1
                 }} className="nav-search-container">
-                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none' }} />
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.5)', pointerEvents: 'none' }} />
                   <input
                     type="text"
                     placeholder="Search products..."
@@ -1316,8 +1333,9 @@ export default function App() {
                       padding: '0 12px 0 36px',
                       fontSize: '0.8rem',
                       borderRadius: '10px',
-                      border: '1.5px solid hsl(var(--border-color))',
-                      background: 'rgba(255, 255, 255, 0.45)',
+                      border: '1.5px solid rgba(14, 165, 233, 0.25)',
+                      background: 'rgba(10, 15, 30, 0.55)',
+                      color: '#ffffff',
                       outline: 'none',
                       transition: 'all 0.25s ease',
                       boxSizing: 'border-box'
@@ -1397,6 +1415,27 @@ export default function App() {
                       {cartCount}
                     </span>
                   )}
+                </button>
+
+                <button
+                  onClick={toggleGuestTheme}
+                  className="header-btn theme-toggle-btn"
+                  title={guestTheme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    border: '1.5px solid rgba(14, 165, 233, 0.4)',
+                    background: 'rgba(14, 165, 233, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#fff',
+                    transition: 'all 0.25s ease'
+                  }}
+                >
+                  {guestTheme === 'dark' ? <Sun size={16} color="#f59e0b" /> : <Moon size={16} color="#38bdf8" />}
                 </button>
 
                 <button
@@ -1582,6 +1621,29 @@ export default function App() {
                 />
               </div>
 
+              {!isLoggedIn && (
+                <button
+                  onClick={toggleGuestTheme}
+                  className="header-btn theme-toggle-btn"
+                  title={guestTheme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    border: '1.5px solid rgba(255, 255, 255, 0.18)',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#fff',
+                    transition: 'all 0.25s ease'
+                  }}
+                >
+                  {guestTheme === 'dark' ? <Sun size={15} color="#f59e0b" /> : <Moon size={15} color="#38bdf8" />}
+                </button>
+              )}
+
               {isLoggedIn ? (
                 <>
                   <button
@@ -1719,7 +1781,7 @@ export default function App() {
                       />
                     } />
                     <Route path="/guides" element={<ProGuidesSubscreen lang={lang} isLoggedIn={false} />} />
-                    <Route path="/" element={<LandingPage onLoginRequired={() => setShowLoginModal(true)} />} />
+                    <Route path="/" element={<LandingPage onLoginRequired={() => setShowLoginModal(true)} guestTheme={guestTheme} />} />
                     <Route path="/product/:id" element={
                       <ProductDetailPage
                         authUser={authUser}
@@ -1823,17 +1885,68 @@ export default function App() {
         >
           <ChevronDown size={20} />
         </button>
-        <a
-          href="https://wa.me/919444126926?text=Hello%20Simple%20Implants%20Support%2C%20I%20am%20using%20the%20B2B%20catalog%20app%20and%20have%20a%20query%20regarding%20surgical%20supplies%2C%20clinical%20cases%2C%20or%20pricing.%20Could%20you%20please%20assist%20me%3F"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="whatsapp-btn"
-          title="Chat on WhatsApp"
-        >
-          <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.248 8.477 3.517 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.731-1.456L0 24h.057zM12.008 2.18c-5.405 0-9.782 4.382-9.785 9.791a9.77 9.77 0 001.492 5.178l.327.52-1.002 3.657 3.743-.982.507.301a9.75 9.75 0 005.173 1.496c5.405 0 9.782-4.382 9.786-9.79a9.77 9.77 0 00-2.868-6.924A9.73 9.73 0 0012.008 2.18zm5.359 13.149c-.293-.146-1.737-.858-2.006-.955-.269-.098-.465-.147-.661.147-.196.293-.76.955-.931 1.15-.171.196-.343.22-.636.073-.293-.146-1.239-.456-2.361-1.458-.873-.779-1.462-1.74-1.633-2.033-.171-.293-.018-.452.129-.597.132-.131.293-.342.44-.513.146-.171.196-.293.293-.489.098-.196.049-.367-.024-.513-.074-.146-.661-1.593-.906-2.18-.238-.574-.48-.496-.661-.505-.171-.007-.367-.008-.563-.008-.196 0-.514.073-.783.366-.269.293-1.026 1.002-1.026 2.444s1.05 2.836 1.197 3.031c.147.196 2.067 3.156 5.006 4.428.699.303 1.246.484 1.671.62.704.223 1.345.192 1.851.116.564-.084 1.737-.709 1.982-1.393.245-.684.245-1.27.172-1.393-.073-.122-.269-.195-.563-.341z"/>
-          </svg>
-        </a>
+        <div style={{ position: 'relative' }}>
+          {isSpeedDialOpen && (
+            <div style={{
+              position: 'absolute',
+              bottom: 60,
+              right: 0,
+              background: 'rgba(10, 15, 30, 0.96)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              borderRadius: 20,
+              padding: '16px',
+              border: '1.5px solid rgba(14, 165, 233, 0.4)',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), 0 0 25px rgba(14, 165, 233, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              minWidth: 240,
+              zIndex: 99999
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: 'Outfit' }}>Surgical Helpline 24/7</span>
+              </div>
+
+              <a
+                href="https://wa.me/919444126926?text=Hi%20Simple%20Implants,%20I%20need%20surgical%20consultation"
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 800, border: '1px solid rgba(16, 185, 129, 0.3)', fontFamily: 'Outfit' }}
+              >
+                <MessageSquare size={16} /> WhatsApp Consultation
+              </a>
+
+              <a
+                href="tel:+919444126926"
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: 'rgba(14, 165, 233, 0.15)', color: '#38bdf8', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 800, border: '1px solid rgba(14, 165, 233, 0.3)', fontFamily: 'Outfit' }}
+              >
+                <Phone size={16} /> Call Helpline Directly
+              </a>
+
+              <a
+                href="mailto:simpleimplants@gmail.com"
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 800, border: '1px solid rgba(99, 102, 241, 0.3)', fontFamily: 'Outfit' }}
+              >
+                <Mail size={16} /> Email Surgical Team
+              </a>
+            </div>
+          )}
+
+          <button
+            onClick={() => setIsSpeedDialOpen(o => !o)}
+            className="whatsapp-btn"
+            title="Speed Dial & Emergency Support"
+            style={{ border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {isSpeedDialOpen ? <X size={22} color="#fff" /> : (
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.248 8.477 3.517 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.731-1.456L0 24h.057zM12.008 2.18c-5.405 0-9.782 4.382-9.785 9.791a9.77 9.77 0 001.492 5.178l.327.52-1.002 3.657 3.743-.982.507.301a9.75 9.75 0 005.173 1.496c5.405 0 9.782-4.382 9.786-9.79a9.77 9.77 0 00-2.868-6.924A9.73 9.73 0 0012.008 2.18zm5.359 13.149c-.293-.146-1.737-.858-2.006-.955-.269-.098-.465-.147-.661.147-.196.293-.76.955-.931 1.15-.171.196-.343.22-.636.073-.293-.146-1.239-.456-2.361-1.458-.873-.779-1.462-1.74-1.633-2.033-.171-.293-.018-.452.129-.597.132-.131.293-.342.44-.513.146-.171.196-.293.293-.489.098-.196.049-.367-.024-.513-.074-.146-.661-1.593-.906-2.18-.238-.574-.48-.496-.661-.505-.171-.007-.367-.008-.563-.008-.196 0-.514.073-.783.366-.269.293-1.026 1.002-1.026 2.444s1.05 2.836 1.197 3.031c.147.196 2.067 3.156 5.006 4.428.699.303 1.246.484 1.671.62.704.223 1.345.192 1.851.116.564-.084 1.737-.709 1.982-1.393.245-.684.245-1.27.172-1.393-.073-.122-.269-.195-.563-.341z"/>
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Full height Localized AI FAQ Assistant */}

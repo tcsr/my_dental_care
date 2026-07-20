@@ -207,7 +207,7 @@ body.is-browser .orders-list-container {
   background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
 }
 
-.app-header {
+.app-header:not(.guest-header) {
   flex-shrink: 0;
   height: calc(60px + env(safe-area-inset-top, 0px));
   display: flex;
@@ -1350,7 +1350,7 @@ button {
     overflow: hidden !important;
   }
 
-  body.is-browser .app-header {
+  body.is-browser .app-header:not(.guest-header) {
     height: 81px !important;
     padding: 0 24px !important;
     box-sizing: border-box !important;
@@ -2551,18 +2551,19 @@ body.is-browser .floating-cart-pill:hover {
 }
 
 /* Guest Navigation Styles */
-.guest-header {
+.app-header.guest-header,
+body.is-browser .app-header.guest-header {
   height: 76px !important;
   position: sticky;
   top: 0;
   z-index: 1000;
   overflow: visible;
-  background: rgba(240, 249, 255, 0.88) !important;
-  backdrop-filter: blur(20px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+  background: linear-gradient(135deg, #081729 0%, #112d4e 50%, #081729 100%) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  border-bottom: 1.5px solid rgba(14, 165, 233, 0.18) !important;
-  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.05) !important;
+  border-bottom: 1.5px solid #0ea5e9 !important;
+  box-shadow: 0 8px 32px rgba(14, 165, 233, 0.22), 0 0 25px rgba(14, 165, 233, 0.15) !important;
 }
 
 .guest-header::after {
@@ -2572,25 +2573,30 @@ body.is-browser .floating-cart-pill:hover {
   right: 0;
   bottom: 0;
   height: 1px;
-  background: rgba(14, 165, 233, 0.15);
+  background: rgba(255, 255, 255, 0.02);
   pointer-events: none;
 }
 
-.guest-header.scrolled {
+.app-header.guest-header.scrolled,
+body.is-browser .app-header.guest-header.scrolled {
   height: 64px !important;
-  background: rgba(240, 249, 255, 0.96) !important;
-  box-shadow: 0 8px 30px rgba(14, 165, 233, 0.09) !important;
-  border-bottom: 1.5px solid rgba(14, 165, 233, 0.22) !important;
+  background: linear-gradient(135deg, #061220 0%, #0d2440 50%, #061220 100%) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 20px rgba(14, 165, 233, 0.18) !important;
+  border-bottom: 1.5px solid #0ea5e9 !important;
 }
-
 
 .guest-header-inner {
   width: 100%;
   max-width: 100% !important;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
+  margin: 0 auto;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
   height: 100%;
+  box-sizing: border-box;
+  padding: 0 clamp(12px, 1.5vw, 24px) !important;
 }
 
 .guest-brand-wrapper {
@@ -2601,6 +2607,20 @@ body.is-browser .floating-cart-pill:hover {
 }
 
 @media (min-width: 769px) {
+  .guest-brand-wrapper {
+    flex: 1 !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+  }
+  .guest-header-actions {
+    flex: 1 !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+  }
+  .guest-right-nav {
+    flex-grow: 0 !important;
+    margin: 0 20px !important;
+  }
 
   .sidebar-overlay.guest-only-mobile,
   .sidebar-drawer.guest-only-mobile {
@@ -2632,6 +2652,8 @@ body.is-browser .floating-cart-pill:hover {
   align-items: center;
   justify-content: center;
   min-width: 0;
+  flex-grow: 1;
+  margin: 0 40px;
 }
 
 .guest-header-actions {
@@ -2643,7 +2665,7 @@ body.is-browser .floating-cart-pill:hover {
 
 .guest-header .navbar-brand-logo {
   width: auto;
-  filter: drop-shadow(0 4px 12px rgba(2, 132, 199, 0.15));
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 4px 12px rgba(2, 132, 199, 0.25)) !important;
   object-fit: contain;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
@@ -2661,8 +2683,8 @@ body.is-browser .floating-cart-pill:hover {
 .guest-nav-link {
   font-size: 0.90rem !important;
   font-weight: 800 !important;
-  color: #475569 !important;
-  /* Soft Slate-600 */
+  color: rgba(241, 245, 249, 0.8) !important;
+  /* Slate-200 with transparency */
   text-decoration: none !important;
   font-family: 'Outfit', sans-serif !important;
   position: relative !important;
@@ -2670,26 +2692,28 @@ body.is-browser .floating-cart-pill:hover {
   background: transparent !important;
   border: none !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  display: inline-block !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   white-space: nowrap !important;
 }
 
 .guest-nav-link::after {
   content: "" !important;
   position: absolute !important;
-  bottom: 0 !important;
+  bottom: -2px !important;
   left: 50% !important;
   transform: translateX(-50%) scaleX(0) !important;
   width: 18px !important;
   height: 3px !important;
   border-radius: 99px !important;
-  background: linear-gradient(90deg, #0ea5e9, #6366f1) !important;
+  background: linear-gradient(90deg, #38bdf8, #818cf8) !important;
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
   transform-origin: center !important;
 }
 
 .guest-nav-link:hover {
-  color: #0ea5e9 !important;
+  color: #38bdf8 !important;
   background: transparent !important;
   transform: translateY(-1px) !important;
 }
@@ -2699,7 +2723,7 @@ body.is-browser .floating-cart-pill:hover {
 }
 
 .guest-nav-link.active {
-  color: #0ea5e9 !important;
+  color: #38bdf8 !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -2774,9 +2798,9 @@ body.is-browser .floating-cart-pill:hover {
   width: 38px;
   height: 38px;
   border-radius: 12px;
-  border: 1px solid hsl(var(--border-color) / 60%) !important;
-  background: hsla(var(--bg-card) / 40%) !important;
-  color: hsl(var(--text-muted)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2786,10 +2810,46 @@ body.is-browser .floating-cart-pill:hover {
 }
 
 .guest-header-actions .header-btn:hover {
-  color: hsl(var(--primary)) !important;
-  border-color: hsl(var(--primary) / 30%) !important;
-  background: hsl(var(--primary) / 5%) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
+  background: rgba(14, 165, 233, 0.15) !important;
   transform: translateY(-2px);
+}
+
+/* Guest header dark PremiumSelect button overrides */
+.guest-header .premium-select-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+.guest-header .premium-select-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+.guest-header .premium-select-btn div>span {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+.guest-header .premium-select-btn svg {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Guest header dark search input overrides */
+.guest-header .nav-search-input {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1.2px solid rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.guest-header .nav-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+.guest-header .nav-search-input:focus {
+  border-color: #0ea5e9 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25) !important;
+}
+.guest-header .nav-search-container svg {
+  color: rgba(255, 255, 255, 0.45) !important;
 }
 
 .guest-header-actions .header-login-btn {
@@ -2992,7 +3052,7 @@ body.is-browser .floating-cart-pill:hover {
     display: block;
   }
 
-  .guest-header {
+  .app-header.guest-header {
     height: auto !important;
     padding-bottom: 12px !important;
   }
@@ -3063,4 +3123,86 @@ body.is-browser .floating-cart-pill:hover {
   .print-only-table {
     display: table !important;
   }
+}
+
+/* Custom Sleek Scrollbars globally */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.22) !important;
+  border-radius: 99px !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(14, 165, 233, 0.45) !important;
+}
+
+/* Enhanced Scroll & Hover Animations for Landing Page Bottom Cards */
+@keyframes cardScrollReveal {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.lp-support-card {
+  animation: cardScrollReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.lp-support-card:hover {
+  transform: translateY(-10px) scale(1.03) !important;
+  box-shadow: 0 24px 48px -12px rgba(14, 165, 233, 0.25), 0 0 0 2px rgba(14, 165, 233, 0.45) !important;
+  border-color: rgba(14, 165, 233, 0.5) !important;
+}
+
+.lp-support-card:hover svg {
+  transform: scale(1.25) rotate(8deg) !important;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.contact-item {
+  animation: cardScrollReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer;
+}
+
+.contact-item:hover {
+  transform: translateX(10px) translateY(-3px) !important;
+  box-shadow: 0 16px 36px rgba(14, 165, 233, 0.2) !important;
+  border-color: rgba(14, 165, 233, 0.45) !important;
+}
+
+.contact-item:hover svg {
+  transform: scale(1.2) !important;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.lp-contact-form-card {
+  animation: cardScrollReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.lp-contact-form-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 24px 60px rgba(14, 165, 233, 0.2) !important;
+  border-color: rgba(14, 165, 233, 0.4) !important;
+}
+
+.lp-stat-card {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.lp-stat-card:hover {
+  transform: translateY(-8px) scale(1.03) !important;
+  box-shadow: 0 20px 40px -10px rgba(14, 165, 233, 0.22), 0 0 0 1.5px rgba(14, 165, 233, 0.35) !important;
+  border-color: rgba(14, 165, 233, 0.45) !important;
 }

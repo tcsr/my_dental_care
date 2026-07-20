@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, Target, Eye,
   Phone, Mail, MapPin, Send, ShoppingCart,
   Headphones, BookOpen, Globe, FileText, Calendar, GraduationCap,
-  CheckCircle, Sparkles
+  CheckCircle, Sparkles, Play, X, MessageSquare, Video
 } from 'lucide-react';
 import Footer from './Footer';
 import { useStore } from '../utils/store';
@@ -41,6 +41,59 @@ function Reveal({ children, delay = 0 }) {
       {children}
     </div>
   );
+}
+
+function CounterNumber({ value, duration = 1200 }) {
+  const [displayValue, setDisplayValue] = useState(value);
+  const ref = useRef(null);
+  const animatedRef = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const numMatch = value.match(/\d+/);
+    if (!numMatch) {
+      setDisplayValue(value);
+      return;
+    }
+
+    const target = parseInt(numMatch[0], 10);
+    const prefix = value.slice(0, numMatch.index);
+    const suffix = value.slice(numMatch.index + numMatch[0].length);
+
+    setDisplayValue(`${prefix}0${suffix}`);
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !animatedRef.current) {
+        animatedRef.current = true;
+        let startTime = null;
+
+        const animate = (currentTime) => {
+          if (!startTime) startTime = currentTime;
+          const progress = Math.min((currentTime - startTime) / duration, 1);
+          const easeProgress = 1 - Math.pow(1 - progress, 3);
+          const currentCount = Math.floor(easeProgress * target);
+
+          setDisplayValue(`${prefix}${currentCount}${suffix}`);
+
+          if (progress < 1) {
+            requestAnimationFrame(animate);
+          } else {
+            setDisplayValue(value);
+          }
+        };
+
+        requestAnimationFrame(animate);
+        observer.disconnect();
+      }
+    }, { threshold: 0.2 });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [value, duration]);
+
+  return <span ref={ref}>{displayValue}</span>;
 }
 
 const FALLBACK_ONE_PIECE = [
@@ -512,7 +565,7 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
   );
 }
 
-export default function LandingPage({ onLoginRequired }) {
+export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
 
   const sendContactEmail = () => {
@@ -521,8 +574,18 @@ export default function LandingPage({ onLoginRequired }) {
     window.location.href = `mailto:contact@simpleimplant.in?subject=${subject}&body=${body}`;
   };
 
+  const isDark = guestTheme === 'dark';
+
   return (
-    <div style={{ minHeight: '100vh', position: 'relative', background: 'linear-gradient(160deg, #f0f9ff 0%, #f8fafc 40%, #eef2ff 80%, #f0fdf4 100%)' }}>
+    <div style={{
+      minHeight: '100vh',
+      position: 'relative',
+      background: isDark
+        ? 'radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px) 0 0 / 28px 28px, linear-gradient(160deg, #030712 0%, #0b1528 50%, #030712 100%)'
+        : 'linear-gradient(160deg, #f0f9ff 0%, #f8fafc 40%, #eef2ff 80%, #f0fdf4 100%)',
+      color: isDark ? '#f8fafc' : '#0f172a',
+      transition: 'all 0.4s ease'
+    }}>
 
       {/* Animated blobs */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
@@ -637,6 +700,43 @@ export default function LandingPage({ onLoginRequired }) {
           .carousel-main-grid > div:last-child  { padding-top: 10px !important; padding-bottom: 28px; }
           .carousel-cta-btn { display: none !important; }
         }
+        ${isDark ? `
+          /* High contrast text overrides */
+          .lp-hero-section h1 { color: #ffffff !important; text-shadow: 0 4px 20px rgba(0,0,0,0.8); }
+          .lp-hero-section p { color: #e2e8f0 !important; font-weight: 600 !important; }
+          .hero-btn-secondary { background: rgba(15, 23, 42, 0.88) !important; color: #ffffff !important; border-color: rgba(56, 189, 248, 0.4) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important; }
+          
+          .lp-stat-card { background: linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.9) 100%) !important; border: 1.5px solid rgba(56, 189, 248, 0.35) !important; color: #ffffff !important; box-shadow: 0 12px 36px rgba(0,0,0,0.5) !important; }
+          .lp-stat-card div { color: #ffffff !important; }
+          .lp-stat-card div:last-child { color: #38bdf8 !important; font-weight: 800 !important; }
+          
+          .lp-about-grid { background: linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.9) 100%) !important; border: 1.5px solid rgba(56, 189, 248, 0.35) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important; }
+          .lp-about-grid h2 { color: #ffffff !important; }
+          .lp-about-grid p { color: #e2e8f0 !important; }
+          .lp-about-grid h3 { color: #ffffff !important; }
+          #about div[style*="linear-gradient"] { background: rgba(15, 23, 42, 0.75) !important; border-color: rgba(56, 189, 248, 0.3) !important; }
+          #about div[style*="linear-gradient"] p { color: #cbd5e1 !important; }
+          
+          #events-courses h2 { color: #ffffff !important; }
+          #events-courses > div > div > div { background: linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.9) 100%) !important; border: 1.5px solid rgba(56, 189, 248, 0.35) !important; box-shadow: 0 12px 36px rgba(0,0,0,0.5) !important; }
+          #events-courses h3 { color: #ffffff !important; }
+          #events-courses p { color: #e2e8f0 !important; }
+          
+          .lp-support-card { background: linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.9) 100%) !important; border: 1.5px solid rgba(56, 189, 248, 0.35) !important; box-shadow: 0 12px 36px rgba(0,0,0,0.5) !important; }
+          .lp-support-card div { color: #ffffff !important; }
+          .lp-support-card p { color: #e2e8f0 !important; }
+          
+          #contact h2 { color: #ffffff !important; }
+          .contact-item { background: linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.9) 100%) !important; border: 1.5px solid rgba(56, 189, 248, 0.35) !important; box-shadow: 0 12px 36px rgba(0,0,0,0.5) !important; }
+          .contact-item div { color: #ffffff !important; }
+          .contact-item div div:first-child { color: #38bdf8 !important; }
+          
+          .lp-contact-form-card { background: linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.9) 100%) !important; border: 1.5px solid rgba(56, 189, 248, 0.35) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important; }
+          .contact-input { background: rgba(9, 13, 22, 0.95) !important; color: #ffffff !important; border-color: rgba(56, 189, 248, 0.4) !important; }
+          .contact-input::placeholder { color: #94a3b8 !important; }
+          
+          .lp-services-section { background: rgba(8, 14, 28, 0.8) !important; border-color: rgba(56, 189, 248, 0.25) !important; }
+        ` : ''}
       `}</style>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
@@ -698,7 +798,9 @@ export default function LandingPage({ onLoginRequired }) {
                     <div style={{ width: 48, height: 48, borderRadius: 14, background: `${s.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', border: `1px solid ${s.color}22` }}>
                       <Icon size={22} color={s.color} />
                     </div>
-                    <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.8rem', color: '#0f172a', lineHeight: 1, letterSpacing: '-0.02em' }}>{s.value}</div>
+                    <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.8rem', color: '#0f172a', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                      <CounterNumber value={s.value} />
+                    </div>
                     <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 8 }}>{s.label}</div>
                   </div>
                 );
@@ -788,7 +890,7 @@ export default function LandingPage({ onLoginRequired }) {
         </section>
 
         {/* ═══════════ SUPPORT & SERVICES ═══════════ */}
-        <section style={{ padding: '64px 24px 80px', background: 'rgba(255,255,255,0.48)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(14,165,233,0.10)', borderBottom: '1px solid rgba(14,165,233,0.10)' }}>
+        <section className="lp-services-section" style={{ padding: '64px 24px 80px', background: isDark ? 'rgba(10, 15, 30, 0.6)' : 'rgba(255,255,255,0.48)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(14,165,233,0.15)', borderBottom: '1px solid rgba(14,165,233,0.15)' }}>
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             <Reveal>
               <div style={{ textAlign: 'center', marginBottom: 44 }}>
@@ -808,7 +910,7 @@ export default function LandingPage({ onLoginRequired }) {
                 ].map((item, i) => {
                   const Icon = item.icon;
                   return (
-                    <div key={i} className="lp-support-card" style={{ background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 26, border: `1.5px solid rgba(255, 255, 255, 0.4)`, display: 'flex', flexDirection: 'column', gap: 13, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.06)', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                    <div key={i} className="lp-support-card" style={{ animationDelay: `${i * 0.08}s`, background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 26, border: `1.5px solid rgba(255, 255, 255, 0.4)`, display: 'flex', flexDirection: 'column', gap: 13, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.06)' }}>
                       <div style={{ width: 46, height: 46, borderRadius: 14, background: `${item.color}12`, color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${item.color}22` }}><Icon size={20} /></div>
                       <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '0.84rem', color: '#0f172a', letterSpacing: '0.02em' }}>{item.title}</div>
                       <p style={{ fontSize: '0.76rem', color: '#64748b', lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
@@ -829,8 +931,8 @@ export default function LandingPage({ onLoginRequired }) {
                 Let's <span style={{ background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Work Together</span>
               </h2>
             </div>
-            <div className="lp-contact-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 1.1fr) 2fr', gap: 28 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="lp-contact-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1.1fr) 2fr', gap: 28, alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
                 {[
                   { icon: Phone, label: 'Phone', value: '+91 94441 26926', color: '#0ea5e9', link: 'tel:+919444126926' },
                   { icon: Mail, label: 'Email', value: 'simpleimplants@gmail.com', color: '#6366f1', link: 'mailto:contact@simpleimplant.in' },
@@ -843,117 +945,131 @@ export default function LandingPage({ onLoginRequired }) {
                       className="contact-item"
                       onClick={() => window.open(item.link, '_blank')}
                       style={{
+                        animationDelay: `${i * 0.12}s`,
+                        flex: 1,
                         display: 'flex',
                         alignItems: 'center',
                         gap: 16,
-                        background: 'rgba(255,255,255,0.85)',
-                        borderRadius: 20,
-                        padding: '20px 22px',
-                        border: '1px solid rgba(14,165,233,0.12)',
-                        backdropFilter: 'blur(16px)',
-                        boxShadow: '0 4px 20px rgba(15,23,42,0.04)',
+                        background: 'rgba(255, 255, 255, 0.88)',
+                        borderRadius: 22,
+                        padding: '18px 22px',
+                        border: '1.5px solid rgba(14, 165, 233, 0.18)',
+                        backdropFilter: 'blur(20px)',
+                        WebkitBackdropFilter: 'blur(20px)',
+                        boxShadow: '0 10px 30px -10px rgba(14, 165, 233, 0.08)',
+                        boxSizing: 'border-box'
                       }}
                     >
                       <div style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 13,
-                        background: `linear-gradient(135deg, ${item.color}15, ${item.color}08)`,
+                        width: 46,
+                        height: 46,
+                        borderRadius: 14,
+                        background: `linear-gradient(135deg, ${item.color}18, ${item.color}08)`,
                         color: item.color,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
-                        border: `1px solid ${item.color}18`
-                      }}><Icon size={18} /></div>
+                        border: `1.5px solid ${item.color}25`
+                      }}><Icon size={20} /></div>
                       <div>
-                        <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</div>
-                        <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#1e293b', marginTop: 3 }}>{item.value}</div>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', marginTop: 3 }}>{item.value}</div>
                       </div>
                     </div>
                   );
                 })}
               </div>
               <div className="lp-contact-form-card" style={{
-                background: 'rgba(255,255,255,0.85)',
+                background: 'rgba(255, 255, 255, 0.88)',
                 borderRadius: 24,
                 padding: '36px 40px',
-                border: '1px solid rgba(14,165,233,0.16)',
+                border: '1.5px solid rgba(14, 165, 233, 0.18)',
                 backdropFilter: 'blur(20px)',
-                boxShadow: '0 10px 40px rgba(14,165,233,0.06), 0 2px 10px rgba(15,23,42,0.03)'
+                WebkitBackdropFilter: 'blur(20px)',
+                boxShadow: '0 15px 45px -10px rgba(14, 165, 233, 0.1), 0 2px 10px rgba(15,23,42,0.03)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxSizing: 'border-box',
+                height: '100%'
               }}>
-                <div className="lp-contact-form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                  {[['Full Name', 'text', 'name'], ['Email Address', 'email', 'email']].map(([ph, type, field]) => (
-                    <input
-                      key={field}
-                      placeholder={ph}
-                      type={type}
-                      value={contactForm[field]}
-                      onChange={e => setContactForm(f => ({ ...f, [field]: e.target.value }))}
-                      className="contact-input"
-                      style={{
-                        padding: '13px 18px',
-                        borderRadius: 12,
-                        border: '1.5px solid rgba(14,165,233,0.18)',
-                        background: 'rgba(248,250,252,0.6)',
-                        fontSize: '0.86rem',
-                        outline: 'none',
-                        color: '#0f172a',
-                        fontFamily: 'Outfit',
-                        boxSizing: 'border-box',
-                        width: '100%'
-                      }}
-                    />
-                  ))}
+                <div>
+                  <div className="lp-contact-form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                    {[['Full Name', 'text', 'name'], ['Email Address', 'email', 'email']].map(([ph, type, field]) => (
+                      <input
+                        key={field}
+                        placeholder={ph}
+                        type={type}
+                        value={contactForm[field]}
+                        onChange={e => setContactForm(f => ({ ...f, [field]: e.target.value }))}
+                        className="contact-input"
+                        style={{
+                          padding: '14px 18px',
+                          borderRadius: 14,
+                          border: '1.5px solid rgba(14, 165, 233, 0.2)',
+                          background: 'rgba(248, 250, 252, 0.8)',
+                          fontSize: '0.88rem',
+                          outline: 'none',
+                          color: '#0f172a',
+                          fontFamily: 'Outfit',
+                          boxSizing: 'border-box',
+                          width: '100%'
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <textarea
+                    placeholder="Tell us about your clinic's surgical requirements..."
+                    rows={4}
+                    value={contactForm.message}
+                    onChange={e => setContactForm(f => ({ ...f, message: e.target.value }))}
+                    className="contact-input"
+                    style={{
+                      width: '100%',
+                      padding: '14px 18px',
+                      borderRadius: 14,
+                      border: '1.5px solid rgba(14, 165, 233, 0.2)',
+                      background: 'rgba(248, 250, 252, 0.8)',
+                      fontSize: '0.88rem',
+                      outline: 'none',
+                      resize: 'vertical',
+                      boxSizing: 'border-box',
+                      marginBottom: 16,
+                      fontFamily: 'Outfit',
+                      color: '#0f172a'
+                    }}
+                  />
                 </div>
-                <textarea
-                  placeholder="Tell us about your clinic's surgical requirements..."
-                  rows={4}
-                  value={contactForm.message}
-                  onChange={e => setContactForm(f => ({ ...f, message: e.target.value }))}
-                  className="contact-input"
-                  style={{
-                    width: '100%',
-                    padding: '13px 18px',
-                    borderRadius: 12,
-                    border: '1.5px solid rgba(14,165,233,0.18)',
-                    background: 'rgba(248,250,252,0.6)',
-                    fontSize: '0.86rem',
-                    outline: 'none',
-                    resize: 'vertical',
-                    boxSizing: 'border-box',
-                    marginBottom: 16,
-                    fontFamily: 'Outfit',
-                    color: '#0f172a'
-                  }}
-                />
-                <button
-                  onClick={sendContactEmail}
-                  disabled={!contactForm.message}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '14px 28px',
-                    borderRadius: 12,
-                    border: 'none',
-                    background: contactForm.message ? 'linear-gradient(135deg, #0ea5e9, #6366f1)' : 'rgba(100,116,139,0.15)',
-                    color: contactForm.message ? '#fff' : '#94a3b8',
-                    fontSize: '0.86rem',
-                    fontWeight: 800,
-                    cursor: contactForm.message ? 'pointer' : 'not-allowed',
-                    boxShadow: contactForm.message ? '0 8px 24px rgba(14,165,233,0.25)' : 'none',
-                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                    fontFamily: 'Outfit'
-                  }}
-                  onMouseEnter={e => { if (contactForm.message) e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
-                >
-                  <Send size={15} /> Send via Email
-                </button>
-                <p style={{ fontSize: '0.66rem', color: '#94a3b8', marginTop: 12, fontWeight: 500 }}>
-                  This will pre-fill your message and open your native email application.
-                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: 12 }}>
+                  <button
+                    onClick={sendContactEmail}
+                    disabled={!contactForm.message}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '14px 30px',
+                      borderRadius: 14,
+                      border: 'none',
+                      background: contactForm.message ? 'linear-gradient(135deg, #0ea5e9, #6366f1)' : 'rgba(148, 163, 184, 0.2)',
+                      color: contactForm.message ? '#fff' : '#94a3b8',
+                      fontSize: '0.88rem',
+                      fontWeight: 800,
+                      cursor: contactForm.message ? 'pointer' : 'not-allowed',
+                      boxShadow: contactForm.message ? '0 10px 28px rgba(14, 165, 233, 0.3)' : 'none',
+                      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                      fontFamily: 'Outfit'
+                    }}
+                    onMouseEnter={e => { if (contactForm.message) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
+                  >
+                    <Send size={15} /> Send via Email
+                  </button>
+                  <p style={{ fontSize: '0.66rem', color: '#94a3b8', marginTop: 8, fontWeight: 500, textAlign: 'right' }}>
+                    This will pre-fill your message and open your native email application.
+                  </p>
+                </div>
               </div>
             </div>
           </Reveal>
