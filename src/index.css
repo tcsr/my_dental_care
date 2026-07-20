@@ -1978,7 +1978,7 @@ body.is-browser main button.carousel-nav-btn {
 
 /* Catalog Page Layout */
 .catalog-container-responsive {
-  padding: 20px 24px 32px;
+  padding: 20px 24px 20px;
   max-width: 1400px;
   margin: 0 auto;
   box-sizing: border-box;
@@ -2656,7 +2656,8 @@ body.is-browser .floating-cart-pill:hover {
 .guest-nav-link {
   font-size: 0.92rem !important;
   font-weight: 700 !important;
-  color: #475569 !important; /* Soft Slate-600 */
+  color: #475569 !important;
+  /* Soft Slate-600 */
   text-decoration: none !important;
   font-family: 'Outfit', sans-serif !important;
   position: relative !important;
@@ -2961,13 +2962,16 @@ body.is-browser .floating-cart-pill:hover {
   .nav-search-container {
     display: none !important;
   }
+
   .mobile-search-bar-row {
     display: block;
   }
+
   .guest-header {
     height: auto !important;
     padding-bottom: 12px !important;
   }
+
   .app-header {
     height: auto !important;
     padding-bottom: 12px !important;
@@ -2978,7 +2982,7 @@ body.is-browser .floating-cart-pill:hover {
 
 /* Premium Carousel Products Row Centering */
 .carousel-products-row {
-  justify-content: center !important;
+  justify-content: safe center !important;
 }
 
 @media (max-width: 640px) {

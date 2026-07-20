@@ -200,8 +200,8 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
           position: 'relative', zIndex: 2,
           height: '100%',
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          maxWidth: 1140,
+          gridTemplateColumns: '1fr 1.6fr',
+          maxWidth: 1360,
           margin: '0 auto',
           padding: '0 clamp(24px, 4vw, 56px)',
           boxSizing: 'border-box',
@@ -297,10 +297,9 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
         <div style={{
           display: 'flex', flexDirection: 'column', justifyContent: 'center',
           gap: 12, paddingBottom: 32, paddingTop: 24,
-          alignItems: 'stretch',
           minWidth: 0,
           width: '100%',
-        }}>
+        }} className="carousel-right-column">
           {/* Feature card — dynamically previews selected product */}
           {(() => {
             const fp = currentSlide.products[activeProductIndex] || currentSlide.products[0];
@@ -318,7 +317,7 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
                 }}
                 className="carousel-feature-card"
                 style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 20,
+                  width: '100%', maxWidth: 600, display: 'flex', alignItems: 'center', gap: 20,
                   background: 'linear-gradient(135deg, rgba(14,165,233,0.12) 0%, rgba(99,102,241,0.09) 50%, rgba(255,255,255,0.04) 100%)',
                   border: '1px solid rgba(14,165,233,0.32)',
                   borderRadius: 22, padding: '18px 22px',
@@ -379,11 +378,12 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
 
           {/* Chip row — all products in current slide */}
           <div style={{
-            display: 'flex', gap: 10, width: '100%',
+            display: 'flex', gap: 10, width: '100%', maxWidth: 600,
             overflowX: 'auto', overflowY: 'visible', scrollbarWidth: 'none', flexWrap: 'nowrap',
             WebkitOverflowScrolling: 'touch',
             paddingTop: 10, marginTop: -10,
-            paddingBottom: 4,
+            paddingBottom: 6,
+            paddingLeft: 6, paddingRight: 6,
           }} className="carousel-products-row">
             {currentSlide.products.map((p, idx) => {
               const rawUrl = p.image_url || p.image;
@@ -413,7 +413,7 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
                       ? `1.5px solid ${chipAccent}` 
                       : `1px solid rgba(255,255,255,0.12)`,
                     borderRadius: 18, padding: '14px 12px 12px',
-                    cursor: 'pointer', minWidth: 100,
+                    cursor: 'pointer', minWidth: 137, width: 137,
                     boxShadow: isActive 
                       ? `0 8px 24px rgba(0,0,0,0.28), 0 0 15px ${chipAccent}50` 
                       : `0 6px 18px rgba(0,0,0,0.22)`,
@@ -450,7 +450,7 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
                   </div>
 
                   {/* Name */}
-                  <div style={{ fontSize:'0.64rem', fontWeight:isActive ? 900 : 800, color: isActive ? '#fff' : 'rgba(241,245,249,0.92)', lineHeight:1.25, textAlign:'center', maxWidth:88, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', zIndex:1 }}>
+                  <div style={{ fontSize:'0.64rem', fontWeight:isActive ? 900 : 800, color: isActive ? '#fff' : 'rgba(241,245,249,0.92)', lineHeight:1.25, textAlign:'center', maxWidth:113, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', zIndex:1 }}>
                     {p.name}
                   </div>
                 </div>
@@ -616,6 +616,16 @@ export default function LandingPage({ onLoginRequired }) {
           background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%) !important;
         }
         .carousel-cta-btn:active { transform: translateY(0) scale(0.97); }
+        .carousel-right-column {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+        }
+        @media(max-width: 768px) {
+          .carousel-right-column {
+            align-items: center !important;
+          }
+        }
         @media(max-width: 768px) {
           .carousel-main-grid {
             grid-template-columns: 1fr !important;

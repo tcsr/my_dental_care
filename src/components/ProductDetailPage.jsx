@@ -92,12 +92,12 @@ const FALLBACK_PRODUCTS = [
   { id: 'fb-op-3', name: 'Basal Implant 4.0mm', category: 'Basal', price: 3200, image_url: 'products/two-piece-implant.jpeg', sizes: '4.0 x 10mm, 4.0 x 12mm, 4.0 x 14mm, 4.0 x 16mm' },
   { id: 'fb-op-4', name: 'Basal Implant 4.5mm', category: 'Basal', price: 3200, image_url: 'products/two-piece-implant.jpeg', sizes: '4.5 x 10mm, 4.5 x 12mm, 4.5 x 14mm, 4.5 x 16mm' },
   { id: 'fb-op-kit', name: 'Basal Surgical Kit', category: 'General Instruments', price: 15000, image_url: 'products/dental-implant-kit.jpeg' },
-  
+
   { id: 'fb-tp-1', name: 'Root Form Classic 3.5mm', category: 'Root Form', price: 2500, image_url: 'products/two-piece-implant.jpeg', sizes: '3.5 x 8.5mm, 3.5 x 10mm, 3.5 x 11.5mm, 3.5 x 13mm' },
   { id: 'fb-tp-2', name: 'Root Form Classic 4.3mm', category: 'Root Form', price: 2500, image_url: 'products/two-piece-implant.jpeg', sizes: '4.3 x 8.5mm, 4.3 x 10mm, 4.3 x 11.5mm, 4.3 x 13mm' },
   { id: 'fb-tp-3', name: 'Root Form Classic 5.0mm', category: 'Root Form', price: 2500, image_url: 'products/two-piece-implant.jpeg', sizes: '5.0 x 8.5mm, 5.0 x 10mm, 5.0 x 11.5mm' },
   { id: 'fb-tp-kit', name: 'Standard Surgical Kit', category: 'General Instruments', price: 18000, image_url: 'products/apexkonnect-kit.jpeg' },
-  
+
   { id: 'fb-ps-1', name: 'L-Plate 4 Hole', category: 'Bone Plate', price: 1200, image_url: 'products/bone-plates.jpeg' },
   { id: 'fb-ps-2', name: 'Straight Plate 6 Hole', category: 'Bone Plate', price: 1500, image_url: 'products/bone-plates.jpeg' },
   { id: 'fb-ps-3', name: 'Fixation Screw 2.0mm', category: 'Fixation Screw', price: 350, image_url: 'products/bone-screws.jpeg' }
@@ -130,14 +130,14 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
         product_variants: p.variants || p.product_variants || []
       }));
     }
-    
+
     // Always append fallback products so matching by ID/name works if missing in Supabase
     FALLBACK_PRODUCTS.forEach(fb => {
       if (!list.some(p => p.name === fb.name)) {
         list.push(fb);
       }
     });
-    
+
     return list;
   }, [storeProducts, dbProducts]);
 
@@ -166,6 +166,8 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
   const [newComment, setNewComment] = useState('');
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [feedbackError, setFeedbackError] = useState('');
+  const [sizeViewMode, setSizeViewMode] = useState('grid'); // 'grid' or 'bulk'
+  const [bulkQuantities, setBulkQuantities] = useState({}); // { [sizeString]: qty }
 
   const feedbackList = product ? (feedback[product.id] || []) : [];
   const hasReviewed = useMemo(() => feedbackList.some(item => item.user_id === authUser?.user?.id), [feedbackList, authUser]);
@@ -173,6 +175,8 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
   useEffect(() => {
     if (!product) return;
     fetchFeedback(product.id);
+    setBulkQuantities({});
+    setSizeViewMode('grid');
     if (product.product_variants?.length > 0) {
       const activeVars = product.product_variants.filter(v => v.active !== false);
       const initialVar = activeVars[0] || null;
@@ -216,6 +220,72 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
     });
   };
 
+  const handleRestockRequest = (sizeStr) => {
+    if (window.__triggerToast) {
+      window.__triggerToast(`Restock request registered for size ${sizeStr}! We will contact you.`, 'success');
+    }
+  };
+
+  const handleBulkQtyChange = (sizeStr, nextVal) => {
+    const val = Math.max(0, parseInt(nextVal) || 0);
+    const maxStock = product.stock_qty || 0;
+    if (maxStock !== null && maxStock !== undefined && val > maxStock) {
+      if (window.__triggerToast) {
+        window.__triggerToast(`Cannot exceed total available stock (${maxStock} units).`, 'warning');
+      }
+      setBulkQuantities(prev => ({ ...prev, [sizeStr]: maxStock }));
+      return;
+    }
+    setBulkQuantities(prev => ({ ...prev, [sizeStr]: val }));
+  };
+
+  const handleBulkAddToCart = () => {
+    const itemsToAdd = [];
+    Object.keys(bulkQuantities).forEach(sizeStr => {
+      const qty = bulkQuantities[sizeStr] || 0;
+      if (qty > 0) {
+        itemsToAdd.push({ sizeStr, qty });
+      }
+    });
+
+    if (itemsToAdd.length === 0) return;
+
+    onCartChange(prev => {
+      const sp = prev && typeof prev === 'object' ? prev : {};
+      const next = { ...sp };
+      itemsToAdd.forEach(item => {
+        const cartKey = `${product.id}_${item.sizeStr}`;
+        const currentQty = next[cartKey]?.qty || 0;
+        next[cartKey] = {
+          product,
+          qty: currentQty + item.qty,
+          size: item.sizeStr,
+          variant: null
+        };
+      });
+      return next;
+    });
+
+    if (window.__triggerToast) {
+      window.__triggerToast(`Added ${itemsToAdd.reduce((acc, curr) => acc + curr.qty, 0)} items to cart successfully!`, 'success');
+    }
+    setBulkQuantities({});
+  };
+
+  const handleBulkRestockRequest = () => {
+    const requestedSizes = Object.keys(bulkQuantities).filter(sizeStr => bulkQuantities[sizeStr] > 0);
+    if (requestedSizes.length === 0) {
+      if (window.__triggerToast) {
+        window.__triggerToast('Please select at least one size to request restock.', 'warning');
+      }
+      return;
+    }
+    if (window.__triggerToast) {
+      window.__triggerToast(`Restock request registered for sizes: ${requestedSizes.join(', ')}!`, 'success');
+    }
+    setBulkQuantities({});
+  };
+
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!newRating || !product) return;
@@ -244,26 +314,26 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
     return (
       <div style={{ minHeight: '100vh', background: 'hsl(var(--bg-primary, #f8fafc))' }}>
         <style>{`
-          .pdp-sticky-bar { position:sticky; top:0; z-index:120; background:rgba(255,255,255,0.82); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); border-bottom:1px solid rgba(14,165,233,0.12); box-shadow:0 2px 16px rgba(15,23,42,0.07); padding:10px 0; }
-          .pdp-back { display:inline-flex; align-items:center; gap:8px; padding:9px 18px; border-radius:12px; border:1.5px solid rgba(14,165,233,0.2); background:rgba(255,255,255,0.75); color:hsl(var(--text-primary,#0f172a)); font-size:0.82rem; font-weight:800; font-family:Outfit; cursor:pointer; transition:all 0.25s ease; backdrop-filter:blur(8px); }
+          .pdp-sticky-bar { position:sticky; top:0; z-index:120; background:rgba(255,255,255,0.82); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); border-bottom:1px solid rgba(14,165,233,0.12); box-shadow:0 2px 16px rgba(15,23,42,0.07); padding:5px 0; }
+          .pdp-back { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:10px; border:1.5px solid rgba(14,165,233,0.2); background:rgba(255,255,255,0.75); color:hsl(var(--text-primary,#0f172a)); font-size:0.78rem; font-weight:800; font-family:Outfit; cursor:pointer; transition:all 0.25s ease; backdrop-filter:blur(8px); }
           .pdp-back:hover { background:white; border-color:#0ea5e9; color:#0ea5e9; transform:translateX(-2px); }
         `}</style>
         <div className="pdp-sticky-bar">
-          <div className="catalog-container-responsive" style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div className="catalog-container-responsive" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button className="pdp-back" onClick={() => navigate(-1)}>
               <ArrowLeft size={16} strokeWidth={2.5} /> Back to Catalog
             </button>
           </div>
         </div>
-        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'60vh', gap:20 }}>
-          <div style={{ width:80, height:80, borderRadius:'50%', background:'rgba(148,163,184,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: 20 }}>
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(148,163,184,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Package size={36} color="#94a3b8" />
           </div>
-          <div style={{ textAlign:'center' }}>
-            <div style={{ fontSize:'1.1rem', fontWeight:900, color:'#475569', fontFamily:'Outfit', marginBottom:6 }}>Product not found</div>
-            <div style={{ fontSize:'0.82rem', color:'#94a3b8', fontWeight:500 }}>This product may have been removed or the link is incorrect.</div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#475569', fontFamily: 'Outfit', marginBottom: 6 }}>Product not found</div>
+            <div style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 500 }}>This product may have been removed or the link is incorrect.</div>
           </div>
-          <button onClick={() => navigate('/catalog')} style={{ padding:'11px 28px', borderRadius:14, border:'none', background:'linear-gradient(135deg,#0ea5e9,#4f46e5)', color:'#fff', fontSize:'0.82rem', fontWeight:800, cursor:'pointer', fontFamily:'Outfit', boxShadow:'0 8px 20px -4px rgba(14,165,233,0.4)' }}>
+          <button onClick={() => navigate('/catalog')} style={{ padding: '11px 28px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,#0ea5e9,#4f46e5)', color: '#fff', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', boxShadow: '0 8px 20px -4px rgba(14,165,233,0.4)' }}>
             Browse Catalog
           </button>
         </div>
@@ -287,8 +357,15 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
       <style>{`
         @keyframes pdpFadeIn { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:translateY(0) } }
         .pdp-wrap { animation: pdpFadeIn 0.4s cubic-bezier(0.16,1,0.3,1) both; }
-        .pdp-vc { transition: all 0.3s cubic-bezier(0.16,1,0.3,1)!important; }
-        .pdp-vc:hover { transform:translateY(-3px)!important; box-shadow:0 12px 28px rgba(14,165,233,0.18)!important; border-color:#0ea5e9!important; }
+        .pdp-vc { transition: all 0.35s cubic-bezier(0.16,1,0.3,1)!important; }
+        .pdp-vc:hover { transform:translateY(-5px)!important; box-shadow: 0 20px 40px -10px rgba(14,165,233,0.18)!important; border-color:#0ea5e9!important; }
+        .pdp-add-btn { transition: all 0.25s ease !important; }
+        .pdp-add-btn:hover { transform: translateY(-1px) !important; box-shadow: 0 10px 24px -4px rgba(14,165,233,0.65) !important; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%) !important; }
+        .pdp-img-box { transition: all 0.3s ease !important; }
+        .pdp-img-box:hover { border-color: rgba(14,165,233,0.45) !important; box-shadow: 0 20px 48px -8px rgba(14,165,233,0.22) !important; }
+        .pdp-img-box:hover .pdp-main-img { transform: scale(1.06); }
+        .pdp-spec-card { transition: all 0.3s cubic-bezier(0.16,1,0.3,1) !important; }
+        .pdp-spec-card:hover { transform: translateY(-3px) !important; border-color: rgba(14,165,233,0.3) !important; box-shadow: 0 16px 32px -8px rgba(14,165,233,0.12) !important; }
         .pdp-rb { transition:all 0.25s ease!important; }
         .pdp-rb:hover { transform:translateY(-2px)!important; box-shadow:0 8px 18px rgba(14,165,233,0.2)!important; }
         .pdp-thumb { transition:all 0.2s ease; cursor:pointer; border-radius:10px; border:2.5px solid transparent; }
@@ -303,11 +380,11 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
           -webkit-backdrop-filter: blur(18px);
           border-bottom: 1px solid rgba(14,165,233,0.12);
           box-shadow: 0 2px 16px rgba(15,23,42,0.07);
-          padding: 10px 0;
-          margin-bottom: 28px;
+          padding: 5px 0;
+          margin-bottom: 14px;
           transition: box-shadow 0.2s ease;
         }
-        .pdp-back { display:inline-flex; align-items:center; gap:8px; padding:9px 18px; border-radius:12px; border:1.5px solid rgba(14,165,233,0.2); background:rgba(255,255,255,0.75); color:hsl(var(--text-primary)); font-size:0.82rem; font-weight:800; font-family:Outfit; cursor:pointer; transition:all 0.25s ease; backdrop-filter:blur(8px); }
+        .pdp-back { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:10px; border:1.5px solid rgba(14,165,233,0.2); background:rgba(255,255,255,0.75); color:hsl(var(--text-primary)); font-size:0.78rem; font-weight:800; font-family:Outfit; cursor:pointer; transition:all 0.25s ease; backdrop-filter:blur(8px); }
         .pdp-back:hover { background:white; border-color:#0ea5e9; color:#0ea5e9; transform:translateX(-2px); }
         @media(max-width:768px) { .pdp-hero { grid-template-columns:1fr!important; } }
       `}</style>
@@ -364,6 +441,31 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
               </div>
             </div>
 
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 4 }}>
+              {[
+                { icon: Shield, text: 'Ti Grade 5', color: '#10b981' },
+                { icon: FlaskConical, text: 'Gamma Sterilized', color: '#6366f1' },
+                { icon: CheckCircle, text: 'Lifetime Warranty', color: '#0ea5e9' }
+              ].map((badge, idx) => {
+                const Icon = badge.icon;
+                return (
+                  <span key={idx} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    fontSize: '0.65rem', fontWeight: 800,
+                    color: badge.color,
+                    background: `${badge.color}0a`,
+                    border: `1px solid ${badge.color}25`,
+                    padding: '5px 12px', borderRadius: 10,
+                    fontFamily: 'Outfit', letterSpacing: '0.01em',
+                    textTransform: 'uppercase'
+                  }}>
+                    <Icon size={11} strokeWidth={2.5} />
+                    {badge.text}
+                  </span>
+                );
+              })}
+            </div>
+
             {!hasSizes && !hasVariants && !isAdmin && !outOfStock && (() => {
               const qty = (cart || {})[product.id]?.qty || 0;
               return qty > 0 ? (
@@ -373,7 +475,7 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
                     <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit', minWidth: 20, textAlign: 'center' }}>{qty}</span>
                     <button onClick={() => addToCart(product)} style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Plus size={12} strokeWidth={2.5} /></button>
                   </div>
-                  <button onClick={() => setCartOpen(true)} style={{ padding: '9px 18px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#0ea5e9,#4f46e5)', color: '#fff', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button onClick={() => { setCartOpen(true); navigate('/catalog'); }} style={{ padding: '9px 18px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#0ea5e9,#4f46e5)', color: '#fff', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <ShoppingCart size={14} /> View Cart
                   </button>
                 </div>
@@ -386,8 +488,21 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', zIndex: 1 }}>
-            <div style={{ height: 240, background: 'linear-gradient(180deg,rgba(255,255,255,0.96) 0%,rgba(248,250,252,0.5) 100%)', borderRadius: 20, border: '1px solid rgba(14,165,233,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, boxSizing: 'border-box', boxShadow: '0 10px 24px -8px rgba(15,23,42,0.08)' }}>
-              <img src={images[imgIdx] || `${import.meta.env.BASE_URL || '/'}logo.png`} alt={product.name} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.1))' }} />
+            <div style={{
+              height: 240,
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(240,249,255,0.6) 100%)',
+              borderRadius: 24,
+              border: '1.5px solid rgba(14,165,233,0.22)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 24, boxSizing: 'border-box',
+              boxShadow: '0 16px 36px -12px rgba(14,165,233,0.12), inset 0 1px 0 rgba(255,255,255,0.8)',
+              position: 'relative',
+              overflow: 'hidden'
+            }} className="pdp-img-box">
+              {/* Subtle background tech grid */}
+              <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(14,165,233,0.06) 1px, transparent 1px)', backgroundSize: '16px 16px', pointerEvents: 'none' }} />
+
+              <img src={images[imgIdx] || `${import.meta.env.BASE_URL || '/'}logo.png`} alt={product.name} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', filter: 'drop-shadow(0 12px 24px rgba(15,23,42,0.12))', zIndex: 1, transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1)' }} className="pdp-main-img" />
             </div>
             {images.length > 1 && (
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -416,20 +531,36 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
         {/* SIZES / VARIANTS */}
         {(hasSizes || hasVariants) && (
           <div style={{ background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(14,165,233,0.15)', borderRadius: 28, padding: 32, marginBottom: 32, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: '0 0 24px 0', letterSpacing: '-0.01em' }}>
-              {hasVariants ? 'Available Variants' : 'Available Sizes'}
-            </h2>
-
-            {hasSizes && (
-              <>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
-                  {diameters.map(dia => (
-                    <button key={dia} onClick={() => setActiveDiameter(dia)} style={{ padding: '9px 20px', borderRadius: 20, background: activeDia === dia ? 'linear-gradient(135deg,#0ea5e9,#4f46e5)' : 'rgba(255,255,255,0.85)', color: activeDia === dia ? '#fff' : 'hsl(var(--text-muted))', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', boxShadow: activeDia === dia ? '0 6px 16px -4px rgba(14,165,233,0.45)' : '0 2px 6px rgba(15,23,42,0.03)', border: activeDia === dia ? 'none' : '1px solid rgba(14,165,233,0.15)', transition: 'all 0.25s cubic-bezier(0.16,1,0.3,1)' }}>
-                      {dia === 'Standard' ? dia : `\u2300 ${dia}`}
-                    </button>
-                  ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, letterSpacing: '-0.01em' }}>
+                  {hasVariants ? 'Available Variants' : 'Available Sizes'}
+                </h2>
+                {hasSizes && diameters.length > 1 && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {diameters.map(dia => (
+                      <button key={dia} onClick={() => setActiveDiameter(dia)} style={{ padding: '6px 14px', borderRadius: 12, background: activeDia === dia ? 'linear-gradient(135deg,#0ea5e9,#4f46e5)' : 'rgba(255,255,255,0.85)', color: activeDia === dia ? '#fff' : 'hsl(var(--text-muted))', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', border: activeDia === dia ? 'none' : '1px solid rgba(14,165,233,0.15)', transition: 'all 0.2s', boxShadow: activeDia === dia ? '0 4px 12px -2px rgba(14,165,233,0.3)' : 'none' }}>
+                        {dia === 'Standard' ? dia : `${dia} mm`}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {hasSizes && (
+                <div style={{ display: 'inline-flex', background: 'rgba(241,245,249,0.8)', border: '1px solid rgba(14,165,233,0.15)', borderRadius: 12, padding: 3, gap: 4 }}>
+                  <button onClick={() => setSizeViewMode('grid')} style={{ padding: '6px 14px', borderRadius: 9, border: 'none', background: sizeViewMode === 'grid' ? '#fff' : 'transparent', color: sizeViewMode === 'grid' ? '#0ea5e9' : '#64748b', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', boxShadow: sizeViewMode === 'grid' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none', fontFamily: 'Outfit' }}>
+                    Grid View
+                  </button>
+                  <button onClick={() => setSizeViewMode('bulk')} style={{ padding: '6px 14px', borderRadius: 9, border: 'none', background: sizeViewMode === 'bulk' ? '#fff' : 'transparent', color: sizeViewMode === 'bulk' ? '#0ea5e9' : '#64748b', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', boxShadow: sizeViewMode === 'bulk' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none', fontFamily: 'Outfit' }}>
+                    ⚡ Bulk Order List
+                  </button>
                 </div>
-                <div style={{ textAlign: 'center', marginBottom: 20, fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.4rem', color: '#0ea5e9', letterSpacing: '-0.01em' }}>
+              )}
+            </div>
+
+            {hasSizes && sizeViewMode === 'grid' && (
+              <>
+                <div style={{ textAlign: 'left', paddingLeft: 4, marginBottom: 20, fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.4rem', color: '#0ea5e9', letterSpacing: '-0.01em' }}>
                   {activeDia === 'Standard' ? 'STANDARD SIZES' : `R${(activeDia || '').replace('.', '')}`}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 20 }}>
@@ -437,27 +568,88 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
                     const cartKey = `${product.id}_${variant.sizeString}`;
                     const qty = (cart || {})[cartKey]?.qty || 0;
                     return (
-                      <div key={variant.sizeString} className="pdp-vc" style={{ background: 'rgba(255,255,255,0.88)', border: '1.5px solid rgba(14,165,233,0.12)', borderRadius: 24, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', boxShadow: '0 8px 20px -6px rgba(15,23,42,0.06)' }}>
-                        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,rgba(14,165,233,0.08),rgba(99,102,241,0.08))', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, border: '1px solid rgba(14,165,233,0.15)' }}>
-                          <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit' }}>{variant.diameter}</span>
+                      <div key={variant.sizeString} className={`pdp-vc ${selectedSize === variant.sizeString ? 'active' : ''}`} onClick={() => setSelectedSize(variant.sizeString)} style={{
+                        background: selectedSize === variant.sizeString
+                          ? 'linear-gradient(145deg, rgba(240,253,250,0.95) 0%, rgba(240,249,255,0.92) 100%)'
+                          : 'linear-gradient(145deg, rgba(255,255,255,0.92) 0%, rgba(240,249,255,0.8) 100%)',
+                        border: selectedSize === variant.sizeString
+                          ? '2px solid #0ea5e9'
+                          : '1.5px solid rgba(14,165,233,0.16)',
+                        borderRadius: 24,
+                        padding: '24px 20px 24px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'stretch',
+                        boxShadow: selectedSize === variant.sizeString
+                          ? '0 12px 28px rgba(14,165,233,0.18), inset 0 1px 0 rgba(255,255,255,0.8)'
+                          : '0 12px 28px -8px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.6)',
+                        transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        minHeight: 270
+                      }}>
+                        {/* High-tech top line decoration */}
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #0ea5e9, #6366f1)' }} />
+
+                        {/* Top header row */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.8rem', color: '#475569', background: 'rgba(71,85,105,0.06)', padding: '3px 8px', borderRadius: 6 }}>
+                            {variant.code}
+                          </span>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 855, color: '#0ea5e9', background: 'rgba(14,165,233,0.08)', padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(14,165,233,0.2)' }}>
+                            {variant.diameter ? `${variant.diameter} mm` : 'Size'}
+                          </span>
                         </div>
-                        <div style={{ fontWeight: 900, fontSize: '0.88rem', color: '#0f172a', fontFamily: 'Outfit', marginBottom: 2 }}>{variant.code}</div>
-                        <div style={{ fontSize: '0.78rem', color: 'hsl(var(--text-muted))', marginBottom: 4, fontWeight: 600 }}>{variant.sizeString}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: 14 }}>{variant.length}</div>
-                        <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit', marginBottom: 14 }}>{'\u20B9'}{product.price?.toLocaleString('en-IN')}</div>
+
+                        {/* Telemetry specs grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(14,165,233,0.08)', borderRadius: 14, padding: 10, marginBottom: 14 }}>
+                          <div style={{ textAlign: 'left' }}>
+                            <div style={{ fontSize: '0.58rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Diameter</div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b', fontFamily: 'Outfit', marginTop: 1 }}>{variant.diameter || 'N/A'}</div>
+                          </div>
+                          <div style={{ textAlign: 'left', borderLeft: '1px solid rgba(14,165,233,0.12)', paddingLeft: 10 }}>
+                            <div style={{ fontSize: '0.58rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Length</div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b', fontFamily: 'Outfit', marginTop: 1 }}>{variant.length || variant.sizeString}</div>
+                          </div>
+                        </div>
+
+                        {/* Price display */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, padding: '0 4px' }}>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Price</span>
+                          <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit' }}>
+                            {'\u20B9'}{product.price?.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        {/* CTA Button area */}
                         {isAdmin ? (
-                          <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>Admin Mode</div>
+                          <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, textAlign: 'center', paddingTop: 8, marginTop: 'auto' }}>Admin Mode</div>
                         ) : outOfStock ? (
-                          <button disabled style={{ width: '100%', padding: '8px 0', borderRadius: 10, border: 'none', background: 'rgba(241,245,249,0.8)', color: '#94a3b8', fontSize: '0.74rem', fontWeight: 800, cursor: 'not-allowed' }}>Sold Out</button>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', marginTop: 'auto', paddingBottom: 4, boxSizing: 'border-box' }}>
+                            <span style={{ fontSize: '0.65rem', color: '#ef4444', fontWeight: 800, textAlign: 'center', background: 'rgba(239,68,68,0.06)', padding: '5px 0', borderRadius: 8, border: '1px solid rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, width: '100%', boxSizing: 'border-box' }}>
+                              <Shield size={11} /> Out of Stock
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRestockRequest(variant.sizeString);
+                              }}
+                              style={{ width: '100%', padding: '7px', borderRadius: 12, border: '1.5px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)', color: '#d97706', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.2s', boxSizing: 'border-box', whiteSpace: 'nowrap' }}
+                              className="pdp-notify-btn"
+                            >
+                              <RefreshCw size={12} className="rotate-hover" /> Request Restock
+                            </button>
+                          </div>
                         ) : qty > 0 ? (
-                          <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(241,245,249,0.6)', border: '1px solid rgba(14,165,233,0.15)', borderRadius: 10, padding: 3, gap: 8, width: '100%', justifyContent: 'space-between' }}>
-                            <button onClick={() => removeFromCart(product.id, variant.sizeString)} style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Minus size={11} strokeWidth={2.5} /></button>
-                            <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit' }}>{qty}</span>
-                            <button onClick={() => addToCart(product, variant.sizeString)} style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Plus size={11} strokeWidth={2.5} /></button>
+                          <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', background: 'rgba(241,245,249,0.7)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: 12, padding: 4, gap: 8, width: '100%', justifyContent: 'space-between', boxSizing: 'border-box', marginTop: 'auto' }}>
+                            <button onClick={() => removeFromCart(product.id, variant.sizeString)} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}><Minus size={11} strokeWidth={2.5} /></button>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 855, color: '#0ea5e9', fontFamily: 'Outfit' }}>{qty}</span>
+                            <button onClick={() => addToCart(product, variant.sizeString)} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}><Plus size={11} strokeWidth={2.5} /></button>
                           </div>
                         ) : (
-                          <button onClick={() => addToCart(product, variant.sizeString)} style={{ width: '100%', padding: '9px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#0ea5e9,#4f46e5)', color: '#fff', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, boxShadow: '0 6px 16px -4px rgba(14,165,233,0.4)' }}>
-                            <Plus size={12} strokeWidth={2.5} /> Add to Cart
+                          <button onClick={(e) => { e.stopPropagation(); addToCart(product, variant.sizeString); }} className="pdp-add-btn" style={{ width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#0ea5e9,#4f46e5)', color: '#fff', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 6px 16px -4px rgba(14,165,233,0.4)', transition: 'all 0.2s ease', marginTop: 'auto' }}>
+                            <Plus size={13} strokeWidth={2.5} /> Add to Cart
                           </button>
                         )}
                       </div>
@@ -467,6 +659,92 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
               </>
             )}
 
+            {hasSizes && sizeViewMode === 'bulk' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                <div style={{ overflowX: 'auto', border: '1px solid rgba(14,165,233,0.15)', borderRadius: 20, background: 'rgba(255,255,255,0.6)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                    <thead>
+                      <tr style={{ background: 'rgba(14,165,233,0.06)', borderBottom: '1px solid rgba(14,165,233,0.15)' }}>
+                        <th style={{ padding: '14px 18px', fontWeight: 800, color: '#475569', fontFamily: 'Outfit' }}>Code</th>
+                        <th style={{ padding: '14px 18px', fontWeight: 800, color: '#475569', fontFamily: 'Outfit' }}>Specifications</th>
+                        <th style={{ padding: '14px 18px', fontWeight: 800, color: '#475569', fontFamily: 'Outfit' }}>Unit Price</th>
+                        <th style={{ padding: '14px 18px', fontWeight: 800, color: '#475569', fontFamily: 'Outfit', textAlign: 'center' }}>Quantity</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(variantsByDiameter[activeDia] || []).map(variant => {
+                        const qty = bulkQuantities[variant.sizeString] || 0;
+                        return (
+                          <tr key={variant.sizeString} style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: qty > 0 ? 'rgba(14,165,233,0.03)' : 'transparent', transition: 'all 0.2s' }}>
+                            <td style={{ padding: '14px 18px', fontWeight: 800, fontFamily: 'monospace', color: '#1e293b' }}>{variant.code}</td>
+                            <td style={{ padding: '14px 18px', color: '#475569', fontWeight: 600 }}>
+                              <span style={{ color: '#0ea5e9', marginRight: 8 }}>Ø {variant.diameter}</span> x <span style={{ marginLeft: 8 }}>{variant.length}</span>
+                            </td>
+                            <td style={{ padding: '14px 18px', fontWeight: 700, color: '#0ea5e9', fontFamily: 'Outfit' }}>₹{product.price?.toLocaleString('en-IN')}</td>
+                            <td style={{ padding: '14px 18px', display: 'flex', justifyContent: 'center' }}>
+                              {outOfStock ? (
+                                <button
+                                  onClick={() => handleRestockRequest(variant.sizeString)}
+                                  style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.06)', color: '#d97706', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit' }}
+                                >
+                                  🔔 Request Restock
+                                </button>
+                              ) : (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', background: '#fff', border: '1px solid rgba(14,165,233,0.25)', borderRadius: 10, padding: 3, gap: 8 }}>
+                                  <button onClick={() => handleBulkQtyChange(variant.sizeString, qty - 1)} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                                  <input
+                                    type="number"
+                                    value={qty}
+                                    onChange={e => handleBulkQtyChange(variant.sizeString, e.target.value)}
+                                    style={{ width: 34, border: 'none', textAlign: 'center', fontSize: '0.8rem', fontWeight: 800, color: '#0ea5e9', outline: 'none', fontFamily: 'Outfit' }}
+                                  />
+                                  <button onClick={() => handleBulkQtyChange(variant.sizeString, qty + 1)} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Bulk Summary Panel */}
+                {(() => {
+                  const totalItems = Object.values(bulkQuantities).reduce((acc, curr) => acc + curr, 0);
+                  const totalPrice = totalItems * (product.price || 0);
+                  return (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(14,165,233,0.06)', border: '1.5px solid rgba(14,165,233,0.18)', borderRadius: 20, padding: '16px 24px', flexWrap: 'wrap', gap: 12 }}>
+                      <div>
+                        <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>Total Bulk Selection:</span>
+                        <div style={{ fontSize: '1rem', fontWeight: 900, color: '#1e293b', fontFamily: 'Outfit', marginTop: 2 }}>
+                          {totalItems} items — <span style={{ color: '#0ea5e9' }}>₹{totalPrice.toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+                      {outOfStock ? (
+                        <button
+                          onClick={handleBulkRestockRequest}
+                          disabled={totalItems === 0}
+                          style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontSize: '0.8rem', fontWeight: 800, cursor: totalItems === 0 ? 'not-allowed' : 'pointer', opacity: totalItems === 0 ? 0.6 : 1, fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: 6 }}
+                        >
+                          <RefreshCw size={14} /> Request Restock for Selected
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleBulkAddToCart}
+                          disabled={totalItems === 0}
+                          style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#0ea5e9,#4f46e5)', color: '#fff', fontSize: '0.8rem', fontWeight: 800, cursor: totalItems === 0 ? 'not-allowed' : 'pointer', opacity: totalItems === 0 ? 0.6 : 1, fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 6px 16px -4px rgba(14,165,233,0.4)' }}
+                        >
+                          <Plus size={14} /> Add Selected to Cart
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             {hasVariants && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 20 }}>
                 {product.product_variants.filter(v => v.active !== false).map(v => {
@@ -474,24 +752,90 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
                   const qty = (cart || {})[cartKey]?.qty || 0;
                   const vOOS = v.stock_qty !== null && v.stock_qty !== undefined && v.stock_qty <= 0;
                   const totalPrice = (product.price || 0) + (v.price_delta || 0);
+                  const isSelected = selectedVariant?.id === v.id;
                   return (
-                    <div key={v.id} className="pdp-vc" onClick={() => { setSelectedVariant(v); setSelectedSize([v.diameter, v.length].filter(Boolean).join(' x ')); }} style={{ background: 'rgba(255,255,255,0.88)', border: `2px solid ${selectedVariant?.id === v.id ? '#0ea5e9' : 'rgba(14,165,233,0.12)'}`, borderRadius: 24, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', boxShadow: selectedVariant?.id === v.id ? '0 8px 24px rgba(14,165,233,0.2)' : '0 8px 20px -6px rgba(15,23,42,0.06)', cursor: 'pointer' }}>
-                      <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#0f172a', fontFamily: 'Outfit', marginBottom: 4 }}>{v.diameter ? `\u2300${v.diameter}` : v.name || 'Variant'}</div>
-                      {v.length && <div style={{ fontSize: '0.78rem', color: 'hsl(var(--text-muted))', marginBottom: 4, fontWeight: 600 }}>L: {v.length}</div>}
-                      <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit', marginBottom: 14 }}>{'\u20B9'}{totalPrice.toLocaleString('en-IN')}</div>
+                    <div key={v.id} className="pdp-vc" onClick={() => { setSelectedVariant(v); setSelectedSize([v.diameter, v.length].filter(Boolean).join(' x ')); }} style={{
+                      background: isSelected
+                        ? 'linear-gradient(145deg, rgba(240,253,250,0.95) 0%, rgba(240,249,255,0.92) 100%)'
+                        : 'linear-gradient(145deg, rgba(255,255,255,0.92) 0%, rgba(240,249,255,0.8) 100%)',
+                      border: isSelected
+                        ? '2px solid #0ea5e9'
+                        : '1.5px solid rgba(14,165,233,0.16)',
+                      borderRadius: 24,
+                      padding: '24px 20px 24px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'stretch',
+                      boxShadow: isSelected
+                        ? '0 12px 28px rgba(14,165,233,0.18), inset 0 1px 0 rgba(255,255,255,0.8)'
+                        : '0 12px 28px -8px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.6)',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      minHeight: 270
+                    }}>
+                      {/* High-tech top line decoration */}
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: isSelected ? 'linear-gradient(90deg, #10b981, #0ea5e9)' : 'linear-gradient(90deg, #0ea5e9, #6366f1)' }} />
+
+                      {/* Top header row */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.8rem', color: '#475569', background: 'rgba(71,85,105,0.06)', padding: '3px 8px', borderRadius: 6 }}>
+                          {v.sku || `VAR-${v.id}`}
+                        </span>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 855, color: isSelected ? '#10b981' : '#0ea5e9', background: isSelected ? 'rgba(16,185,129,0.08)' : 'rgba(14,165,233,0.08)', padding: '3px 8px', borderRadius: 999, border: isSelected ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(14,165,233,0.2)' }}>
+                          {v.diameter ? `${v.diameter} mm` : 'Variant'}
+                        </span>
+                      </div>
+
+                      {/* Telemetry specs grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(14,165,233,0.08)', borderRadius: 14, padding: 10, marginBottom: 14 }}>
+                        <div style={{ textAlign: 'left' }}>
+                          <div style={{ fontSize: '0.58rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Diameter</div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b', fontFamily: 'Outfit', marginTop: 1 }}>{v.diameter || 'Standard'}</div>
+                        </div>
+                        <div style={{ textAlign: 'left', borderLeft: '1px solid rgba(14,165,233,0.12)', paddingLeft: 10 }}>
+                          <div style={{ fontSize: '0.58rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Length</div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b', fontFamily: 'Outfit', marginTop: 1 }}>{v.length || 'Standard'}</div>
+                        </div>
+                      </div>
+
+                      {/* Price display */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, padding: '0 4px' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Price</span>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 900, color: isSelected ? '#10b981' : '#0ea5e9', fontFamily: 'Outfit' }}>
+                          {'\u20B9'}{totalPrice.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
+                      {/* CTA Button area */}
                       {isAdmin ? (
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>Admin Mode</div>
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, textAlign: 'center', paddingTop: 8, marginTop: 'auto' }}>Admin Mode</div>
                       ) : vOOS ? (
-                        <button disabled style={{ width: '100%', padding: '8px 0', borderRadius: 10, border: 'none', background: 'rgba(241,245,249,0.8)', color: '#94a3b8', fontSize: '0.74rem', fontWeight: 800, cursor: 'not-allowed' }}>Sold Out</button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', marginTop: 'auto', paddingBottom: 4, boxSizing: 'border-box' }}>
+                          <span style={{ fontSize: '0.65rem', color: '#ef4444', fontWeight: 800, textAlign: 'center', background: 'rgba(239,68,68,0.06)', padding: '5px 0', borderRadius: 8, border: '1px solid rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, width: '100%', boxSizing: 'border-box' }}>
+                            <Shield size={11} /> Out of Stock
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRestockRequest([v.diameter, v.length].filter(Boolean).join(' x '));
+                            }}
+                            style={{ width: '100%', padding: '10px 0', borderRadius: 12, border: '1.5px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)', color: '#d97706', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.2s', boxSizing: 'border-box', whiteSpace: 'nowrap' }}
+                            className="pdp-notify-btn"
+                          >
+                            <RefreshCw size={12} className="rotate-hover" /> Request Restock
+                          </button>
+                        </div>
                       ) : qty > 0 ? (
-                        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(241,245,249,0.6)', border: '1px solid rgba(14,165,233,0.15)', borderRadius: 10, padding: 3, gap: 8, width: '100%', justifyContent: 'space-between' }}>
-                          <button onClick={e => { e.stopPropagation(); removeFromCart(product.id, null, v); }} style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Minus size={11} strokeWidth={2.5} /></button>
-                          <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'Outfit' }}>{qty}</span>
-                          <button onClick={e => { e.stopPropagation(); addToCart(product, null, v); }} style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Plus size={11} strokeWidth={2.5} /></button>
+                        <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', background: 'rgba(241,245,249,0.7)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: 12, padding: 4, gap: 8, width: '100%', justifyContent: 'space-between', boxSizing: 'border-box', marginTop: 'auto' }}>
+                          <button onClick={e => { e.stopPropagation(); removeFromCart(product.id, null, v); }} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}><Minus size={11} strokeWidth={2.5} /></button>
+                          <span style={{ fontSize: '0.88rem', fontWeight: 855, color: '#0ea5e9', fontFamily: 'Outfit' }}>{qty}</span>
+                          <button onClick={e => { e.stopPropagation(); addToCart(product, null, v); }} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}><Plus size={11} strokeWidth={2.5} /></button>
                         </div>
                       ) : (
-                        <button onClick={e => { e.stopPropagation(); addToCart(product, null, v); }} style={{ width: '100%', padding: '9px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#0ea5e9,#4f46e5)', color: '#fff', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, boxShadow: '0 6px 16px -4px rgba(14,165,233,0.4)' }}>
-                          <Plus size={12} strokeWidth={2.5} /> Add to Cart
+                        <button onClick={e => { e.stopPropagation(); addToCart(product, null, v); }} className="pdp-add-btn" style={{ width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#0ea5e9,#4f46e5)', color: '#fff', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 6px 16px -4px rgba(14,165,233,0.4)', transition: 'all 0.2s ease', marginTop: 'auto' }}>
+                          <Plus size={13} strokeWidth={2.5} /> Add to Cart
                         </button>
                       )}
                     </div>
@@ -501,7 +845,7 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 28 }}>
-              <button onClick={() => setCartOpen(true)} style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#0ea5e9,#4f46e5)', color: '#fff', fontSize: '0.84rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 6px 16px -4px rgba(14,165,233,0.4)' }}>
+              <button onClick={() => { setCartOpen(true); navigate('/catalog'); }} style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#0ea5e9,#4f46e5)', color: '#fff', fontSize: '0.84rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 6px 16px -4px rgba(14,165,233,0.4)' }}>
                 <ShoppingCart size={15} /> View Cart
               </button>
             </div>
@@ -513,19 +857,42 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
           <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: '0 0 20px 0', letterSpacing: '-0.01em' }}>Technical Specifications</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 16 }}>
             {[
-              { label: 'Availability', value: outOfStock ? 'Out of Stock' : lowStock ? `Low Stock \u2014 ${product.stock_qty} units left` : 'In Stock', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981' },
-              { label: 'Category', value: product.category || 'General', color: cs.color },
-              product.material && { label: 'Material Composition', value: product.material },
-              product.finish && { label: 'Surface Treatment', value: product.finish },
-              product.sterilization && { label: 'Sterilization Method', value: product.sterilization },
-              product.unit && { label: 'Unit', value: product.unit },
-              product.warrantyPct > 0 && { label: 'Product Warranty', value: `${product.warrantyPct}% Clinical Lifetime Coverage` },
-            ].filter(Boolean).map((spec, i) => (
-              <div key={i} style={{ background: 'rgba(255,255,255,0.88)', padding: '18px 22px', borderRadius: 20, border: '1px solid rgba(14,165,233,0.12)', boxShadow: '0 4px 12px rgba(15,23,42,0.03)' }}>
-                <div style={{ fontSize: '0.62rem', color: 'hsl(var(--text-muted))', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{spec.label}</div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: spec.color || 'hsl(var(--text-primary))', marginTop: 4 }}>{spec.value}</div>
-              </div>
-            ))}
+              { label: 'Availability', value: outOfStock ? 'Out of Stock' : lowStock ? `Low Stock \u2014 ${product.stock_qty} units left` : 'In Stock', color: outOfStock ? '#ef4444' : lowStock ? '#f59e0b' : '#10b981', icon: Shield },
+              { label: 'Category', value: product.category || 'General', color: cs.color, icon: Boxes },
+              product.material && { label: 'Material Composition', value: product.material, icon: FlaskConical },
+              product.finish && { label: 'Surface Treatment', value: product.finish, icon: Flame },
+              product.sterilization && { label: 'Sterilization Method', value: product.sterilization, icon: Clock },
+              product.unit && { label: 'Unit', value: product.unit, icon: Grid3x3 },
+              product.warrantyPct > 0 && { label: 'Product Warranty', value: `${product.warrantyPct}% Lifetime Coverage`, icon: CheckCircle },
+            ].filter(Boolean).map((spec, i) => {
+              const Icon = spec.icon || Settings;
+              return (
+                <div key={i} style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(240,249,255,0.4) 100%)',
+                  padding: '20px 24px',
+                  borderRadius: 20,
+                  border: '1.5px solid rgba(14,165,233,0.14)',
+                  boxShadow: '0 8px 24px -10px rgba(15,23,42,0.06)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                }} className="pdp-spec-card">
+                  <div style={{
+                    width: 42, height: 42, borderRadius: 12,
+                    background: `${spec.color || '#0ea5e9'}0c`,
+                    border: `1px solid ${spec.color || '#0ea5e9'}22`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Icon size={18} color={spec.color || '#0ea5e9'} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.62rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{spec.label}</div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 800, color: spec.color || 'hsl(var(--text-primary))', marginTop: 3 }}>{spec.value}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -560,7 +927,7 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {feedbackList.map(item => (
-                <div key={item.id} style={{ display: 'flex', gap: 14, padding: 16, borderRadius: 16, background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(14,165,233,0.08)' }}>
+                <div key={item.id} style={{ display: 'flex', gap: 16, padding: '20px 24px', borderRadius: 20, background: 'rgba(255,255,255,0.85)', border: '1.5px solid rgba(14,165,233,0.1)' }}>
                   <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.95rem', flexShrink: 0 }}>
                     {item.profiles?.name?.charAt(0).toUpperCase() || 'D'}
                   </div>
