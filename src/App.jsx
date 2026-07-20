@@ -1410,30 +1410,32 @@ export default function App() {
               </div>
             </div>
 
-            <div className="mobile-search-bar-row">
-              <div style={{ position: 'relative', width: '100%' }}>
-                <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none' }} />
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={navSearchQuery}
-                  onChange={e => setNavSearchQuery(e.target.value)}
-                  onKeyDown={handleNavSearch}
-                  className="mobile-search-input"
-                  style={{
-                    width: '100%',
-                    height: '38px',
-                    padding: '0 12px 0 36px',
-                    fontSize: '0.8rem',
-                    borderRadius: '10px',
-                    border: '1.5px solid hsl(var(--border-color))',
-                    background: 'rgba(255, 255, 255, 0.65)',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
+            {location.pathname !== '/catalog' && (
+              <div className="mobile-search-bar-row">
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none' }} />
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={navSearchQuery}
+                    onChange={e => setNavSearchQuery(e.target.value)}
+                    onKeyDown={handleNavSearch}
+                    className="mobile-search-input"
+                    style={{
+                      width: '100%',
+                      height: '38px',
+                      padding: '0 12px 0 36px',
+                      fontSize: '0.8rem',
+                      borderRadius: '10px',
+                      border: '1.5px solid hsl(var(--border-color))',
+                      background: 'rgba(255, 255, 255, 0.65)',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
         ) : (
@@ -1616,30 +1618,32 @@ export default function App() {
               )}
             </div>
 
-            <div className="mobile-search-bar-row">
-              <div style={{ position: 'relative', width: '100%' }}>
-                <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none' }} />
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={navSearchQuery}
-                  onChange={e => setNavSearchQuery(e.target.value)}
-                  onKeyDown={handleNavSearch}
-                  className="mobile-search-input"
-                  style={{
-                    width: '100%',
-                    height: '38px',
-                    padding: '0 12px 0 36px',
-                    fontSize: '0.8rem',
-                    borderRadius: '10px',
-                    border: '1.5px solid hsl(var(--border-color))',
-                    background: 'rgba(255, 255, 255, 0.65)',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
+            {location.pathname !== '/catalog' && (
+              <div className="mobile-search-bar-row">
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none' }} />
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={navSearchQuery}
+                    onChange={e => setNavSearchQuery(e.target.value)}
+                    onKeyDown={handleNavSearch}
+                    className="mobile-search-input"
+                    style={{
+                      width: '100%',
+                      height: '38px',
+                      padding: '0 12px 0 36px',
+                      fontSize: '0.8rem',
+                      borderRadius: '10px',
+                      border: '1.5px solid hsl(var(--border-color))',
+                      background: 'rgba(255, 255, 255, 0.65)',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -1785,12 +1789,12 @@ export default function App() {
             <button className={`nav-item ${location.pathname === '/' && !location.hash ? 'active' : ''}`} onClick={() => handleNav('')}>
               <Store /><span>Home</span>
             </button>
-            <button className={`nav-item ${activeTab === 'catalog' ? 'active' : ''}`} onClick={() => handleNav('catalog')} style={{ position: 'relative' }}>
+            <button className={`nav-item ${location.pathname === '/catalog' ? 'active' : ''}`} onClick={() => handleNav('catalog')} style={{ position: 'relative' }}>
               <ShoppingBag />
               {cartCount > 0 && <span style={{ position: 'absolute', top: 4, right: '50%', transform: 'translateX(10px)', background: '#ef4444', color: '#fff', fontSize: '0.5rem', fontWeight: 800, padding: '1px 4px', borderRadius: 8, minWidth: 14, textAlign: 'center' }}>{cartCount}</span>}
               <span>Products</span>
             </button>
-            <button className={`nav-item ${activeTab === 'guides' ? 'active' : ''}`} onClick={() => handleNav('guides')}>
+            <button className={`nav-item ${location.pathname === '/guides' ? 'active' : ''}`} onClick={() => handleNav('guides')}>
               <Film /><span>Videos</span>
             </button>
             <button className="nav-item" onClick={() => setShowLoginModal(true)}>

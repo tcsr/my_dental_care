@@ -1181,7 +1181,7 @@ export default function ProductCatalog({
           </div>
 
           {category.toLowerCase() === 'implants' && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', scrollbarWidth: 'none', width: '100%', WebkitOverflowScrolling: 'touch' }} className="cat-scroll">
               {[
                 { k: 'all', label: 'All types' },
                 { k: 'one_piece', label: 'One-piece' },
@@ -1197,6 +1197,7 @@ export default function ProductCatalog({
                     fontWeight: 700,
                     fontFamily: 'Outfit',
                     cursor: 'pointer',
+                    flexShrink: 0,
                     border: subtype === k ? '1.5px solid #6366f1' : '1.5px solid rgba(99,102,241,0.2)',
                     background: subtype === k ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.7)',
                     color: subtype === k ? '#6366f1' : 'hsl(var(--text-muted))',
@@ -1267,7 +1268,7 @@ export default function ProductCatalog({
                     <div style={{ width: '100%', height: 150, overflow: 'hidden', background: 'linear-gradient(180deg, rgba(240,249,255,0.3) 0%, rgba(238,242,255,0.5) 100%)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(14,165,233,0.08)' }}>
                       <div className="product-card-overlay" />
                       {images && images.length > 0 ? (
-                        <img className="product-card-img" src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease' }} onError={(e) => { e.target.style.display = 'none'; }} loading="lazy" />
+                        <img className="product-card-img" src={images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '12px', boxSizing: 'border-box', transition: 'transform 0.4s ease' }} onError={(e) => { e.target.style.display = 'none'; }} loading="lazy" />
                       ) : (
                         <div style={{ color: cs.color, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: 0.5 }}>
                           {typeof cs.icon === 'string' ? <span style={{ fontSize: '2.5rem' }}>{cs.icon}</span> : <cs.icon size={40} />}
@@ -1421,7 +1422,10 @@ export default function ProductCatalog({
             animation: 'cartSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             overflow: 'hidden'
           }}>
-            <div style={{ padding: '20px 20px 12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, paddingBottom: 2, flexShrink: 0 }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(148,163,184,0.3)' }} />
+            </div>
+            <div style={{ padding: '12px 20px 12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ShoppingCart size={18} strokeWidth={2.5} style={{ color: '#0ea5e9' }} /> Your Order Case

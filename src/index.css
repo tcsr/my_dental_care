@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
   /* Color Palette - HSL values for premium LIGHT theme */
@@ -74,11 +74,16 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Force Roboto font-family globally, overriding other declarations */
+body, button, input, select, textarea, span, div, h1, h2, h3, h4, h5, h6, p, a, label, li, td, th {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
 body {
   background-color: #cbd5e1;
   /* Outer frame background */
   color: hsl(var(--text-primary));
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif !important;
   font-size: 0.98rem;
   overflow: hidden;
   line-height: 1.5;
@@ -2073,8 +2078,8 @@ body.is-browser main button.carousel-nav-btn {
 
 .product-catalog-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+  grid-template-columns: 1fr;
+  gap: 16px;
   margin-top: 16px;
 }
 
@@ -2650,38 +2655,58 @@ body.is-browser .floating-cart-pill:hover {
 .guest-nav-links {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .guest-nav-link {
-  font-size: 0.92rem !important;
-  font-weight: 700 !important;
+  font-size: 0.90rem !important;
+  font-weight: 800 !important;
   color: #475569 !important;
   /* Soft Slate-600 */
   text-decoration: none !important;
   font-family: 'Outfit', sans-serif !important;
   position: relative !important;
-  padding: 8px 16px !important;
-  border-radius: 12px !important;
+  padding: 8px 10px !important;
   background: transparent !important;
-  border: 1.5px solid transparent !important;
+  border: none !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   display: inline-block !important;
   white-space: nowrap !important;
 }
 
+.guest-nav-link::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) scaleX(0) !important;
+  width: 18px !important;
+  height: 3px !important;
+  border-radius: 99px !important;
+  background: linear-gradient(90deg, #0ea5e9, #6366f1) !important;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transform-origin: center !important;
+}
+
 .guest-nav-link:hover {
   color: #0ea5e9 !important;
-  background: rgba(14, 165, 233, 0.05) !important;
-  border-color: rgba(14, 165, 233, 0.08) !important;
-  transform: translateY(-1.5px) !important;
+  background: transparent !important;
+  transform: translateY(-1px) !important;
+}
+
+.guest-nav-link:hover::after {
+  transform: translateX(-50%) scaleX(1) !important;
 }
 
 .guest-nav-link.active {
   color: #0ea5e9 !important;
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(99, 102, 241, 0.06) 100%) !important;
-  border-color: rgba(14, 165, 233, 0.22) !important;
-  box-shadow: 0 4px 12px -2px rgba(14, 165, 233, 0.08) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.guest-nav-link.active::after {
+  transform: translateX(-50%) scaleX(1.4) !important;
 }
 
 @media (max-width: 768px) {
@@ -2988,5 +3013,54 @@ body.is-browser .floating-cart-pill:hover {
 @media (max-width: 640px) {
   .carousel-products-row {
     justify-content: flex-start !important;
+  }
+}
+
+/* Responsive Landing Page Grid Overrides */
+@media (max-width: 992px) {
+  .carousel-main-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+    padding-top: 130px !important;
+  }
+  .carousel-right-column {
+    padding-top: 0 !important;
+    align-items: center !important;
+  }
+  .carousel-main-grid img {
+    margin: 0 auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-about-grid {
+    grid-template-columns: 1fr !important;
+    padding: 24px 20px !important;
+    gap: 24px !important;
+  }
+  .lp-contact-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .lp-contact-form-row {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .lp-contact-form-card {
+    padding: 24px 20px !important;
+  }
+}
+
+/* Print Only Table Styles for responsive PDF views */
+.print-only-table {
+  display: none !important;
+}
+
+@media print {
+  .print-only-table {
+    display: table !important;
   }
 }

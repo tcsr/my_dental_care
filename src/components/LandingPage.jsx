@@ -121,21 +121,21 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
       headline: 'One Piece Implants',
       subheadline: 'Monobloc implants designed for immediate loading and maximum convenience.',
       products: slide1Products,
-      bg: 'linear-gradient(135deg, #0b1329 0%, #172442 50%, #0b1329 100%)',
+      bg: 'linear-gradient(135deg, #090d16 0%, #172442 50%, #090d16 100%)',
     },
     {
       id: 'two-piece',
       headline: 'Two Piece Implants',
       subheadline: 'Classic root-form implants featuring high stability and standard surgical protocols.',
       products: slide2Products,
-      bg: 'linear-gradient(135deg, #0a1826 0%, #162f45 50%, #0a1826 100%)',
+      bg: 'linear-gradient(135deg, #070d18 0%, #162f45 50%, #070d18 100%)',
     },
     {
       id: 'plates-screws',
       headline: 'Bone Plate + Screw',
       subheadline: 'Precision surgical bone plates and fixation screws for stable osteosynthesis.',
       products: slide3Products,
-      bg: 'linear-gradient(135deg, #0b1c19 0%, #173b35 50%, #0b1c19 100%)',
+      bg: 'linear-gradient(135deg, #080f14 0%, #15293b 50%, #080f14 100%)',
     }
   ];
 
@@ -164,7 +164,7 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
         position: 'relative',
         width: '100%',
         height: 'clamp(380px, 46vw, 500px)',
-        borderRadius: 28,
+        borderRadius: 16,
         overflow: 'hidden',
         boxShadow: '0 32px 72px -12px rgba(15,23,42,0.38), 0 0 0 1px rgba(255,255,255,0.07)',
         background: '#080e1a',
@@ -320,7 +320,7 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
                   width: '100%', maxWidth: 600, display: 'flex', alignItems: 'center', gap: 20,
                   background: 'linear-gradient(135deg, rgba(14,165,233,0.12) 0%, rgba(99,102,241,0.09) 50%, rgba(255,255,255,0.04) 100%)',
                   border: '1px solid rgba(14,165,233,0.32)',
-                  borderRadius: 22, padding: '18px 22px',
+                  borderRadius: 12, padding: '18px 22px',
                   cursor: 'pointer', boxSizing: 'border-box',
                   backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
                   boxShadow: '0 16px 40px rgba(0,0,0,0.32), 0 0 0 1px rgba(14,165,233,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',

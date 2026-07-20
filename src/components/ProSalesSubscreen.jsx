@@ -2570,7 +2570,30 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
               </div>
 
               {/* Table */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.7rem', marginTop: '6px' }}>
+              <div style={{ overflowX: 'auto', width: '100%' }} className="no-print">
+                <table style={{ width: '100%', minWidth: '400px', borderCollapse: 'collapse', fontSize: '0.7rem', marginTop: '6px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 0' }}>Item Description</th>
+                      <th style={{ textAlign: 'center', padding: '6px 0' }}>HSN</th>
+                      <th style={{ textAlign: 'right', padding: '6px 0' }}>Rate</th>
+                      <th style={{ textAlign: 'center', padding: '6px 0' }}>Qty</th>
+                      <th style={{ textAlign: 'right', padding: '6px 0' }}>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '8px 0', fontWeight: 'bold' }}>{product.name}</td>
+                      <td style={{ padding: '8px 0', textAlign: 'center', color: '#64748b' }}>9021</td>
+                      <td style={{ padding: '8px 0', textAlign: 'right' }}>₹{product.price}</td>
+                      <td style={{ padding: '8px 0', textAlign: 'center' }}>{order.qty}</td>
+                      <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 'bold' }}>₹{product.price * order.qty}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              {/* Printable-only table without overflow wrapper to keep PDF clean */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.7rem', marginTop: '6px' }} className="print-only-table">
                 <thead>
                   <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
                     <th style={{ textAlign: 'left', padding: '6px 0' }}>Item Description</th>
@@ -2744,7 +2767,28 @@ export default function ProSalesSubscreen({ lang, profile, onNavigate }) {
               </div>
 
               {/* Table */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.7rem', marginTop: '6px' }}>
+              <div style={{ overflowX: 'auto', width: '100%' }} className="no-print">
+                <table style={{ width: '100%', minWidth: '400px', borderCollapse: 'collapse', fontSize: '0.7rem', marginTop: '6px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 0' }}>Item Description</th>
+                      <th style={{ textAlign: 'center', padding: '6px 0' }}>HSN</th>
+                      <th style={{ textAlign: 'center', padding: '6px 0' }}>Batch No</th>
+                      <th style={{ textAlign: 'center', padding: '6px 0' }}>Qty (Pcs)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '8px 0', fontWeight: 'bold' }}>{product.name} ({product.sku})</td>
+                      <td style={{ padding: '8px 0', textAlign: 'center', color: '#64748b' }}>9021</td>
+                      <td style={{ padding: '8px 0', textAlign: 'center', color: '#64748b' }}>{order.batchNo || 'N/A'}</td>
+                      <td style={{ padding: '8px 0', textAlign: 'center', fontWeight: 'bold' }}>{order.qty}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              {/* Printable-only table without overflow wrapper to keep PDF clean */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.7rem', marginTop: '6px' }} className="print-only-table">
                 <thead>
                   <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
                     <th style={{ textAlign: 'left', padding: '6px 0' }}>Item Description</th>

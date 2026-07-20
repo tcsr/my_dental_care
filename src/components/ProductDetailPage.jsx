@@ -168,6 +168,13 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
   const [feedbackError, setFeedbackError] = useState('');
   const [sizeViewMode, setSizeViewMode] = useState('grid'); // 'grid' or 'bulk'
   const [bulkQuantities, setBulkQuantities] = useState({}); // { [sizeString]: qty }
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const feedbackList = product ? (feedback[product.id] || []) : [];
   const hasReviewed = useMemo(() => feedbackList.some(item => item.user_id === authUser?.user?.id), [feedbackList, authUser]);
@@ -352,6 +359,158 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
   const hasVariants = (product.product_variants?.length || 0) > 0;
   const hasSizes = diameters.length > 0;
 
+  const renderMobileStickyBar = () => {
+    if (!isMobile || !product) return null;
+
+    // Check if selection is required
+    const needsSelection = hasSizes || hasVariants;
+    const isSelectionMade = !needsSelection || (needsSelection && (selectedSize || selectedVariant));
+
+    let activeVariantObj = null;
+    let activeSizeStr = selectedSize;
+
+    if (hasVariants && selectedVariant) {
+      activeVariantObj = selectedVariant;
+      activeSizeStr = [selectedVariant.diameter, selectedVariant.length].filter(Boolean).join(' x ');
+    } else if (hasSizes && selectedSize) {
+      activeVariantObj = product.product_variants?.find(v => v.sizeString === selectedSize || [v.diameter, v.length].filter(Boolean).join(' x ') === selectedSize);
+    }
+
+    const maxStock = activeVariantObj ? activeVariantObj.stock_qty : product.stock_qty;
+    const itemOutOfStock = maxStock !== null && maxStock !== undefined && maxStock <= 0;
+    const displayPrice = product.price + (activeVariantObj?.price_delta || 0);
+
+    const cartKey = activeVariantObj ? `${product.id}_v_${activeVariantObj.id}` : (activeSizeStr ? `${product.id}_${activeSizeStr}` : product.id);
+    const qtyInCart = (cart || {})[cartKey]?.qty || 0;
+
+    return (
+      <div 
+        className="pdp-mobile-sticky-bar animate-fade-in"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderTop: '1px solid rgba(14, 165, 233, 0.14)',
+          padding: '12px 18px calc(12px + env(safe-area-inset-bottom, 0px))',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          zIndex: 4000,
+          boxShadow: '0 -10px 30px rgba(15, 23, 42, 0.08)'
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, textAlign: 'left' }}>
+          {needsSelection ? (
+            isSelectionMade ? (
+              <>
+                <span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Selected Size</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#1e293b', fontFamily: 'Outfit' }}>{activeSizeStr}</span>
+              </>
+            ) : (
+              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#f59e0b', fontFamily: 'Outfit' }}>⚠️ Select size</span>
+            )
+          ) : (
+            <>
+              <span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Item Price</span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit' }}>₹{displayPrice?.toLocaleString('en-IN')}</span>
+            </>
+          )}
+          {isSelectionMade && (
+            <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0ea5e9', fontFamily: 'Outfit' }}>
+              ₹{displayPrice?.toLocaleString('en-IN')}
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {!isSelectionMade ? (
+            <button
+              onClick={() => document.getElementById('sizes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+              style={{
+                padding: '12px 24px',
+                borderRadius: 14,
+                border: 'none',
+                background: 'linear-gradient(135deg, #0ea5e9, #4f46e5)',
+                color: '#fff',
+                fontSize: '0.78rem',
+                fontWeight: 900,
+                cursor: 'pointer',
+                fontFamily: 'Outfit',
+                boxShadow: '0 4px 12px rgba(14, 165, 233, 0.35)'
+              }}
+            >
+              Choose Size
+            </button>
+          ) : itemOutOfStock ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 120 }}>
+              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#ef4444', textAlign: 'center', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 4 }}>Out of Stock</span>
+              <button
+                onClick={() => handleRestockRequest(activeSizeStr || 'Standard')}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  border: '1.5px solid #ef4444',
+                  background: 'rgba(239, 68, 68, 0.05)',
+                  color: '#ef4444',
+                  fontSize: '0.7rem',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  fontFamily: 'Outfit',
+                  width: '100%'
+                }}
+              >
+                Notify Me
+              </button>
+            </div>
+          ) : qtyInCart > 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(14, 165, 233, 0.08)', borderRadius: 14, padding: '6px 12px', border: '1px solid rgba(14, 165, 233, 0.15)' }}>
+              <button
+                onClick={() => removeFromCart(product.id, activeSizeStr, activeVariantObj)}
+                style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: '#fff', color: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}
+              >
+                <Minus size={12} strokeWidth={2.5} />
+              </button>
+              <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#1e293b', fontFamily: 'Outfit', minWidth: 16, textAlign: 'center' }}>
+                {qtyInCart}
+              </span>
+              <button
+                onClick={() => addToCart(product, activeSizeStr, activeVariantObj)}
+                style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: '#fff', color: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}
+              >
+                <Plus size={12} strokeWidth={2.5} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => addToCart(product, activeSizeStr, activeVariantObj)}
+              style={{
+                padding: '12px 24px',
+                borderRadius: 14,
+                border: 'none',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#fff',
+                fontSize: '0.78rem',
+                fontWeight: 900,
+                cursor: 'pointer',
+                fontFamily: 'Outfit',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <ShoppingCart size={14} /> Add to Case
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ paddingBottom: 100, minHeight: '100vh' }}>
       <style>{`
@@ -386,7 +545,14 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
         }
         .pdp-back { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:10px; border:1.5px solid rgba(14,165,233,0.2); background:rgba(255,255,255,0.75); color:hsl(var(--text-primary)); font-size:0.78rem; font-weight:800; font-family:Outfit; cursor:pointer; transition:all 0.25s ease; backdrop-filter:blur(8px); }
         .pdp-back:hover { background:white; border-color:#0ea5e9; color:#0ea5e9; transform:translateX(-2px); }
-        @media(max-width:768px) { .pdp-hero { grid-template-columns:1fr!important; } }
+        @media(max-width:768px) {
+          .pdp-hero {
+            display: flex !important;
+            flex-direction: column-reverse !important;
+            padding: 20px 16px !important;
+            gap: 24px !important;
+          }
+        }
       `}</style>
 
       {/* ── STICKY TOP BAR ── */}
@@ -530,7 +696,7 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
 
         {/* SIZES / VARIANTS */}
         {(hasSizes || hasVariants) && (
-          <div style={{ background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(14,165,233,0.15)', borderRadius: 28, padding: 32, marginBottom: 32, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+          <div id="sizes-section" style={{ background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(14,165,233,0.15)', borderRadius: 28, padding: 32, marginBottom: 32, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, letterSpacing: '-0.01em' }}>
@@ -944,7 +1110,7 @@ export default function ProductDetailPage({ authUser, cart, onCartChange, setCar
             </div>
           )}
         </div>
-
+        {renderMobileStickyBar()}
       </div>
     </div>
   );
