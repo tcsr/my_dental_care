@@ -58,32 +58,44 @@ function FooterLink({ to, href, children }) {
     color: 'rgba(203, 213, 225, 0.7)',
     fontSize: '0.82rem',
     textDecoration: 'none',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
     fontFamily: 'Outfit',
     fontWeight: 500,
     display: 'inline-flex',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
   };
   const enter = e => {
     e.currentTarget.style.color = '#38bdf8';
     e.currentTarget.style.transform = 'translateX(4px)';
+    const icon = e.currentTarget.querySelector('svg');
+    if (icon) {
+      icon.style.opacity = '1';
+      icon.style.transform = 'translate3d(1.5px, -1.5px, 0) scale(1.1)';
+      icon.style.color = '#38bdf8';
+    }
   };
   const leave = e => {
     e.currentTarget.style.color = 'rgba(203, 213, 225, 0.7)';
     e.currentTarget.style.transform = 'none';
+    const icon = e.currentTarget.querySelector('svg');
+    if (icon) {
+      icon.style.opacity = '0.4';
+      icon.style.transform = 'none';
+      icon.style.color = 'currentColor';
+    }
   };
   if (to) {
     return (
       <Link to={to} style={style} onMouseEnter={enter} onMouseLeave={leave}>
-        <ArrowUpRight size={11} style={{ opacity: 0.5 }} />
+        <ArrowUpRight size={11} style={{ opacity: 0.4, transition: 'all 0.2s ease' }} />
         {children}
       </Link>
     );
   }
   return (
     <a href={href} style={style} onMouseEnter={enter} onMouseLeave={leave}>
-      <ArrowUpRight size={11} style={{ opacity: 0.5 }} />
+      <ArrowUpRight size={11} style={{ opacity: 0.4, transition: 'all 0.2s ease' }} />
       {children}
     </a>
   );
@@ -92,46 +104,83 @@ function FooterLink({ to, href, children }) {
 export default function Footer() {
   return (
     <footer style={{
-      background: 'linear-gradient(175deg, #0c1832 0%, #040e1f 60%, #020817 100%)',
+      background: 'linear-gradient(175deg, #07224f 0%, #0a3d99 50%, #031435 100%)',
       color: '#fff',
       marginTop: 0,
-      borderTop: '1px solid rgba(56, 189, 248, 0.12)',
+      borderTop: '1.5px solid transparent',
+      borderImage: 'linear-gradient(90deg, transparent 0%, rgba(14, 165, 233, 0.4) 20%, #0ea5e9 50%, rgba(14, 165, 233, 0.4) 80%, transparent 100%) 1',
       position: 'relative',
       overflow: 'hidden',
     }}>
       {/* Ambient glow blobs */}
       <div style={{
         position: 'absolute', top: '-80px', left: '-40px', width: 300, height: 300,
-        background: 'radial-gradient(ellipse, rgba(14,165,233,0.09) 0%, transparent 70%)',
+        background: 'radial-gradient(ellipse, rgba(14,165,233,0.16) 0%, transparent 70%)',
         pointerEvents: 'none', zIndex: 0,
       }} />
       <div style={{
         position: 'absolute', bottom: 0, right: '-60px', width: 260, height: 260,
-        background: 'radial-gradient(ellipse, rgba(99,102,241,0.07) 0%, transparent 70%)',
+        background: 'radial-gradient(ellipse, rgba(99,102,241,0.12) 0%, transparent 70%)',
         pointerEvents: 'none', zIndex: 0,
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '-100px', left: '50%', transform: 'translateX(-50%)', width: 600, height: 250,
+        background: 'radial-gradient(ellipse at center, rgba(14,165,233,0.12) 0%, transparent 75%)',
+        pointerEvents: 'none', zIndex: 0,
+      }} />
+
+      {/* Dotted grid texture matching carousel */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+        opacity: 0.8,
+        zIndex: 0, pointerEvents: 'none',
       }} />
 
       {/* Top content */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '52px 28px 0', position: 'relative', zIndex: 1 }}>
 
-        {/* Trust badges row */}
+        {/* Trust badges bar */}
         <div style={{
-          display: 'flex', gap: 12, flexWrap: 'wrap',
-          justifyContent: 'flex-start', marginBottom: 44,
+          display: 'flex', gap: 16, flexWrap: 'wrap',
+          alignItems: 'center',
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1.5px solid rgba(255, 255, 255, 0.05)',
+          borderRadius: 20,
+          padding: '16px 24px',
+          marginBottom: 44,
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+          backdropFilter: 'blur(8px)',
         }}>
           {BADGES.map(({ icon: Icon, text }) => (
             <div key={text} style={{
-              display: 'flex', alignItems: 'center', gap: 7,
+              display: 'flex', alignItems: 'center', gap: 8,
               background: 'rgba(14,165,233,0.06)',
-              border: '1px solid rgba(14,165,233,0.15)',
+              border: '1px solid rgba(14,165,233,0.18)',
               borderRadius: 100,
-              padding: '6px 14px',
-              fontSize: '0.7rem',
-              color: 'rgba(148,210,240,0.9)',
-              fontFamily: 'Outfit', fontWeight: 600,
-              letterSpacing: '0.03em',
-            }}>
-              <Icon size={11} color="#38bdf8" />
+              padding: '8px 16px',
+              fontSize: '0.72rem',
+              color: '#38bdf8',
+              fontFamily: 'Outfit', fontWeight: 800,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              boxShadow: '0 4px 12px rgba(14, 165, 233, 0.08)',
+              transition: 'all 0.25s ease',
+              cursor: 'default',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.borderColor = '#0ea5e9';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(14, 165, 233, 0.18)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'none';
+              e.currentTarget.style.borderColor = 'rgba(14,165,233,0.18)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(14, 165, 233, 0.08)';
+            }}
+            >
+              <Icon size={12} color="#38bdf8" />
               {text}
             </div>
           ))}
@@ -298,14 +347,33 @@ export default function Footer() {
               {/* Phone */}
               <a
                 href={BRAND.phoneHref}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', transition: 'all 0.2s' }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateX(3px)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                  const b = e.currentTarget.querySelector('.contact-bubble-phone');
+                  if (b) {
+                    b.style.transform = 'scale(1.1)';
+                    b.style.borderColor = 'rgba(14,165,233,0.45)';
+                    b.style.background = 'rgba(14,165,233,0.16)';
+                    b.style.boxShadow = '0 0 12px rgba(14,165,233,0.2)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'none';
+                  const b = e.currentTarget.querySelector('.contact-bubble-phone');
+                  if (b) {
+                    b.style.transform = 'none';
+                    b.style.borderColor = 'rgba(14,165,233,0.2)';
+                    b.style.background = 'rgba(14,165,233,0.1)';
+                    b.style.boxShadow = 'none';
+                  }
+                }}
               >
-                <div style={{
-                  width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+                <div className="contact-bubble-phone" style={{
+                  width: 32, height: 32, borderRadius: 10, flexShrink: 0,
                   background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}>
                   <Phone size={13} color="#38bdf8" strokeWidth={2.2} />
                 </div>
@@ -318,14 +386,33 @@ export default function Footer() {
               {/* Email */}
               <a
                 href={BRAND.emailHref}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', transition: 'all 0.2s' }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateX(3px)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                  const b = e.currentTarget.querySelector('.contact-bubble-mail');
+                  if (b) {
+                    b.style.transform = 'scale(1.1)';
+                    b.style.borderColor = 'rgba(99,102,241,0.45)';
+                    b.style.background = 'rgba(99,102,241,0.16)';
+                    b.style.boxShadow = '0 0 12px rgba(99,102,241,0.2)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'none';
+                  const b = e.currentTarget.querySelector('.contact-bubble-mail');
+                  if (b) {
+                    b.style.transform = 'none';
+                    b.style.borderColor = 'rgba(99,102,241,0.2)';
+                    b.style.background = 'rgba(99,102,241,0.1)';
+                    b.style.boxShadow = 'none';
+                  }
+                }}
               >
-                <div style={{
-                  width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+                <div className="contact-bubble-mail" style={{
+                  width: 32, height: 32, borderRadius: 10, flexShrink: 0,
                   background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}>
                   <Mail size={13} color="#818cf8" strokeWidth={2.2} />
                 </div>
@@ -336,11 +423,35 @@ export default function Footer() {
               </a>
 
               {/* Address */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <div style={{
-                  width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+              <div 
+                style={{ display: 'flex', alignItems: 'flex-start', gap: 10, transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                  const b = e.currentTarget.querySelector('.contact-bubble-pin');
+                  if (b) {
+                    b.style.transform = 'scale(1.1)';
+                    b.style.borderColor = 'rgba(16,185,129,0.45)';
+                    b.style.background = 'rgba(16,185,129,0.16)';
+                    b.style.boxShadow = '0 0 12px rgba(16,185,129,0.2)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'none';
+                  const b = e.currentTarget.querySelector('.contact-bubble-pin');
+                  if (b) {
+                    b.style.transform = 'none';
+                    b.style.borderColor = 'rgba(16,185,129,0.2)';
+                    b.style.background = 'rgba(16,185,129,0.1)';
+                    b.style.boxShadow = 'none';
+                  }
+                }}
+              >
+                <div className="contact-bubble-pin" style={{
+                  width: 32, height: 32, borderRadius: 10, flexShrink: 0,
                   background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                  marginTop: 2,
                 }}>
                   <MapPin size={13} color="#34d399" strokeWidth={2.2} />
                 </div>

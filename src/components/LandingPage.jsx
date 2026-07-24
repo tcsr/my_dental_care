@@ -183,21 +183,21 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
       headline: 'One Piece Implants',
       subheadline: 'Monobloc implants designed for immediate loading and maximum convenience.',
       products: slide1Products,
-      bg: 'linear-gradient(135deg, #030f24 0%, #083ca6 50%, #030f24 100%)',
+      bg: 'linear-gradient(135deg, #07224f 0%, #0e56e3 50%, #07224f 100%)',
     },
     {
       id: 'two-piece',
       headline: 'Two Piece Implants',
       subheadline: 'Classic root-form implants featuring high stability and standard surgical protocols.',
       products: slide2Products,
-      bg: 'linear-gradient(135deg, #020b1c 0%, #0b45b5 50%, #020b1c 100%)',
+      bg: 'linear-gradient(135deg, #051d45 0%, #0e5fe3 50%, #051d45 100%)',
     },
     {
       id: 'plates-screws',
       headline: 'Bone Plate + Screw',
       subheadline: 'Precision surgical bone plates and fixation screws for stable osteosynthesis.',
       products: slide3Products,
-      bg: 'linear-gradient(135deg, #020814 0%, #104fa8 50%, #020814 100%)',
+      bg: 'linear-gradient(135deg, #03173d 0%, #176fe8 50%, #03173d 100%)',
     }
   ];
 
@@ -248,15 +248,15 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
       {/* ── Subtle dot-grid texture ── */}
       <div style={{
         position: 'absolute', inset: 0,
-        backgroundImage: 'radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px)',
-        backgroundSize: '28px 28px',
+        backgroundImage: 'radial-gradient(rgba(255,255,255,0.08) 1.2px, transparent 1.2px)',
+        backgroundSize: '26px 26px',
         zIndex: 1, pointerEvents: 'none',
       }} />
 
       {/* ── Glow orbs ── */}
-      <div style={{ position: 'absolute', top: '-20%', right: '5%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(14,165,233,0.22) 0%, transparent 65%)', filter: 'blur(60px)', zIndex: 1, pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: '-25%', left: '15%', width: 340, height: 340, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 65%)', filter: 'blur(50px)', zIndex: 1, pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', top: '20%', left: '-5%', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 65%)', filter: 'blur(40px)', zIndex: 1, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '-20%', right: '5%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(14,165,233,0.24) 0%, transparent 65%)', filter: 'blur(60px)', zIndex: 1, pointerEvents: 'none', animation: 'floatOrb1 12s infinite alternate ease-in-out' }} />
+      <div style={{ position: 'absolute', bottom: '-25%', left: '15%', width: 340, height: 340, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 65%)', filter: 'blur(50px)', zIndex: 1, pointerEvents: 'none', animation: 'floatOrb2 16s infinite alternate ease-in-out' }} />
+      <div style={{ position: 'absolute', top: '20%', left: '-5%', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 65%)', filter: 'blur(40px)', zIndex: 1, pointerEvents: 'none', animation: 'floatOrb3 14s infinite alternate ease-in-out' }} />
 
       {/* ── SLIDING TRACK CONTAINER ── */}
       <div
@@ -634,6 +634,9 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
         @keyframes blobF1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(30px,-40px) scale(1.05)} }
         @keyframes blobF2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-40px,30px) scale(1.08)} }
         @keyframes blobF3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20px,-20px) scale(1.04)} }
+        @keyframes floatOrb1 { 0%{transform:translate3d(0,0,0) scale(1)} 100%{transform:translate3d(24px,-24px,0) scale(1.12)} }
+        @keyframes floatOrb2 { 0%{transform:translate3d(0,0,0) scale(1)} 100%{transform:translate3d(-20px,24px,0) scale(1.1)} }
+        @keyframes floatOrb3 { 0%{transform:translate3d(0,0,0) scale(1)} 100%{transform:translate3d(16px,16px,0) scale(1.06)} }
         @keyframes heroUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
         @keyframes landingReveal {
           from { opacity: 0; transform: translate3d(0, 10px, 0); }
@@ -805,42 +808,102 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
         </section>
 
         {/* ═══════════ HERO ═══════════ */}
-        <section className="lp-hero-section" style={{ padding: '48px 24px 48px', textAlign: 'center', maxWidth: 860, margin: '0 auto', animation: 'heroUp 0.8s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 18px', borderRadius: 999, background: 'linear-gradient(135deg, rgba(14,165,233,0.10), rgba(99,102,241,0.08))', border: '1px solid rgba(14,165,233,0.22)', color: '#0ea5e9', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', backdropFilter: 'blur(12px)', boxShadow: '0 4px 16px rgba(14,165,233,0.10)' }}>
-              <Sparkles size={13} /> Next Generation Dental Implant System
-            </span>
-          </div>
+        <section className="lp-hero-section" style={{ padding: '8px 24px 48px', textAlign: 'center', margin: '0 auto', maxWidth: 1060 }}>
+          <Reveal variant="card">
+            <div className="hero-card-container" style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.52) 100%) padding-box, linear-gradient(135deg, rgba(14, 165, 233, 0.3) 0%, rgba(99, 102, 241, 0.22) 50%, rgba(16, 185, 129, 0.12) 100%) border-box',
+              border: '1.5px solid transparent',
+              backdropFilter: 'blur(32px)',
+              WebkitBackdropFilter: 'blur(32px)',
+              borderRadius: 32,
+              padding: '60px clamp(20px, 6vw, 64px) 54px',
+              boxShadow: '0 32px 72px -16px rgba(15,23,42,0.14), 0 0 40px rgba(14, 165, 233, 0.05)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Soft decorative glow orb inside the card */}
+              <div style={{
+                position: 'absolute',
+                top: '-30%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: 380,
+                height: 380,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(14, 165, 233, 0.12) 0%, transparent 65%)',
+                filter: 'blur(45px)',
+                zIndex: 0,
+                pointerEvents: 'none'
+              }} />
 
-          <h1 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: 'clamp(2.1rem, 5.5vw, 3.4rem)', lineHeight: 1.12, color: '#0f172a', margin: '0 0 20px', letterSpacing: '-0.02em' }}>
-            Most Innovative,{' '}
-            <span style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #10b981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', backgroundSize: '200% auto', animation: 'shimmerText 4s linear infinite' }}>
-              Versatile Implants
-            </span>
-            {' '}— All Under One System
-          </h1>
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 18px', borderRadius: 999, background: 'linear-gradient(135deg, rgba(14,165,233,0.10), rgba(99,102,241,0.08))', border: '1px solid rgba(14,165,233,0.22)', color: '#0ea5e9', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', backdropFilter: 'blur(12px)', boxShadow: '0 4px 16px rgba(14,165,233,0.10)' }}>
+                    <Sparkles size={13} /> Next Generation Dental Implant System
+                  </span>
+                </div>
 
-          <p style={{ fontSize: '1.05rem', color: '#475569', lineHeight: 1.7, maxWidth: 660, margin: '0 auto 36px', fontWeight: 500 }}>
-            Immediate loading, minimal procedures, real results. Simple, Effective, Efficient —
-            join us in giving your patients their smile back.
-          </p>
+                <h1 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: 'clamp(2.0rem, 5vw, 3.2rem)', lineHeight: 1.12, color: '#0f172a', margin: '0 0 20px', letterSpacing: '-0.02em' }}>
+                  Most Innovative,{' '}
+                  <span style={{ background: 'linear-gradient(135deg, #0a3da1 0%, #0ea5e9 50%, #10b981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', backgroundSize: '200% auto', animation: 'shimmerText 4s linear infinite' }}>
+                    Versatile Implants
+                  </span>
+                  {' '}— All Under One System
+                </h1>
 
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 44 }}>
-            <Link to="/catalog" className="hero-btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '15px 30px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', color: '#fff', fontSize: '0.9rem', fontWeight: 800, textDecoration: 'none', boxShadow: '0 8px 24px rgba(14,165,233,0.30)' }}>
-              <Store size={17} /> Browse Catalog
-            </Link>
-            <button onClick={onLoginRequired} className="hero-btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '15px 30px', borderRadius: 14, border: '1.5px solid rgba(14,165,233,0.25)', background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(16px)', color: '#0f172a', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(15,23,42,0.06)' }}>
-              <LogIn size={17} /> Register Your Clinic
-            </button>
-          </div>
+                <p style={{ fontSize: '1.02rem', color: '#475569', lineHeight: 1.7, maxWidth: 660, margin: '0 auto 36px', fontWeight: 500 }}>
+                  Immediate loading, minimal procedures, real results. Simple, Effective, Efficient —
+                  join us in giving your patients their smile back.
+                </p>
 
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {TRUST_BADGES.map((b, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 13px', borderRadius: 8, background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(14,165,233,0.15)', fontSize: '0.68rem', fontWeight: 700, color: '#475569', backdropFilter: 'blur(8px)' }}>
-                <CheckCircle size={11} color="#10b981" /> {b}
-              </span>
-            ))}
-          </div>
+                <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 44 }}>
+                  <Link to="/catalog" className="hero-btn-primary">
+                    <Store size={17} /> Browse Catalog
+                  </Link>
+                  <button onClick={onLoginRequired} className="hero-btn-secondary">
+                    <LogIn size={17} /> Register Your Clinic
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  {TRUST_BADGES.map((b, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '6px 14px',
+                        borderRadius: 10,
+                        background: 'rgba(255, 255, 255, 0.45)',
+                        border: '1px solid rgba(14,165,233,0.1)',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        color: '#475569',
+                        backdropFilter: 'blur(4px)',
+                        transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                        cursor: 'default'
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.75)';
+                        e.currentTarget.style.borderColor = 'rgba(14, 165, 233, 0.25)';
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(14, 165, 233, 0.08)';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.45)';
+                        e.currentTarget.style.borderColor = 'rgba(14,165,233,0.1)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      <CheckCircle size={11} color="#10b981" /> {b}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Reveal>
         </section>
 
         {/* ═══════════ STATS ═══════════ */}

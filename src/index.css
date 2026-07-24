@@ -2639,11 +2639,14 @@ body.is-browser .app-header.guest-header {
   top: 0;
   z-index: 1000;
   overflow: visible;
-  background: linear-gradient(135deg, #030f24 0%, #052c73 50%, #030f24 100%) !important;
+  background: 
+    radial-gradient(circle at 50% 100%, rgba(14, 165, 233, 0.32) 0%, transparent 55%),
+    linear-gradient(135deg, #07224f 0%, #0c4cb8 50%, #07224f 100%) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  border-bottom: 1.5px solid #0ea5e9 !important;
+  border-bottom: 1.5px solid transparent !important;
+  border-image: linear-gradient(90deg, transparent 0%, rgba(14, 165, 233, 0.4) 20%, #0ea5e9 50%, rgba(14, 165, 233, 0.4) 80%, transparent 100%) 1 !important;
   box-shadow: 0 8px 32px rgba(14, 165, 233, 0.22), 0 0 25px rgba(14, 165, 233, 0.15) !important;
 }
 
@@ -2661,11 +2664,14 @@ body.is-browser .app-header.guest-header {
 .app-header.guest-header.scrolled,
 body.is-browser .app-header.guest-header.scrolled {
   height: 64px !important;
-  background: linear-gradient(135deg, #020a1a 0%, #031e54 50%, #020a1a 100%) !important;
+  background: 
+    radial-gradient(circle at 50% 100%, rgba(14, 165, 233, 0.28) 0%, transparent 50%),
+    linear-gradient(135deg, #051a3d 0%, #093b8f 50%, #051a3d 100%) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 20px rgba(14, 165, 233, 0.18) !important;
-  border-bottom: 1.5px solid #0ea5e9 !important;
+  border-bottom: 1.5px solid transparent !important;
+  border-image: linear-gradient(90deg, transparent 0%, rgba(14, 165, 233, 0.4) 20%, #0ea5e9 50%, rgba(14, 165, 233, 0.4) 80%, transparent 100%) 1 !important;
 }
 
 .guest-header-inner {
@@ -2916,10 +2922,16 @@ body.is-browser .app-header.guest-header.scrolled {
 
 /* Guest header dark search input overrides */
 .guest-header .nav-search-input {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1.2px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
   color: #f8fafc !important;
+  border-radius: 12px !important;
+  font-family: 'Outfit', sans-serif !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.guest-header .nav-search-input:hover {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: rgba(255, 255, 255, 0.09) !important;
 }
 .guest-header .nav-search-input::placeholder {
   color: rgba(255, 255, 255, 0.35) !important;
@@ -3006,6 +3018,70 @@ body.is-browser .app-header.guest-header.scrolled {
   .guest-header-actions {
     gap: 8px;
   }
+}
+
+/* Premium Hero Section Card Buttons */
+.hero-btn-primary {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 15px 30px !important;
+  border-radius: 14px !important;
+  border: none !important;
+  background: linear-gradient(135deg, #0ea5e9, #6366f1) !important;
+  color: #fff !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  text-decoration: none !important;
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.3) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.hero-btn-primary::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: -150% !important;
+  width: 50% !important;
+  height: 100% !important;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent) !important;
+  transform: skewX(-25deg) !important;
+}
+
+.hero-btn-primary:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 12px 28px rgba(14, 165, 233, 0.45), 0 0 15px rgba(99, 102, 241, 0.25) !important;
+}
+
+.hero-btn-primary:hover::after {
+  left: 150% !important;
+  transition: left 0.8s ease-in-out !important;
+}
+
+.hero-btn-secondary {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 15px 30px !important;
+  border-radius: 14px !important;
+  border: 1.5px solid rgba(14, 165, 233, 0.25) !important;
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  color: #0f172a !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.hero-btn-secondary:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(14, 165, 233, 0.55) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12), 0 0 10px rgba(14, 165, 233, 0.15) !important;
 }
 
 /* Premium Product Carousel Animations */
