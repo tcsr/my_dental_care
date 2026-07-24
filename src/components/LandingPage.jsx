@@ -24,7 +24,7 @@ const TRUST_BADGES = [
   'Lifetime Warranty',
 ];
 
-function Reveal({ children, delay = 0 }) {
+function Reveal({ children, delay = 0, variant = 'fade-up', style = {} }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -36,11 +36,16 @@ function Reveal({ children, delay = 0 }) {
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+  
+  const className = visible
+    ? (variant === 'card' ? 'landing-card-reveal-active' : 'landing-reveal-active')
+    : (variant === 'card' ? 'landing-card-reveal' : 'landing-reveal');
+
   return (
     <div
       ref={ref}
-      className={visible ? 'landing-reveal-active' : 'landing-reveal'}
-      style={{ animationDelay: `${delay}s` }}
+      className={className}
+      style={{ animationDelay: `${delay}s`, ...style }}
     >
       {children}
     </div>
@@ -178,21 +183,21 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
       headline: 'One Piece Implants',
       subheadline: 'Monobloc implants designed for immediate loading and maximum convenience.',
       products: slide1Products,
-      bg: 'linear-gradient(135deg, #090d16 0%, #172442 50%, #090d16 100%)',
+      bg: 'linear-gradient(135deg, #030f24 0%, #083ca6 50%, #030f24 100%)',
     },
     {
       id: 'two-piece',
       headline: 'Two Piece Implants',
       subheadline: 'Classic root-form implants featuring high stability and standard surgical protocols.',
       products: slide2Products,
-      bg: 'linear-gradient(135deg, #070d18 0%, #162f45 50%, #070d18 100%)',
+      bg: 'linear-gradient(135deg, #020b1c 0%, #0b45b5 50%, #020b1c 100%)',
     },
     {
       id: 'plates-screws',
       headline: 'Bone Plate + Screw',
       subheadline: 'Precision surgical bone plates and fixation screws for stable osteosynthesis.',
       products: slide3Products,
-      bg: 'linear-gradient(135deg, #080f14 0%, #15293b 50%, #080f14 100%)',
+      bg: 'linear-gradient(135deg, #020814 0%, #104fa8 50%, #020814 100%)',
     }
   ];
 
@@ -634,11 +639,21 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
           from { opacity: 0; transform: translate3d(0, 10px, 0); }
           to   { opacity: 1; transform: translate3d(0, 0, 0); }
         }
+        @keyframes cardReveal {
+          from { opacity: 0; transform: translate3d(0, 15px, 0) scale(0.96); }
+          to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
         .landing-reveal {
           opacity: 0;
         }
         .landing-reveal-active {
           animation: landingReveal 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .landing-card-reveal {
+          opacity: 0;
+        }
+        .landing-card-reveal-active {
+          animation: cardReveal 0.48s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         @keyframes shimmerText { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
         .hero-btn-primary { transition: all 0.3s cubic-bezier(0.16,1,0.3,1) !important; }
@@ -830,12 +845,12 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
 
         {/* ═══════════ STATS ═══════════ */}
         <section style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px 60px' }}>
-          <Reveal>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
-              {STATS.map((s, i) => {
-                const Icon = s.icon;
-                return (
-                  <div key={i} className="lp-stat-card" style={{ background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: '24px 20px', textAlign: 'center', border: `1.5px solid rgba(255, 255, 255, 0.4)`, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.08)', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
+            {STATS.map((s, i) => {
+              const Icon = s.icon;
+              return (
+                <Reveal key={i} delay={i * 0.08} variant="card">
+                  <div className="lp-stat-card" style={{ background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: '24px 20px', textAlign: 'center', border: `1.5px solid rgba(255, 255, 255, 0.4)`, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.08)', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                     <div style={{ width: 48, height: 48, borderRadius: 14, background: `${s.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', border: `1px solid ${s.color}22` }}>
                       <Icon size={22} color={s.color} />
                     </div>
@@ -844,10 +859,10 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
                     </div>
                     <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 8 }}>{s.label}</div>
                   </div>
-                );
-              })}
-            </div>
-          </Reveal>
+                </Reveal>
+              );
+            })}
+          </div>
         </section>
 
         {/* ═══════════ ABOUT ═══════════ */}
@@ -900,14 +915,16 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
                 Upcoming <span style={{ background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Events &amp; Courses</span>
               </h2>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
-              {[
-                { icon: Calendar, color: '#0ea5e9', title: 'Conferences & Symposiums', items: [{ name: 'Symposium on Immediate Loading', desc: 'Learn chairside syncrystallisation (Genweld intra-oral welding) and multi-unit restorations for immediate prosthetics.' }, { name: 'Annual Implantology Meet', desc: 'Clinical discussions and case studies on cortical implants in challenging bone conditions.' }] },
-                { icon: GraduationCap, color: '#6366f1', title: 'Clinical Training & Masterclasses', items: [{ name: 'Masterclass in Cortical Implantology', desc: 'Complete training on flapless insertion, single-piece implant loading, and prosthetics adjustment in days.' }, { name: 'Hands-on Surgical Workshop', desc: 'Practical practice on model mandibles using our general instruments, drills, and drivers.' }] }
-              ].map((card, ci) => {
-                const Icon = card.icon;
-                return (
-                  <div key={ci} style={{ background: 'rgba(255,255,255,0.82)', borderRadius: 22, padding: 30, border: `1px solid ${card.color}20`, backdropFilter: 'blur(16px)', boxShadow: '0 4px 24px rgba(15,23,42,0.06)' }}>
+          </Reveal>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+            {[
+              { icon: Calendar, color: '#0ea5e9', title: 'Conferences & Symposiums', items: [{ name: 'Symposium on Immediate Loading', desc: 'Learn chairside syncrystallisation (Genweld intra-oral welding) and multi-unit restorations for immediate prosthetics.' }, { name: 'Annual Implantology Meet', desc: 'Clinical discussions and case studies on cortical implants in challenging bone conditions.' }] },
+              { icon: GraduationCap, color: '#6366f1', title: 'Clinical Training & Masterclasses', items: [{ name: 'Masterclass in Cortical Implantology', desc: 'Complete training on flapless insertion, single-piece implant loading, and prosthetics adjustment in days.' }, { name: 'Hands-on Surgical Workshop', desc: 'Practical practice on model mandibles using our general instruments, drills, and drivers.' }] }
+            ].map((card, ci) => {
+              const Icon = card.icon;
+              return (
+                <Reveal key={ci} delay={ci * 0.12} variant="card">
+                  <div style={{ background: 'rgba(255,255,255,0.82)', borderRadius: 22, padding: 30, border: `1px solid ${card.color}20`, backdropFilter: 'blur(16px)', boxShadow: '0 4px 24px rgba(15,23,42,0.06)', height: '100%', boxSizing: 'border-box' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
                       <div style={{ width: 42, height: 42, borderRadius: 12, background: `${card.color}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Icon size={20} color={card.color} />
@@ -924,10 +941,10 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
                       ))}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </Reveal>
+                </Reveal>
+              );
+            })}
+          </div>
         </section>
 
         {/* ═══════════ SUPPORT & SERVICES ═══════════ */}
@@ -940,26 +957,28 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
                   Support and <span style={{ background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Sales</span>
                 </h2>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20 }}>
-                {[
-                  { title: 'ONLINE SHOP', icon: ShoppingCart, desc: 'Browse and purchase the full range of implants, instruments, and kits 24/7.', color: '#0ea5e9' },
-                  { title: 'CLINICAL SUPPORT', icon: Headphones, desc: 'Technical guidance, case planning, and surgical consultation for implant placements.', color: '#6366f1' },
-                  { title: 'TRAINING PROGRAM', icon: BookOpen, desc: 'Clinical textbooks, instruction guides, video masterclasses, and hands-on workshops.', color: '#10b981' },
-                  { title: 'RESOURCE NETWORK', icon: Globe, desc: 'Professional resources, clinical studies, scientific articles, and research networks.', color: '#f59e0b' },
-                  { title: 'LIFETIME GUARANTEE', icon: ShieldCheck, desc: '100% Grade 5 Titanium implants backed by a lifetime replacement warranty.', color: '#ef4444' },
-                  { title: 'PATIENTS LITERATURE', icon: FileText, desc: 'Informative brochures, patient educational guides, and clinical manuals.', color: '#a855f7' }
-                ].map((item, i) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={i} className="lp-support-card" style={{ animationDelay: `${i * 0.08}s`, background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 26, border: `1.5px solid rgba(255, 255, 255, 0.4)`, display: 'flex', flexDirection: 'column', gap: 13, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.06)' }}>
+            </Reveal>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20 }}>
+              {[
+                { title: 'ONLINE SHOP', icon: ShoppingCart, desc: 'Browse and purchase the full range of implants, instruments, and kits 24/7.', color: '#0ea5e9' },
+                { title: 'CLINICAL SUPPORT', icon: Headphones, desc: 'Technical guidance, case planning, and surgical consultation for implant placements.', color: '#6366f1' },
+                { title: 'TRAINING PROGRAM', icon: BookOpen, desc: 'Clinical textbooks, instruction guides, video masterclasses, and hands-on workshops.', color: '#10b981' },
+                { title: 'RESOURCE NETWORK', icon: Globe, desc: 'Professional resources, clinical studies, scientific articles, and research networks.', color: '#f59e0b' },
+                { title: 'LIFETIME GUARANTEE', icon: ShieldCheck, desc: '100% Grade 5 Titanium implants backed by a lifetime replacement warranty.', color: '#ef4444' },
+                { title: 'PATIENTS LITERATURE', icon: FileText, desc: 'Informative brochures, patient educational guides, and clinical manuals.', color: '#a855f7' }
+              ].map((item, i) => {
+                const Icon = item.icon;
+                return (
+                  <Reveal key={i} delay={i * 0.06} variant="card">
+                    <div className="lp-support-card" style={{ background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 26, border: `1.5px solid rgba(255, 255, 255, 0.4)`, display: 'flex', flexDirection: 'column', gap: 13, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.06)', height: '100%', boxSizing: 'border-box' }}>
                       <div style={{ width: 46, height: 46, borderRadius: 14, background: `${item.color}12`, color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${item.color}22` }}><Icon size={20} /></div>
                       <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '0.84rem', color: '#0f172a', letterSpacing: '0.02em' }}>{item.title}</div>
                       <p style={{ fontSize: '0.76rem', color: '#64748b', lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
                     </div>
-                  );
-                })}
-              </div>
-            </Reveal>
+                  </Reveal>
+                );
+              })}
+            </div>
           </div>
         </section>
 
@@ -981,43 +1000,45 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
                 ].map((item, i) => {
                   const Icon = item.icon;
                   return (
-                    <div
-                      key={i}
-                      className="contact-item"
-                      onClick={() => window.open(item.link, '_blank')}
-                      style={{
-                        animationDelay: `${i * 0.12}s`,
-                        flex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 16,
-                        background: 'rgba(255, 255, 255, 0.88)',
-                        borderRadius: 22,
-                        padding: '18px 22px',
-                        border: '1.5px solid rgba(14, 165, 233, 0.18)',
-                        backdropFilter: 'blur(20px)',
-                        WebkitBackdropFilter: 'blur(20px)',
-                        boxShadow: '0 10px 30px -10px rgba(14, 165, 233, 0.08)',
-                        boxSizing: 'border-box'
-                      }}
-                    >
-                      <div style={{
-                        width: 46,
-                        height: 46,
-                        borderRadius: 14,
-                        background: `linear-gradient(135deg, ${item.color}18, ${item.color}08)`,
-                        color: item.color,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        border: `1.5px solid ${item.color}25`
-                      }}><Icon size={20} /></div>
-                      <div>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</div>
-                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', marginTop: 3 }}>{item.value}</div>
+                    <Reveal key={i} delay={i * 0.08} variant="card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <div
+                        className="contact-item"
+                        onClick={() => window.open(item.link, '_blank')}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 16,
+                          background: 'rgba(255, 255, 255, 0.88)',
+                          borderRadius: 22,
+                          padding: '18px 22px',
+                          border: '1.5px solid rgba(14, 165, 233, 0.18)',
+                          backdropFilter: 'blur(20px)',
+                          WebkitBackdropFilter: 'blur(20px)',
+                          boxShadow: '0 10px 30px -10px rgba(14, 165, 233, 0.08)',
+                          boxSizing: 'border-box',
+                          height: '100%',
+                          flex: 1,
+                          width: '100%'
+                        }}
+                      >
+                        <div style={{
+                          width: 46,
+                          height: 46,
+                          borderRadius: 14,
+                          background: `linear-gradient(135deg, ${item.color}18, ${item.color}08)`,
+                          color: item.color,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          border: `1.5px solid ${item.color}25`
+                        }}><Icon size={20} /></div>
+                        <div>
+                          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</div>
+                          <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', marginTop: 3 }}>{item.value}</div>
+                        </div>
                       </div>
-                    </div>
+                    </Reveal>
                   );
                 })}
               </div>

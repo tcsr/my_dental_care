@@ -1363,6 +1363,7 @@ export default function App() {
 
               {/* Right: Actions pinned to far right */}
               <div className="guest-header-actions">
+                {/* Language selection commented for now, will enable in the future
                 <div className="header-select-wrapper">
                   <PremiumSelect
                     value={lang}
@@ -1377,6 +1378,7 @@ export default function App() {
                     style={{ fontSize: '0.7rem' }}
                   />
                 </div>
+                */}
 
                 <button
                   onClick={() => setIsAiOpen(true)}
@@ -1613,6 +1615,7 @@ export default function App() {
                 </button>
               )}
 
+              {/* Language selection commented for now, will enable in the future
               <div className="header-select-wrapper">
                 <PremiumSelect
                   value={lang}
@@ -1627,6 +1630,7 @@ export default function App() {
                   style={{ fontSize: '0.7rem' }}
                 />
               </div>
+              */}
 
               {!isLoggedIn && (
                 <button
@@ -1892,7 +1896,7 @@ export default function App() {
         >
           <ChevronDown size={20} />
         </button>
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', marginTop: 12 }}>
           {isSpeedDialOpen && (
             <div
               onClick={(e) => e.stopPropagation()}

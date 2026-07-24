@@ -1235,28 +1235,43 @@ button {
 }
 
 @keyframes whatsapp-wave {
-  0%, 80%, 100% {
+  0%, 60%, 100% {
     transform: rotate(0deg) scale(1);
   }
-  83% {
-    transform: rotate(-14deg) scale(1.08);
+  65% {
+    transform: rotate(-16deg) scale(1.08);
   }
-  86% {
-    transform: rotate(12deg) scale(1.08);
+  70% {
+    transform: rotate(14deg) scale(1.08);
   }
-  89% {
-    transform: rotate(-10deg) scale(1.08);
+  75% {
+    transform: rotate(-12deg) scale(1.08);
   }
-  92% {
-    transform: rotate(6deg) scale(1.05);
+  80% {
+    transform: rotate(10deg) scale(1.05);
   }
-  95% {
+  85% {
+    transform: rotate(-6deg) scale(1.03);
+  }
+  90% {
     transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes whatsapp-radar {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
   }
 }
 
 /* Premium WhatsApp Floating Button Styling */
 .whatsapp-btn {
+  position: relative !important;
   width: 54px;
   height: 54px;
   border-radius: 50% !important;
@@ -1270,8 +1285,28 @@ button {
   text-decoration: none !important;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
   cursor: pointer !important;
-  animation: whatsapp-pulse 2.2s infinite !important, whatsapp-wave 4.5s infinite !important;
+  animation: whatsapp-pulse 2.2s infinite, whatsapp-wave 2.4s infinite !important;
   transform-origin: center !important;
+}
+
+.whatsapp-btn::before,
+.whatsapp-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(37, 211, 102, 0.38);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.whatsapp-btn::before {
+  animation: whatsapp-radar 2.4s infinite ease-out;
+}
+
+.whatsapp-btn::after {
+  animation: whatsapp-radar 2.4s infinite ease-out;
+  animation-delay: 1.2s;
 }
 
 .whatsapp-btn:hover {
@@ -1518,7 +1553,7 @@ button {
   /* Make buttons smaller on desktop browser and prevent stretching */
   body.is-browser .btn-primary,
   body.is-browser .btn-secondary,
-  body.is-browser main button:not(.tab-btn):not(.sidebar-link):not(.sidebar-header button):not(.app-header button):not(.qty-btn):not(.modal-close-btn):not(.carousel-nav-btn):not(.carousel-control-btn):not(.premium-select-btn):not(.cat-chip):not(.search-clear-btn):not(.modal-close-btn-premium):not(.ai-send-btn):not(.hero-btn-secondary) {
+  body.is-browser main button:not(.tab-btn):not(.sidebar-link):not(.sidebar-header button):not(.app-header button):not(.qty-btn):not(.modal-close-btn):not(.carousel-nav-btn):not(.carousel-control-btn):not(.premium-select-btn):not(.cat-chip):not(.cat-sub-chip):not(.search-clear-btn):not(.modal-close-btn-premium):not(.ai-send-btn):not(.hero-btn-secondary) {
     width: auto !important;
     min-width: unset !important;
     max-width: 320px !important;
@@ -1527,6 +1562,14 @@ button {
     display: inline-flex !important;
     justify-content: center !important;
     align-items: center !important;
+  }
+
+  .cat-sub-chip {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+  .cat-sub-chip:hover {
+    transform: translateY(-1px) !important;
+    border-color: #6366f1 !important;
   }
 
   /* Desktop centered modal layout overrides */
@@ -2596,7 +2639,7 @@ body.is-browser .app-header.guest-header {
   top: 0;
   z-index: 1000;
   overflow: visible;
-  background: linear-gradient(135deg, #081729 0%, #112d4e 50%, #081729 100%) !important;
+  background: linear-gradient(135deg, #030f24 0%, #052c73 50%, #030f24 100%) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -2618,7 +2661,7 @@ body.is-browser .app-header.guest-header {
 .app-header.guest-header.scrolled,
 body.is-browser .app-header.guest-header.scrolled {
   height: 64px !important;
-  background: linear-gradient(135deg, #061220 0%, #0d2440 50%, #061220 100%) !important;
+  background: linear-gradient(135deg, #020a1a 0%, #031e54 50%, #020a1a 100%) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 20px rgba(14, 165, 233, 0.18) !important;

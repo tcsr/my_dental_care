@@ -1190,6 +1190,7 @@ export default function ProductCatalog({
                 <button
                   key={k}
                   onClick={() => setSubtype(k)}
+                  className="cat-sub-chip"
                   style={{
                     padding: '7px 14px',
                     borderRadius: 12,
