@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { useState, useEffect, lazy, Suspense, useRef } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense, useRef } from 'react';
 import { useNavigate, useLocation, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -126,12 +126,22 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [guestScrolled, setGuestScrolled] = useState(false);
   const [navSearchQuery, setNavSearchQuery] = useState('');
-  const handleNavSearch = (e) => {
-    if (e.key === 'Enter' && navSearchQuery.trim()) {
-      navigate(`/catalog?search=${encodeURIComponent(navSearchQuery.trim())}`);
-      setNavSearchQuery('');
-    }
-  };
+  const [navSearchFocused, setNavSearchFocused] = useState(false);
+  const [navSearchHighlight, setNavSearchHighlight] = useState(-1);
+  const navSearchRef = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (navSearchRef.current && !navSearchRef.current.contains(e.target)) {
+        setNavSearchFocused(false);
+        setNavSearchHighlight(-1);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
 
   useEffect(() => {
     let mainEl = null;
@@ -317,6 +327,70 @@ export default function App() {
   const initData = useStore(state => state.initData);
   const clearData = useStore(state => state.clearData);
   const storeProducts = useStore(state => state.products);
+
+  // Build autocomplete suggestions — mirrors ProductCatalog's fallback strategy
+  // Use Zustand (Supabase) products if available, otherwise fall back to Dexie (IndexedDB)
+  const dbSearchProducts = useLiveQuery(() => db.b2bProducts.toArray()) || [];
+  const allSearchProducts = useMemo(() => {
+    if (storeProducts && storeProducts.length > 0) return storeProducts;
+    return dbSearchProducts;
+  }, [storeProducts, dbSearchProducts]);
+
+  const navSearchSuggestions = useMemo(() => {
+    const q = navSearchQuery.trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+    const seen = new Set();
+    const matches = [];
+    (allSearchProducts || []).forEach(p => {
+      const name = (p.name || '').trim();
+      if (!name) return;
+      if (name.toLowerCase().includes(q) && !seen.has(name.toLowerCase())) {
+        seen.add(name.toLowerCase());
+        matches.push(name);
+      }
+    });
+    console.log('[NavSearch] query:', q, '| pool:', allSearchProducts.length, '| matches:', matches.length);
+    return matches.slice(0, 8);
+  }, [navSearchQuery, allSearchProducts]);
+
+  const showSuggestions = navSearchFocused && navSearchSuggestions.length > 0;
+
+  // Handlers placed here to avoid temporal dead zone with showSuggestions/navSearchSuggestions
+  const handleNavSearch = (e) => {
+    if (showSuggestions) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setNavSearchHighlight(h => Math.min(h + 1, navSearchSuggestions.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setNavSearchHighlight(h => Math.max(h - 1, -1));
+        return;
+      }
+      if (e.key === 'Escape') {
+        setNavSearchFocused(false);
+        setNavSearchHighlight(-1);
+        return;
+      }
+    }
+    if (e.key === 'Enter') {
+      const term = navSearchHighlight >= 0 ? navSearchSuggestions[navSearchHighlight] : navSearchQuery.trim();
+      if (term) {
+        navigate(`/catalog?search=${encodeURIComponent(term)}`);
+        setNavSearchQuery('');
+        setNavSearchFocused(false);
+        setNavSearchHighlight(-1);
+      }
+    }
+  };
+
+  const handleSuggestionClick = (name) => {
+    navigate(`/catalog?search=${encodeURIComponent(name)}`);
+    setNavSearchQuery('');
+    setNavSearchFocused(false);
+    setNavSearchHighlight(-1);
+  };
 
   useEffect(() => {
     console.log('App.jsx storeProducts changed:', storeProducts);
@@ -799,6 +873,14 @@ export default function App() {
           width: 148px;
           height: 148px;
           border-radius: 50%;
+          .guest-header .nav-search-input {
+            height: 42px !important;
+            background: rgba(255, 255, 255, 0.06) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+            color: #f8fafc !important;
+            font-family: 'Outfit', sans-serif !important;
+            /* Note: transition intentionally NOT overridden here so JS inline style controls width animation */
+          }
           background: rgba(255, 255, 255, 0.95);
           border: 1.5px solid rgba(14, 165, 233, 0.22);
           backdrop-filter: blur(10px);
@@ -1322,40 +1404,121 @@ export default function App() {
                 </Link>
               </div>
 
-              <div className="guest-right-nav">
-                <div style={{
+              {/* Search bar - compact pill, expands on focus */}
+              <div ref={navSearchRef} className="nav-search-container" style={{
                   position: 'relative',
-                  maxWidth: '260px',
-                  width: '100%',
+                  flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
-                  marginRight: '20px',
-                  flexGrow: 1
-                }} className="nav-search-container">
-                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.5)', pointerEvents: 'none' }} />
+                  margin: '0 16px',
+                }}>
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.5)', pointerEvents: 'none', zIndex: 1 }} />
                   <input
                     type="text"
-                    placeholder="Search products..."
+                    placeholder={navSearchFocused ? 'Type to search products...' : 'Search...'}
                     value={navSearchQuery}
-                    onChange={e => setNavSearchQuery(e.target.value)}
+                    onChange={e => { setNavSearchQuery(e.target.value); setNavSearchHighlight(-1); }}
                     onKeyDown={handleNavSearch}
+                    onFocus={() => setNavSearchFocused(true)}
                     style={{
-                      width: '100%',
-                      height: '38px',
-                      padding: '0 12px 0 36px',
-                      fontSize: '0.8rem',
-                      borderRadius: '10px',
-                      border: '1.5px solid rgba(14, 165, 233, 0.25)',
-                      background: 'rgba(10, 15, 30, 0.55)',
-                      color: '#ffffff',
+                      width: navSearchFocused ? '440px' : '190px',
+                      height: '42px',
+                      padding: '0 38px 0 36px',
+                      fontSize: '0.82rem',
+                      borderRadius: (navSearchFocused && navSearchQuery.trim().length >= 2) ? '10px 10px 0 0' : '10px',
                       outline: 'none',
-                      transition: 'all 0.25s ease',
+                      transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.15s ease, box-shadow 0.2s ease',
+                      boxShadow: navSearchFocused ? '0 0 0 3px rgba(14, 165, 233, 0.2)' : 'none',
                       boxSizing: 'border-box'
                     }}
                     className="nav-search-input"
                   />
+                  {/* Clear button */}
+                  {navSearchQuery && (
+                    <button
+                      onMouseDown={e => { e.preventDefault(); setNavSearchQuery(''); setNavSearchHighlight(-1); }}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'rgba(255,255,255,0.15)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '18px',
+                        height: '18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: 'rgba(255,255,255,0.7)',
+                        zIndex: 2,
+                        padding: 0
+                      }}
+                      title="Clear"
+                    >
+                      <X size={11} />
+                    </button>
+                  )}
+                  {/* Autocomplete dropdown */}
+                  {navSearchFocused && navSearchQuery.trim().length >= 2 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      width: '440px',
+                      background: 'linear-gradient(160deg, #061525 0%, #0b2545 100%)',
+                      border: '1.5px solid rgba(14, 165, 233, 0.35)',
+                      borderTop: 'none',
+                      borderRadius: '0 0 12px 12px',
+                      zIndex: 99999,
+                      boxShadow: '0 16px 48px rgba(0,0,0,0.5), 0 4px 20px rgba(14, 165, 233, 0.18)',
+                      overflow: 'hidden',
+                      marginTop: '1px'
+                    }}>
+                      {/* Header row */}
+                      <div style={{ padding: '7px 14px', fontSize: '0.68rem', color: 'rgba(14,165,233,0.7)', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '1px solid rgba(14,165,233,0.1)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Search size={10} />
+                        Products
+                      </div>
+                      {navSearchSuggestions.length > 0 ? (
+                        navSearchSuggestions.map((name, idx) => (
+                          <div
+                            key={name}
+                            onMouseDown={() => handleSuggestionClick(name)}
+                            onMouseEnter={() => setNavSearchHighlight(idx)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '10px 16px',
+                              fontSize: '0.82rem',
+                              color: idx === navSearchHighlight ? '#fff' : 'rgba(255,255,255,0.8)',
+                              background: idx === navSearchHighlight ? 'rgba(14,165,233,0.15)' : 'transparent',
+                              cursor: 'pointer',
+                              borderBottom: idx < navSearchSuggestions.length - 1 ? '1px solid rgba(14,165,233,0.06)' : 'none',
+                              transition: 'background 0.12s ease'
+                            }}
+                          >
+                            <Search size={13} style={{ opacity: 0.4, flexShrink: 0 }} />
+                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                            <span style={{ fontSize: '0.68rem', opacity: 0.35 }}>↵</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: '14px 16px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+                          No products found for &ldquo;{navSearchQuery}&rdquo;
+                        </div>
+                      )}
+                      {/* Footer hint */}
+                      <div style={{ padding: '7px 16px', fontSize: '0.68rem', color: 'rgba(255,255,255,0.25)', borderTop: '1px solid rgba(14,165,233,0.08)', display: 'flex', gap: 12 }}>
+                        <span>↑↓ navigate</span><span>↵ select</span><span>Esc dismiss</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
+              <div className="guest-right-nav">
                 <div className="guest-nav-links">
                   <Link to="/" className={`guest-nav-link ${location.pathname === '/' && !location.hash ? 'active' : ''}`}>Home</Link>
                   <Link to="/#about" className={`guest-nav-link ${location.pathname === '/' && location.hash === '#about' ? 'active' : ''}`}>About</Link>
@@ -1463,7 +1626,7 @@ export default function App() {
               </div>
             </div>
 
-            {location.pathname !== '/catalog' && (
+            {isLoggedIn && location.pathname !== '/catalog' && (
               <div className="mobile-search-bar-row">
                 <div style={{ position: 'relative', width: '100%' }}>
                   <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none' }} />
@@ -1534,36 +1697,75 @@ export default function App() {
               )}
             </div>
 
-            <div style={{
+            <div ref={navSearchRef} style={{
               position: 'relative',
-              maxWidth: '300px',
               width: '100%',
               display: 'flex',
               alignItems: 'center',
               margin: '0 12px',
-              flexGrow: 1
+              flexGrow: 1,
+              minWidth: 0
             }} className="nav-search-container">
-              <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none' }} />
+              <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))', pointerEvents: 'none', zIndex: 1 }} />
               <input
                 type="text"
                 placeholder="Search products..."
                 value={navSearchQuery}
-                onChange={e => setNavSearchQuery(e.target.value)}
+                onChange={e => { setNavSearchQuery(e.target.value); setNavSearchHighlight(-1); }}
                 onKeyDown={handleNavSearch}
+                onFocus={() => setNavSearchFocused(true)}
                 style={{
                   width: '100%',
                   height: '38px',
                   padding: '0 12px 0 36px',
                   fontSize: '0.8rem',
-                  borderRadius: '10px',
+                  borderRadius: showSuggestions ? '10px 10px 0 0' : '10px',
                   border: '1.5px solid hsl(var(--border-color))',
                   background: 'rgba(255, 255, 255, 0.45)',
                   outline: 'none',
-                  transition: 'all 0.25s ease',
+                  transition: 'border-radius 0.15s ease',
                   boxSizing: 'border-box'
                 }}
                 className="nav-search-input"
               />
+              {showSuggestions && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: 'var(--bg-card, #fff)',
+                  border: '1.5px solid hsl(var(--border-color))',
+                  borderTop: 'none',
+                  borderRadius: '0 0 10px 10px',
+                  zIndex: 9999,
+                  boxShadow: '0 12px 36px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08)',
+                  overflow: 'hidden'
+                }}>
+                  {navSearchSuggestions.map((name, idx) => (
+                    <div
+                      key={name}
+                      onMouseDown={() => handleSuggestionClick(name)}
+                      onMouseEnter={() => setNavSearchHighlight(idx)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '9px 14px 9px 36px',
+                        fontSize: '0.8rem',
+                        color: idx === navSearchHighlight ? 'hsl(var(--primary))' : 'hsl(var(--text-primary))',
+                        background: idx === navSearchHighlight ? 'hsl(var(--primary) / 8%)' : 'transparent',
+                        cursor: 'pointer',
+                        borderBottom: idx < navSearchSuggestions.length - 1 ? '1px solid hsl(var(--border-color))' : 'none',
+                        transition: 'background 0.15s ease'
+                      }}
+                    >
+                      <Search size={12} style={{ opacity: 0.45, flexShrink: 0 }} />
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Premium Globe i18n Dropdown & Profile Icon */}

@@ -4,7 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { supabase } from '../utils/supabase';
 import { useStore } from '../utils/store';
-import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight, Wrench, FlaskConical, Shield, Settings, ArrowLeft, Zap, Layers, Grid3x3, RefreshCw, Boxes, Flame, Clock, Syringe } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, X, Package, CheckCircle, ChevronLeft, ChevronRight, Wrench, FlaskConical, Shield, Settings, ArrowLeft, Zap, Layers, Grid3x3, RefreshCw, Boxes, Flame, Clock, Syringe, Trash2 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../utils/db';
 import PremiumLoader from './ui/PremiumLoader';
@@ -1432,14 +1432,26 @@ export default function ProductCatalog({
                 <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'hsl(var(--text-primary))', fontFamily: 'Outfit', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ShoppingCart size={18} strokeWidth={2.5} style={{ color: '#0ea5e9' }} /> Your Order Case
                 </h3>
-                <button
-                  onClick={() => setCartOpen(false)}
-                  style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'hsl(var(--bg-dark))', color: 'hsl(var(--text-muted))', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'hsl(var(--text-muted))'; e.currentTarget.style.background = 'hsl(var(--bg-dark))'; }}
-                >
-                  <X size={14} strokeWidth={2.5} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {cartItems.length > 0 && (
+                    <button
+                      onClick={() => { clearCart(); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.06)', color: '#ef4444', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'Outfit', transition: 'all 0.2s' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.15)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.45)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)'; }}
+                    >
+                      <Trash2 size={12} strokeWidth={2.5} /> Clear All
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setCartOpen(false)}
+                    style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'hsl(var(--bg-dark))', color: 'hsl(var(--text-muted))', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'hsl(var(--text-muted))'; e.currentTarget.style.background = 'hsl(var(--bg-dark))'; }}
+                  >
+                    <X size={14} strokeWidth={2.5} />
+                  </button>
+                </div>
               </div>
             </div>
 

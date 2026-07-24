@@ -137,6 +137,14 @@ main {
   padding: 24px 20px 24px 20px;
 }
 
+/* Guest landing page: zero out all padding so carousel and cards go full-width */
+main.guest-main {
+  padding: 0 !important;
+  background-color: transparent !important;
+  overflow-x: clip;
+}
+
+
 /* Scrollbar styling for independent scroll view */
 main::-webkit-scrollbar {
   width: 5px;
@@ -1359,7 +1367,8 @@ button {
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   position: relative;
 }
 
@@ -2561,12 +2570,10 @@ body.is-browser .catalog-sticky-header {
 @keyframes fadeInScreen {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -2696,18 +2703,18 @@ body.is-browser .app-header.guest-header.scrolled {
 
 @media (min-width: 769px) {
   .guest-brand-wrapper {
-    flex: 1 !important;
+    flex: 0 0 auto !important;
     display: flex !important;
     justify-content: flex-start !important;
   }
   .guest-header-actions {
-    flex: 1 !important;
+    flex: 0 0 auto !important;
     display: flex !important;
     justify-content: flex-end !important;
   }
   .guest-right-nav {
-    flex-grow: 0 !important;
-    margin: 0 20px !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
   }
 
   .sidebar-overlay.guest-only-mobile,
@@ -2923,24 +2930,31 @@ body.is-browser .app-header.guest-header.scrolled {
 
 /* Guest header dark search input overrides */
 .guest-header .nav-search-input {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
-  color: #f8fafc !important;
-  border-radius: 12px !important;
+  background: rgba(8, 20, 45, 0.75) !important;
+  border: 1.5px solid rgba(14, 165, 233, 0.3) !important;
+  color: #f0f8ff !important;
   font-family: 'Outfit', sans-serif !important;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  /* width, transition and box-shadow are controlled by JS inline styles */
 }
 .guest-header .nav-search-input:hover {
-  border-color: rgba(255, 255, 255, 0.25) !important;
-  background: rgba(255, 255, 255, 0.09) !important;
-}
-.guest-header .nav-search-input::placeholder {
-  color: rgba(255, 255, 255, 0.35) !important;
+  border-color: rgba(14, 165, 233, 0.45) !important;
+  background: rgba(8, 22, 50, 0.85) !important;
 }
 .guest-header .nav-search-input:focus {
-  border-color: #0ea5e9 !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25) !important;
+  background: rgba(6, 16, 38, 0.92) !important;
+  border-color: rgba(14, 165, 233, 0.65) !important;
+  color: #ffffff !important;
+}
+.guest-header .nav-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+/* Prevent browser autofill from blasting white background */
+.guest-header .nav-search-input:-webkit-autofill,
+.guest-header .nav-search-input:-webkit-autofill:hover,
+.guest-header .nav-search-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(6, 16, 38, 0.95) inset !important;
+  caret-color: #ffffff;
 }
 .guest-header .nav-search-container svg {
   color: rgba(255, 255, 255, 0.45) !important;

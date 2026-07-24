@@ -32,28 +32,24 @@ function Reveal({ children, delay = 0, variant = 'fade-up', style = {} }) {
     if (!el) return;
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) { setVisible(true); observer.disconnect(); }
-    }, { threshold: 0.01, rootMargin: '120px 0px 50px 0px' });
+    }, { threshold: 0.08, rootMargin: '0px 0px 0px 0px' });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  
-  const getClasses = () => {
-    switch (variant) {
-      case 'card':
-        return visible ? 'landing-card-reveal landing-card-reveal-active' : 'landing-card-reveal';
-      case 'left':
-        return visible ? 'landing-left-reveal landing-left-reveal-active' : 'landing-left-reveal';
-      case 'right':
-        return visible ? 'landing-right-reveal landing-right-reveal-active' : 'landing-right-reveal';
-      default:
-        return visible ? 'landing-reveal landing-reveal-active' : 'landing-reveal';
-    }
+
+  const getClass = () => {
+    const base = variant === 'left' ? 'lp-reveal-left'
+      : variant === 'right' ? 'lp-reveal-right'
+      : variant === 'card' || variant === 'zoom' ? 'lp-reveal-scale'
+      : variant === 'flip' ? 'lp-reveal-up'
+      : 'lp-reveal-up';
+    return visible ? `${base} ${base}--in` : base;
   };
 
   return (
     <div
       ref={ref}
-      className={getClasses()}
+      className={getClass()}
       style={{ animationDelay: `${delay}s`, ...style }}
     >
       {children}
@@ -630,7 +626,9 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
         ? 'radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px) 0 0 / 28px 28px, linear-gradient(160deg, #030712 0%, #0b1528 50%, #030712 100%)'
         : 'linear-gradient(160deg, #f0f9ff 0%, #f8fafc 40%, #eef2ff 80%, #f0fdf4 100%)',
       color: isDark ? '#f8fafc' : '#0f172a',
-      transition: 'all 0.4s ease'
+      transition: 'all 0.4s ease',
+      marginTop: 0,
+      paddingTop: 0,
     }}>
 
       {/* Animated blobs */}
@@ -648,38 +646,35 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
         @keyframes floatOrb2 { 0%{transform:translate3d(0,0,0) scale(1)} 100%{transform:translate3d(-20px,24px,0) scale(1.1)} }
         @keyframes floatOrb3 { 0%{transform:translate3d(0,0,0) scale(1)} 100%{transform:translate3d(16px,16px,0) scale(1.06)} }
         @keyframes heroUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes landingReveal {
-          from { opacity: 0; filter: blur(6px); transform: translate3d(0, 24px, 0); }
-          to   { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0); }
+        /* ── Scroll Reveal Animations ── */
+        @keyframes lpRevealUp {
+          from { opacity: 0; transform: translateY(28px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes cardReveal {
-          from { opacity: 0; filter: blur(8px); transform: translate3d(0, 28px, 0) scale(0.95); }
-          to   { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) scale(1); }
+        @keyframes lpRevealLeft {
+          from { opacity: 0; transform: translateX(-32px); }
+          to   { opacity: 1; transform: translateX(0); }
         }
-        @keyframes revealLeft {
-          from { opacity: 0; filter: blur(6px); transform: translate3d(-32px, 0, 0); }
-          to   { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0); }
+        @keyframes lpRevealRight {
+          from { opacity: 0; transform: translateX(32px); }
+          to   { opacity: 1; transform: translateX(0); }
         }
-        @keyframes revealRight {
-          from { opacity: 0; filter: blur(6px); transform: translate3d(32px, 0, 0); }
-          to   { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0); }
+        @keyframes lpRevealScale {
+          from { opacity: 0; transform: scale(0.94) translateY(16px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .landing-reveal { opacity: 0; }
-        .landing-reveal-active {
-          animation: landingReveal 0.65s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-        }
-        .landing-card-reveal { opacity: 0; }
-        .landing-card-reveal-active {
-          animation: cardReveal 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-        .landing-left-reveal { opacity: 0; }
-        .landing-left-reveal-active {
-          animation: revealLeft 0.72s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-        }
-        .landing-right-reveal { opacity: 0; }
-        .landing-right-reveal-active {
-          animation: revealRight 0.72s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-        }
+
+        .lp-reveal-up  { opacity: 0; }
+        .lp-reveal-up--in  { animation: lpRevealUp  0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+        .lp-reveal-left  { opacity: 0; }
+        .lp-reveal-left--in  { animation: lpRevealLeft  0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+        .lp-reveal-right  { opacity: 0; }
+        .lp-reveal-right--in  { animation: lpRevealRight  0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+        .lp-reveal-scale  { opacity: 0; }
+        .lp-reveal-scale--in  { animation: lpRevealScale  0.65s cubic-bezier(0.34,1.56,0.64,1) forwards; }
         @keyframes shimmerText { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
         .hero-btn-primary { transition: all 0.3s cubic-bezier(0.16,1,0.3,1) !important; }
         .hero-btn-primary:hover { transform: translateY(-3px) scale(1.03) !important; box-shadow: 0 20px 40px rgba(14,165,233,0.38) !important; }
@@ -694,13 +689,16 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
         .contact-input { transition: all 0.25s ease !important; }
         .contact-input:focus { border-color: #0ea5e9 !important; background: #ffffff !important; box-shadow: 0 0 0 3px rgba(14,165,233,0.15) !important; }
         @media (max-width: 768px) {
-          .lp-about-grid { grid-template-columns: 1fr !important; gap: 28px !important; padding: 30px 24px !important; }
+          .lp-about-grid { grid-template-columns: 1fr !important; gap: 20px !important; padding: 24px 16px !important; }
           .lp-contact-grid { grid-template-columns: 1fr !important; }
-          .lp-contact-form-card { padding: 26px 22px !important; }
+          .lp-contact-form-card { padding: 22px 16px !important; }
+          .lp-section { padding-left: 8px !important; padding-right: 8px !important; }
+          .lp-hero-section { padding-left: 8px !important; padding-right: 8px !important; }
+          .lp-services-section { padding-left: 8px !important; padding-right: 8px !important; }
         }
         @media (max-width: 520px) {
-          .lp-hero-section { padding: 36px 16px 36px !important; }
-          .lp-section { padding-left: 16px !important; padding-right: 16px !important; }
+          .lp-hero-section { padding: 28px 8px 32px !important; }
+          .lp-section { padding-left: 8px !important; padding-right: 8px !important; }
           .lp-contact-form-row { grid-template-columns: 1fr !important; }
           .hero-btn-primary, .hero-btn-secondary { width: 100%; justify-content: center !important; }
         }
@@ -773,12 +771,12 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
         @media(max-width: 768px) {
           .carousel-main-grid {
             grid-template-columns: 1fr !important;
-            padding: 0 20px !important;
+            padding: 0 16px !important;
             overflow-y: auto;
             gap: 0;
           }
-          .carousel-main-grid > div:first-child { padding-bottom: 0 !important; padding-top: 24px; }
-          .carousel-main-grid > div:last-child  { padding-top: 10px !important; padding-bottom: 28px; }
+          .carousel-main-grid > div:first-child { padding-bottom: 0 !important; padding-top: 20px; }
+          .carousel-main-grid > div:last-child  { padding-top: 8px !important; padding-bottom: 24px; }
           .carousel-cta-btn { display: none !important; }
         }
         ${isDark ? `
@@ -820,13 +818,11 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
         ` : ''}
       `}</style>
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <div style={{ position: 'relative', zIndex: 1, marginTop: 0 }}>
 
         {/* ═══════════ HERO BANNER CAROUSEL (TOPMOST) ═══════════ */}
-        <section style={{ width: '100%', padding: '0 0 24px 0', boxSizing: 'border-box' }}>
-          <Reveal>
-            <HeroBannerSlider onLoginRequired={onLoginRequired} />
-          </Reveal>
+        <section style={{ width: '100%', padding: 0, boxSizing: 'border-box', overflow: 'hidden', margin: 0, display: 'block', lineHeight: 0 }}>
+          <HeroBannerSlider onLoginRequired={onLoginRequired} />
         </section>
 
         {/* ═══════════ HERO ═══════════ */}
@@ -929,12 +925,12 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
         </section>
 
         {/* ═══════════ STATS ═══════════ */}
-        <section style={{ maxWidth: 1360, margin: '0 auto', padding: '0 24px 60px' }}>
+        <section className="lp-section" style={{ maxWidth: 1360, margin: '0 auto', padding: '0 24px 60px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
             {STATS.map((s, i) => {
               const Icon = s.icon;
               return (
-                <Reveal key={i} delay={i * 0.08} variant="card">
+                <Reveal key={i} delay={i * 0.1} variant="zoom">
                   <div className="lp-stat-card" style={{ background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: '24px 20px', textAlign: 'center', border: `1.5px solid rgba(255, 255, 255, 0.4)`, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.08)', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                     <div style={{ width: 48, height: 48, borderRadius: 14, background: `${s.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', border: `1px solid ${s.color}22` }}>
                       <Icon size={22} color={s.color} />
@@ -994,8 +990,8 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
         </section>
 
         {/* ═══════════ EVENTS & COURSES ═══════════ */}
-        <section id="events-courses" style={{ maxWidth: 1360, margin: '0 auto', padding: '0 24px 80px' }}>
-          <Reveal>
+        <section id="events-courses" className="lp-section" style={{ maxWidth: 1360, margin: '0 auto', padding: '0 24px 80px' }}>
+          <Reveal variant="flip">
             <div style={{ textAlign: 'center', marginBottom: 40 }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Professional Growth</span>
               <h2 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: 'clamp(1.6rem, 3vw, 2rem)', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
@@ -1010,7 +1006,7 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
             ].map((card, ci) => {
               const Icon = card.icon;
               return (
-                <Reveal key={ci} delay={ci * 0.12} variant="card">
+                <Reveal key={ci} delay={ci * 0.14} variant={ci % 2 === 0 ? 'left' : 'right'}>
                   <div style={{ background: 'rgba(255,255,255,0.82)', borderRadius: 22, padding: 30, border: `1px solid ${card.color}20`, backdropFilter: 'blur(16px)', boxShadow: '0 4px 24px rgba(15,23,42,0.06)', height: '100%', boxSizing: 'border-box' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
                       <div style={{ width: 42, height: 42, borderRadius: 12, background: `${card.color}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1037,7 +1033,7 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
         {/* ═══════════ SUPPORT & SERVICES ═══════════ */}
         <section className="lp-services-section" style={{ padding: '64px 24px 80px', background: isDark ? 'rgba(10, 15, 30, 0.6)' : 'rgba(255,255,255,0.48)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(14,165,233,0.15)', borderBottom: '1px solid rgba(14,165,233,0.15)' }}>
           <div style={{ maxWidth: 1360, margin: '0 auto' }}>
-            <Reveal>
+            <Reveal variant="flip">
               <div style={{ textAlign: 'center', marginBottom: 44 }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Services & Resources</span>
                 <h2 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: 'clamp(1.6rem, 3vw, 2rem)', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
@@ -1056,7 +1052,7 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
               ].map((item, i) => {
                 const Icon = item.icon;
                 return (
-                  <Reveal key={i} delay={i * 0.06} variant="card">
+                  <Reveal key={i} delay={i * 0.07} variant={i % 3 === 0 ? 'zoom' : i % 3 === 1 ? 'left' : 'right'}>
                     <div className="lp-support-card" style={{ background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 26, border: `1.5px solid rgba(255, 255, 255, 0.4)`, display: 'flex', flexDirection: 'column', gap: 13, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.06)', height: '100%', boxSizing: 'border-box' }}>
                       <div style={{ width: 46, height: 46, borderRadius: 14, background: `${item.color}12`, color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${item.color}22` }}><Icon size={20} /></div>
                       <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '0.84rem', color: '#0f172a', letterSpacing: '0.02em' }}>{item.title}</div>
@@ -1070,7 +1066,7 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
         </section>
 
         {/* ═══════════ CONTACT ═══════════ */}
-        <section id="contact" style={{ maxWidth: 1360, margin: '0 auto', padding: '64px 24px 80px' }}>
+        <section id="contact" className="lp-section" style={{ maxWidth: 1360, margin: '0 auto', padding: '64px 24px 80px' }}>
           <Reveal>
             <div style={{ textAlign: 'center', marginBottom: 40 }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Get in Touch</span>
