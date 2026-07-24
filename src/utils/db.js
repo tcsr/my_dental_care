@@ -211,10 +211,16 @@ export async function seedSurgicalKit() {
 
 // Seed Initial B2B Data
 export async function seedDemoData() {
-  // Cloud sync (Supabase) must run OUTSIDE the Dexie transaction below — awaiting a real
-  // network call inside db.transaction() auto-commits the IDB transaction partway through,
-  // so every local write issued after it throws a DexieError (TransactionInactiveError).
-  let needsSupabaseSync = false;
+  // Fast-path: Check outside transaction to avoid blocking and overhead on every load
+  try {
+    const is10Seeded = await db.userProfile.get('dbSeeded10ProductsSupabase');
+    const isSeeded = await db.userProfile.get('dbSeeded');
+    if (is10Seeded && isSeeded) {
+      return;
+    }
+  } catch (e) {
+    console.warn('Fast path seed check failed:', e);
+  }
 
   // Transaction serializes concurrent calls (e.g. React StrictMode's double-invoked
   // effects in dev) so the isSeeded check can't race across two callers.
@@ -233,7 +239,6 @@ export async function seedDemoData() {
 
       // Seed the new 10 products locally
       await db.b2bProducts.bulkAdd(B2B_PRODUCTS_SEED);
-      needsSupabaseSync = true;
 
       // Seed consistent B2B orders referencing product ID 1 (Two Piece Dental Implant)
       await db.b2bOrders.bulkAdd([

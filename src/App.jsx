@@ -185,6 +185,16 @@ export default function App() {
     }
   }, [toast]);
 
+  // Close WhatsApp speed dial when clicking outside
+  useEffect(() => {
+    if (!isSpeedDialOpen) return;
+    const handleDocumentClick = () => {
+      setIsSpeedDialOpen(false);
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
+  }, [isSpeedDialOpen]);
+
   // Load/merge cart from Dexie IndexedDB based on auth user
   useEffect(() => {
     if (!isDbReady || !authChecked) return;
@@ -867,10 +877,7 @@ export default function App() {
   );
 
   if (!isDbReady) return splashLoader;
-
   if (!authChecked) return splashLoader;
-
-  if (globalLoading) return splashLoader;
 
 
 
@@ -1887,23 +1894,26 @@ export default function App() {
         </button>
         <div style={{ position: 'relative' }}>
           {isSpeedDialOpen && (
-            <div style={{
-              position: 'absolute',
-              bottom: 60,
-              right: 0,
-              background: 'rgba(10, 15, 30, 0.96)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              borderRadius: 20,
-              padding: '16px',
-              border: '1.5px solid rgba(14, 165, 233, 0.4)',
-              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), 0 0 25px rgba(14, 165, 233, 0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-              minWidth: 240,
-              zIndex: 99999
-            }}>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'absolute',
+                bottom: 60,
+                right: 0,
+                background: 'rgba(10, 15, 30, 0.96)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderRadius: 20,
+                padding: '16px',
+                border: '1.5px solid rgba(14, 165, 233, 0.4)',
+                boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), 0 0 25px rgba(14, 165, 233, 0.2)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                minWidth: 240,
+                zIndex: 99999
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
                 <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: 'Outfit' }}>Surgical Helpline 24/7</span>
@@ -1935,7 +1945,10 @@ export default function App() {
           )}
 
           <button
-            onClick={() => setIsSpeedDialOpen(o => !o)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsSpeedDialOpen(o => !o);
+            }}
             className="whatsapp-btn"
             title="Speed Dial & Emergency Support"
             style={{ border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

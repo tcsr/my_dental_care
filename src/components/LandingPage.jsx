@@ -32,12 +32,16 @@ function Reveal({ children, delay = 0 }) {
     if (!el) return;
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) { setVisible(true); observer.disconnect(); }
-    }, { threshold: 0.10 });
+    }, { threshold: 0.01, rootMargin: '120px 0px 50px 0px' });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
   return (
-    <div ref={ref} className={visible ? 'animate-fade-in' : ''} style={{ opacity: visible ? undefined : 0, animationDelay: `${delay}s` }}>
+    <div
+      ref={ref}
+      className={visible ? 'landing-reveal-active' : 'landing-reveal'}
+      style={{ animationDelay: `${delay}s` }}
+    >
       {children}
     </div>
   );
@@ -204,8 +208,6 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
 
   if (total === 0) return null;
 
-  const currentSlide = slides[index];
-
   // Progress bar width cycles 0→100% over 6s per slide
   const SLIDE_DURATION = 6000;
 
@@ -223,13 +225,20 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
         background: '#080e1a',
       }}
     >
-      {/* ── Animated gradient background per slide ── */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: currentSlide.bg,
-        transition: 'background 1s ease-in-out',
-        zIndex: 0,
-      }} />
+      {/* ── Animated gradient background per slide (GPU crossfade) ── */}
+      {slides.map((s, i) => (
+        <div
+          key={`bg-${s.id}`}
+          style={{
+            position: 'absolute', inset: 0,
+            background: s.bg,
+            opacity: i === index ? 1 : 0,
+            transition: 'opacity 0.8s ease-in-out',
+            zIndex: 0,
+            pointerEvents: 'none',
+          }}
+        />
+      ))}
 
       {/* ── Subtle dot-grid texture ── */}
       <div style={{
@@ -244,273 +253,295 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
       <div style={{ position: 'absolute', bottom: '-25%', left: '15%', width: 340, height: 340, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 65%)', filter: 'blur(50px)', zIndex: 1, pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', top: '20%', left: '-5%', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 65%)', filter: 'blur(40px)', zIndex: 1, pointerEvents: 'none' }} />
 
-
-
-      {/* ── MAIN CONTENT: split left/right ── */}
+      {/* ── SLIDING TRACK CONTAINER ── */}
       <div
-        key={index}
         style={{
-          position: 'relative', zIndex: 2,
+          display: 'flex',
+          width: `${total * 100}%`,
           height: '100%',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1.6fr',
-          maxWidth: 1360,
-          margin: '0 auto',
-          padding: '0 clamp(24px, 4vw, 56px)',
-          boxSizing: 'border-box',
-          animation: 'carouselIn 0.6s cubic-bezier(0.16,1,0.3,1) both',
+          transform: `translate3d(-${(index * 100) / total}%, 0, 0)`,
+          transition: 'transform 0.75s cubic-bezier(0.16, 1, 0.3, 1)',
+          position: 'relative',
+          zIndex: 2,
         }}
-        className="carousel-main-grid"
       >
-        {/* ── LEFT: Text + CTA ── */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          gap: 14, paddingRight: 'clamp(16px,3vw,40px)', paddingBottom: 32,
-        }}>
-
-          {/* Label pill */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, width: 'fit-content' }}>
-            <span style={{
-              fontSize: '0.62rem', fontWeight: 800,
-              color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.12em',
-              background: 'rgba(14,165,233,0.12)',
-              border: '1px solid rgba(14,165,233,0.3)',
-              padding: '4px 12px', borderRadius: 999,
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-            }}>
-              <Sparkles size={10} strokeWidth={2.5} />
-              {currentSlide.id === 'one-piece' ? 'One Piece System' : currentSlide.id === 'two-piece' ? 'Two Piece System' : 'Fixation System'}
-            </span>
-          </div>
-
-          {/* Headline */}
-          <h2 style={{
-            fontFamily: 'Outfit', fontWeight: 900,
-            fontSize: 'clamp(1.55rem, 3.2vw, 2.4rem)',
-            lineHeight: 1.08, margin: 0,
-            letterSpacing: '-0.025em',
-            background: 'linear-gradient(140deg, #ffffff 30%, #bae6fd 75%, #a5b4fc 100%)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          }}>
-            {currentSlide.headline}
-          </h2>
-
-          {/* Sub */}
-          <p style={{
-            fontSize: 'clamp(0.8rem, 1.6vw, 0.9rem)',
-            color: 'rgba(226,232,240,0.72)',
-            lineHeight: 1.55, margin: 0, fontWeight: 500,
-            maxWidth: 360,
-          }}>
-            {currentSlide.subheadline}
-          </p>
-
-          {/* Trust badges */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-            {['Ti Grade 5', 'ISO Certified', 'Gamma Sterilized'].map(b => (
-              <span key={b} style={{
-                fontSize: '0.58rem', fontWeight: 800,
-                color: 'rgba(186,230,253,0.85)',
-                background: 'rgba(14,165,233,0.08)',
-                border: '1px solid rgba(14,165,233,0.22)',
-                padding: '3px 10px', borderRadius: 999,
-                display: 'flex', alignItems: 'center', gap: 4,
-                letterSpacing: '0.06em', textTransform: 'uppercase',
-              }}>
-                <CheckCircle size={9} strokeWidth={2.5} style={{ flexShrink: 0 }} />{b}
-              </span>
-            ))}
-          </div>
-
-          {/* CTA */}
-          <button
-            onClick={() => navigate('/catalog')}
-            style={{
-              marginTop: 8,
-              alignSelf: 'flex-start',
-              padding: '11px 24px',
-              borderRadius: 14,
-              border: '1px solid rgba(255,255,255,0.15)',
-              background: 'linear-gradient(135deg, #0ea5e9 0%, #4f46e5 100%)',
-              color: '#fff',
-              fontSize: '0.8rem', fontWeight: 800, fontFamily: 'Outfit',
-              cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 8,
-              boxShadow: '0 8px 24px -4px rgba(14,165,233,0.5)',
-              letterSpacing: '0.01em',
-              transition: 'all 0.25s ease',
-            }}
-            className="carousel-cta-btn"
-          >
-            <Store size={14} strokeWidth={2.5} /> Browse Catalog
-          </button>
-        </div>
-
-        {/* ── RIGHT: Feature product + chip row ── */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          gap: 12, paddingBottom: 32, paddingTop: 24,
-          minWidth: 0,
-          width: '100%',
-        }} className="carousel-right-column">
-          {/* Feature card — dynamically previews selected product */}
-          {(() => {
-            const fp = currentSlide.products[activeProductIndex] || currentSlide.products[0];
-            if (!fp) return null;
+        {slides.map((slide, slideIdx) => {
+          const isActiveSlide = slideIdx === index;
+          const fpIndex = isActiveSlide ? activeProductIndex : 0;
+          const fp = slide.products[fpIndex] || slide.products[0];
+          
+          let imgUrl = '';
+          if (fp) {
             const rawUrl = fp.image_url || fp.image;
             const baseUrl = import.meta.env.BASE_URL || '/';
-            const imgUrl = rawUrl ? (rawUrl.startsWith('http') || rawUrl.startsWith('data:') ? rawUrl : `${baseUrl}${rawUrl.replace(/^\//, '')}`) : '';
-            return (
-              <div
-                key={`${index}-${activeProductIndex}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (fp.id && !String(fp.id).startsWith('fb-')) navigate(`/product/${fp.id}`);
-                  else navigate(`/product/${fp.id}?name=${encodeURIComponent(fp.name)}`);
-                }}
-                className="carousel-feature-card"
-                style={{
-                  width: '100%', maxWidth: 600, display: 'flex', alignItems: 'center', gap: 20,
-                  background: 'linear-gradient(135deg, rgba(14,165,233,0.12) 0%, rgba(99,102,241,0.09) 50%, rgba(255,255,255,0.04) 100%)',
-                  border: '1px solid rgba(14,165,233,0.32)',
-                  borderRadius: 12, padding: '18px 22px',
-                  cursor: 'pointer', boxSizing: 'border-box',
-                  backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                  boxShadow: '0 16px 40px rgba(0,0,0,0.32), 0 0 0 1px rgba(14,165,233,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
-                  transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)',
-                  position: 'relative', overflow: 'hidden',
-                  animation: 'carouselIn 0.5s cubic-bezier(0.16,1,0.3,1) both',
-                }}
-              >
-                {/* Glow sweep behind card */}
-                <div style={{ position:'absolute', top:'-30%', left:'-10%', width:'60%', height:'160%', background:'radial-gradient(ellipse, rgba(14,165,233,0.14) 0%, transparent 70%)', pointerEvents:'none', zIndex:0 }} />
+            imgUrl = rawUrl ? (rawUrl.startsWith('http') || rawUrl.startsWith('data:') ? rawUrl : `${baseUrl}${rawUrl.replace(/^\//, '')}`) : '';
+          }
 
-                {/* Featured badge */}
-                <div style={{ position:'absolute', top:10, right:14, fontSize:'0.5rem', fontWeight:900, color:'#fff', background:'linear-gradient(135deg,#0ea5e9,#6366f1)', padding:'2px 9px', borderRadius:999, textTransform:'uppercase', letterSpacing:'0.1em', boxShadow:'0 2px 8px rgba(14,165,233,0.4)', zIndex:2 }}>
-                  Featured
-                </div>
+          const textOpacity = isActiveSlide ? 1 : 0;
 
-                {/* Image with halo */}
-                <div style={{ position:'relative', zIndex:1, flexShrink:0 }}>
-                  <div style={{ position:'absolute', inset:-8, borderRadius:'50%', background:'radial-gradient(circle, rgba(14,165,233,0.35) 0%, transparent 70%)', filter:'blur(10px)', zIndex:0 }} className="halo-glow" />
-                  <div style={{
-                    width: 86, height: 86, borderRadius: 20, position:'relative', zIndex:1,
-                    background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: 10, boxSizing: 'border-box',
-                    boxShadow: '0 10px 28px rgba(0,0,0,0.25), 0 0 0 2px rgba(14,165,233,0.4)',
-                    border: '1px solid rgba(255,255,255,0.9)',
+          return (
+            <div
+              key={slide.id}
+              style={{
+                width: `${100 / total}%`,
+                height: '100%',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1.6fr',
+                maxWidth: 1360,
+                margin: '0 auto',
+                padding: '0 clamp(24px, 4vw, 56px)',
+                boxSizing: 'border-box',
+              }}
+              className="carousel-main-grid"
+            >
+              {/* ── LEFT: Text + CTA ── */}
+              <div style={{
+                display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                gap: 14, paddingRight: 'clamp(16px,3vw,40px)', paddingBottom: 32,
+                transform: `translate3d(0, ${isActiveSlide ? '0px' : '15px'}, 0)`,
+                opacity: textOpacity,
+                transition: 'transform 0.75s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.75s ease',
+              }}>
+                {/* Label pill */}
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, width: 'fit-content' }}>
+                  <span style={{
+                    fontSize: '0.62rem', fontWeight: 800,
+                    color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.12em',
+                    background: 'rgba(14,165,233,0.12)',
+                    border: '1px solid rgba(14,165,233,0.3)',
+                    padding: '4px 12px', borderRadius: 999,
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
                   }}>
-                    {imgUrl
-                      ? <img src={imgUrl} alt={fp.name} style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain', transition:'transform 0.35s ease' }} className="feature-img" />
-                      : <Package size={32} color="#0ea5e9" />}
-                  </div>
+                    <Sparkles size={10} strokeWidth={2.5} />
+                    {slide.id === 'one-piece' ? 'One Piece System' : slide.id === 'two-piece' ? 'Two Piece System' : 'Fixation System'}
+                  </span>
                 </div>
 
-                {/* Text */}
-                <div style={{ flex:1, minWidth:0, position:'relative', zIndex:1 }}>
-                  <div style={{ fontSize:'0.58rem', fontWeight:900, color:'#38bdf8', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:5, display:'flex', alignItems:'center', gap:5 }}>
-                    <span style={{ width:5, height:5, borderRadius:'50%', background:'#38bdf8', display:'inline-block', boxShadow:'0 0 6px #38bdf8' }} />
-                    {fp.category}
-                  </div>
-                  <div style={{ fontSize:'clamp(0.9rem,1.8vw,1.05rem)', fontWeight:900, color:'#fff', fontFamily:'Outfit', lineHeight:1.15, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textShadow:'0 2px 8px rgba(0,0,0,0.3)' }}>
-                    {fp.name}
-                  </div>
-                  <div style={{ fontSize:'0.64rem', color:'rgba(255,255,255,0.6)', fontWeight:500, marginTop:4, display:'flex', alignItems:'center', gap:6 }}>
-                    <span>Click to view technical specifications</span>
-                    <ChevronRight size={12} style={{ opacity: 0.7 }} />
-                  </div>
+                {/* Headline */}
+                <h2 style={{
+                  fontFamily: 'Outfit', fontWeight: 900,
+                  fontSize: 'clamp(1.55rem, 3.2vw, 2.4rem)',
+                  lineHeight: 1.08, margin: 0,
+                  letterSpacing: '-0.025em',
+                  background: 'linear-gradient(140deg, #ffffff 30%, #bae6fd 75%, #a5b4fc 100%)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                }}>
+                  {slide.headline}
+                </h2>
+
+                {/* Sub */}
+                <p style={{
+                  fontSize: 'clamp(0.8rem, 1.6vw, 0.9rem)',
+                  color: 'rgba(226,232,240,0.72)',
+                  lineHeight: 1.55, margin: 0, fontWeight: 500,
+                  maxWidth: 360,
+                }}>
+                  {slide.subheadline}
+                </p>
+
+                {/* Trust badges */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                  {['Ti Grade 5', 'ISO Certified', 'Gamma Sterilized'].map(b => (
+                    <span key={b} style={{
+                      fontSize: '0.58rem', fontWeight: 800,
+                      color: 'rgba(186,230,253,0.85)',
+                      background: 'rgba(14,165,233,0.08)',
+                      border: '1px solid rgba(14,165,233,0.22)',
+                      padding: '3px 10px', borderRadius: 999,
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                    }}>
+                      <CheckCircle size={9} strokeWidth={2.5} style={{ flexShrink: 0 }} />{b}
+                    </span>
+                  ))}
                 </div>
 
-                <div style={{ flexShrink:0, width:32, height:32, borderRadius:'50%', background:'rgba(14,165,233,0.18)', border:'1px solid rgba(14,165,233,0.35)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1 }} className="feature-arrow">
-                  <ChevronRight size={16} color="#38bdf8" strokeWidth={2.5} />
+                {/* CTA */}
+                <button
+                  onClick={() => navigate('/catalog')}
+                  style={{
+                    marginTop: 8,
+                    alignSelf: 'flex-start',
+                    padding: '11px 24px',
+                    borderRadius: 14,
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    background: 'linear-gradient(135deg, #0ea5e9 0%, #4f46e5 100%)',
+                    color: '#fff',
+                    fontSize: '0.8rem', fontWeight: 800, fontFamily: 'Outfit',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    boxShadow: '0 8px 24px -4px rgba(14,165,233,0.5)',
+                    letterSpacing: '0.01em',
+                    transition: 'all 0.25s ease',
+                  }}
+                  className="carousel-cta-btn"
+                >
+                  <Store size={14} strokeWidth={2.5} /> Browse Catalog
+                </button>
+              </div>
+
+              {/* ── RIGHT: Feature product + chip row ── */}
+              <div style={{
+                display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                gap: 12, paddingBottom: 32, paddingTop: 24,
+                minWidth: 0,
+                width: '100%',
+                transform: `translate3d(0, ${isActiveSlide ? '0px' : '-15px'}, 0)`,
+                opacity: textOpacity,
+                transition: 'transform 0.75s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.75s ease',
+              }} className="carousel-right-column">
+                {/* Feature card — dynamically previews selected product */}
+                {fp && (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (fp.id && !String(fp.id).startsWith('fb-')) navigate(`/product/${fp.id}`);
+                      else navigate(`/product/${fp.id}?name=${encodeURIComponent(fp.name)}`);
+                    }}
+                    className="carousel-feature-card"
+                    style={{
+                      width: '100%', maxWidth: 600, display: 'flex', alignItems: 'center', gap: 20,
+                      background: 'linear-gradient(135deg, rgba(14,165,233,0.12) 0%, rgba(99,102,241,0.09) 50%, rgba(255,255,255,0.04) 100%)',
+                      border: '1px solid rgba(14,165,233,0.32)',
+                      borderRadius: 12, padding: '18px 22px',
+                      cursor: 'pointer', boxSizing: 'border-box',
+                      backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                      boxShadow: '0 16px 40px rgba(0,0,0,0.32), 0 0 0 1px rgba(14,165,233,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
+                      transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)',
+                      position: 'relative', overflow: 'hidden',
+                    }}
+                  >
+                    {/* Glow sweep behind card */}
+                    <div style={{ position:'absolute', top:'-30%', left:'-10%', width:'60%', height:'160%', background:'radial-gradient(ellipse, rgba(14,165,233,0.14) 0%, transparent 70%)', pointerEvents:'none', zIndex:0 }} />
+
+                    {/* Featured badge */}
+                    <div style={{ position:'absolute', top:10, right:14, fontSize:'0.5rem', fontWeight:900, color:'#fff', background:'linear-gradient(135deg,#0ea5e9,#6366f1)', padding:'2px 9px', borderRadius:999, textTransform:'uppercase', letterSpacing:'0.1em', boxShadow:'0 2px 8px rgba(14,165,233,0.4)', zIndex:2 }}>
+                      Featured
+                    </div>
+
+                    {/* Image with halo */}
+                    <div style={{ position:'relative', zIndex:1, flexShrink:0 }}>
+                      <div style={{ position:'absolute', inset:-8, borderRadius:'50%', background:'radial-gradient(circle, rgba(14,165,233,0.35) 0%, transparent 70%)', filter:'blur(10px)', zIndex:0 }} className="halo-glow" />
+                      <div style={{
+                        width: 86, height: 86, borderRadius: 20, position:'relative', zIndex:1,
+                        background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: 10, boxSizing: 'border-box',
+                        boxShadow: '0 10px 28px rgba(0,0,0,0.25), 0 0 0 2px rgba(14,165,233,0.4)',
+                        border: '1px solid rgba(255,255,255,0.9)',
+                      }}>
+                        {imgUrl
+                          ? <img src={imgUrl} alt={fp.name} style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain', transition:'transform 0.35s ease' }} className="feature-img" />
+                          : <Package size={32} color="#0ea5e9" />}
+                      </div>
+                    </div>
+
+                    {/* Text */}
+                    <div style={{ flex:1, minWidth:0, position:'relative', zIndex:1 }}>
+                      <div style={{ fontSize:'0.58rem', fontWeight:900, color:'#38bdf8', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:5, display:'flex', alignItems:'center', gap:5 }}>
+                        <span style={{ width:5, height:5, borderRadius:'50%', background:'#38bdf8', display:'inline-block', boxShadow:'0 0 6px #38bdf8' }} />
+                        {fp.category}
+                      </div>
+                      <div style={{ fontSize:'clamp(0.9rem,1.8vw,1.05rem)', fontWeight:900, color:'#fff', fontFamily:'Outfit', lineHeight:1.15, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textShadow:'0 2px 8px rgba(0,0,0,0.3)' }}>
+                        {fp.name}
+                      </div>
+                      <div style={{ fontSize:'0.64rem', color:'rgba(255,255,255,0.6)', fontWeight:500, marginTop:4, display:'flex', alignItems:'center', gap:6 }}>
+                        <span>Click to view technical specifications</span>
+                        <ChevronRight size={12} style={{ opacity: 0.7 }} />
+                      </div>
+                    </div>
+
+                    <div style={{ flexShrink:0, width:32, height:32, borderRadius:'50%', background:'rgba(14,165,233,0.18)', border:'1px solid rgba(14,165,233,0.35)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1 }} className="feature-arrow">
+                      <ChevronRight size={16} color="#38bdf8" strokeWidth={2.5} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Chip row — all products in current slide */}
+                <div style={{
+                  display: 'flex', gap: 10, width: '100%', maxWidth: 600,
+                  overflowX: 'auto', overflowY: 'visible', scrollbarWidth: 'none', flexWrap: 'nowrap',
+                  WebkitOverflowScrolling: 'touch',
+                  paddingTop: 10, marginTop: -10,
+                  paddingBottom: 6,
+                  paddingLeft: 6, paddingRight: 6,
+                }} className="carousel-products-row">
+                  {slide.products.map((p, idx) => {
+                    const rawUrl = p.image_url || p.image;
+                    const baseUrl = import.meta.env.BASE_URL || '/';
+                    const chipImgUrl = rawUrl ? (rawUrl.startsWith('http') || rawUrl.startsWith('data:') ? rawUrl : `${baseUrl}${rawUrl.replace(/^\//, '')}`) : '';
+                    const isKit = (p.category || '').toLowerCase().includes('instrument') || (p.name || '').toLowerCase().includes('kit');
+                    const chipAccent = isKit ? '#a78bfa' : '#38bdf8';
+                    const chipGlow = isKit ? 'rgba(167,139,250,0.25)' : 'rgba(14,165,233,0.22)';
+                    const isActive = isActiveSlide && idx === activeProductIndex;
+                    return (
+                      <div
+                        key={p.id}
+                        onMouseEnter={() => isActiveSlide && setActiveProductIndex(idx)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (p.id && !String(p.id).startsWith('fb-')) navigate(`/product/${p.id}`);
+                          else navigate(`/product/${p.id}?name=${encodeURIComponent(p.name)}`);
+                        }}
+                        className={`carousel-chip ${isActive ? 'active' : ''}`}
+                        style={{
+                          flexShrink: 0,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                          background: isActive 
+                            ? 'linear-gradient(160deg, rgba(14,165,233,0.18) 0%, rgba(99,102,241,0.12) 100%)' 
+                            : 'linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)',
+                          border: isActive 
+                            ? `1.5px solid ${chipAccent}` 
+                            : `1px solid rgba(255,255,255,0.12)`,
+                          borderRadius: 18, padding: '14px 12px 12px',
+                          cursor: 'pointer', minWidth: 137, width: 137,
+                          boxShadow: isActive 
+                            ? `0 8px 24px rgba(0,0,0,0.28), 0 0 15px ${chipAccent}50` 
+                            : `0 6px 18px rgba(0,0,0,0.22)`,
+                          transition: 'all 0.32s cubic-bezier(0.16,1,0.3,1)',
+                          backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+                          position: 'relative', overflow: 'hidden',
+                          transform: isActive ? 'translateY(-5px) scale(1.03)' : 'translateY(0) scale(1)',
+                        }}
+                      >
+                        {/* Subtle top accent glow */}
+                        <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', width:'70%', height:2, background:`linear-gradient(90deg, transparent, ${chipAccent}, transparent)`, borderRadius:1, zIndex:0 }} />
+
+                        {/* Active bottom marker */}
+                        {isActive && (
+                          <div style={{ position:'absolute', bottom:0, left:'50%', transform:'translateX(-50%)', width:20, height:3, background:chipAccent, borderRadius:'3px 3px 0 0', boxShadow:`0 -2px 8px ${chipAccent}` }} />
+                        )}
+
+                        {/* Image */}
+                        <div style={{
+                          width: 56, height: 56, borderRadius: 14, flexShrink: 0, position:'relative', zIndex:1,
+                          background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(240,249,255,0.9) 100%)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          padding: 7, boxSizing: 'border-box',
+                          boxShadow: isActive 
+                            ? `0 6px 16px rgba(0,0,0,0.2), 0 0 16px ${chipAccent}60` 
+                            : `0 6px 16px rgba(0,0,0,0.2), 0 0 12px ${chipGlow}`,
+                          border: isActive 
+                            ? `1.5px solid ${chipAccent}` 
+                            : `1.5px solid ${chipAccent}40`,
+                        }}>
+                          {chipImgUrl
+                            ? <img src={chipImgUrl} alt={p.name} style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain' }} />
+                            : <Package size={22} color={chipAccent} />}
+                        </div>
+
+                        {/* Name */}
+                        <div style={{ fontSize:'0.64rem', fontWeight:isActive ? 900 : 800, color: isActive ? '#fff' : 'rgba(241,245,249,0.92)', lineHeight:1.25, textAlign:'center', maxWidth:113, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', zIndex:1 }}>
+                          {p.name}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            );
-          })()}
-
-          {/* Chip row — all products in current slide */}
-          <div style={{
-            display: 'flex', gap: 10, width: '100%', maxWidth: 600,
-            overflowX: 'auto', overflowY: 'visible', scrollbarWidth: 'none', flexWrap: 'nowrap',
-            WebkitOverflowScrolling: 'touch',
-            paddingTop: 10, marginTop: -10,
-            paddingBottom: 6,
-            paddingLeft: 6, paddingRight: 6,
-          }} className="carousel-products-row">
-            {currentSlide.products.map((p, idx) => {
-              const rawUrl = p.image_url || p.image;
-              const baseUrl = import.meta.env.BASE_URL || '/';
-              const imgUrl = rawUrl ? (rawUrl.startsWith('http') || rawUrl.startsWith('data:') ? rawUrl : `${baseUrl}${rawUrl.replace(/^\//, '')}`) : '';
-              const isKit = (p.category || '').toLowerCase().includes('instrument') || (p.name || '').toLowerCase().includes('kit');
-              const chipAccent = isKit ? '#a78bfa' : '#38bdf8';
-              const chipGlow = isKit ? 'rgba(167,139,250,0.25)' : 'rgba(14,165,233,0.22)';
-              const isActive = idx === activeProductIndex;
-              return (
-                <div
-                  key={p.id}
-                  onMouseEnter={() => setActiveProductIndex(idx)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (p.id && !String(p.id).startsWith('fb-')) navigate(`/product/${p.id}`);
-                    else navigate(`/product/${p.id}?name=${encodeURIComponent(p.name)}`);
-                  }}
-                  className={`carousel-chip ${isActive ? 'active' : ''}`}
-                  style={{
-                    flexShrink: 0,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                    background: isActive 
-                      ? 'linear-gradient(160deg, rgba(14,165,233,0.18) 0%, rgba(99,102,241,0.12) 100%)' 
-                      : 'linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)',
-                    border: isActive 
-                      ? `1.5px solid ${chipAccent}` 
-                      : `1px solid rgba(255,255,255,0.12)`,
-                    borderRadius: 18, padding: '14px 12px 12px',
-                    cursor: 'pointer', minWidth: 137, width: 137,
-                    boxShadow: isActive 
-                      ? `0 8px 24px rgba(0,0,0,0.28), 0 0 15px ${chipAccent}50` 
-                      : `0 6px 18px rgba(0,0,0,0.22)`,
-                    transition: 'all 0.32s cubic-bezier(0.16,1,0.3,1)',
-                    backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
-                    position: 'relative', overflow: 'hidden',
-                    transform: isActive ? 'translateY(-5px) scale(1.03)' : 'translateY(0) scale(1)',
-                  }}
-                >
-                  {/* Subtle top accent glow */}
-                  <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', width:'70%', height:2, background:`linear-gradient(90deg, transparent, ${chipAccent}, transparent)`, borderRadius:1, zIndex:0 }} />
-
-                  {/* Active bottom marker */}
-                  {isActive && (
-                    <div style={{ position:'absolute', bottom:0, left:'50%', transform:'translateX(-50%)', width:20, height:3, background:chipAccent, borderRadius:'3px 3px 0 0', boxShadow:`0 -2px 8px ${chipAccent}` }} />
-                  )}
-
-                  {/* Image */}
-                  <div style={{
-                    width: 56, height: 56, borderRadius: 14, flexShrink: 0, position:'relative', zIndex:1,
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(240,249,255,0.9) 100%)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: 7, boxSizing: 'border-box',
-                    boxShadow: isActive 
-                      ? `0 6px 16px rgba(0,0,0,0.2), 0 0 16px ${chipAccent}60` 
-                      : `0 6px 16px rgba(0,0,0,0.2), 0 0 12px ${chipGlow}`,
-                    border: isActive 
-                      ? `1.5px solid ${chipAccent}` 
-                      : `1.5px solid ${chipAccent}40`,
-                  }}>
-                    {imgUrl
-                      ? <img src={imgUrl} alt={p.name} style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain' }} />
-                      : <Package size={22} color={chipAccent} />}
-                  </div>
-
-                  {/* Name */}
-                  <div style={{ fontSize:'0.64rem', fontWeight:isActive ? 900 : 800, color: isActive ? '#fff' : 'rgba(241,245,249,0.92)', lineHeight:1.25, textAlign:'center', maxWidth:113, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', zIndex:1 }}>
-                    {p.name}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* ── Progress bar ── */}
@@ -599,6 +630,16 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
         @keyframes blobF2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-40px,30px) scale(1.08)} }
         @keyframes blobF3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20px,-20px) scale(1.04)} }
         @keyframes heroUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes landingReveal {
+          from { opacity: 0; transform: translate3d(0, 10px, 0); }
+          to   { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        .landing-reveal {
+          opacity: 0;
+        }
+        .landing-reveal-active {
+          animation: landingReveal 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
         @keyframes shimmerText { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
         .hero-btn-primary { transition: all 0.3s cubic-bezier(0.16,1,0.3,1) !important; }
         .hero-btn-primary:hover { transform: translateY(-3px) scale(1.03) !important; box-shadow: 0 20px 40px rgba(14,165,233,0.38) !important; }

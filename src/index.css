@@ -1222,6 +1222,39 @@ button {
   transform: scale(0.92) !important;
 }
 
+@keyframes whatsapp-pulse {
+  0% {
+    box-shadow: 0 8px 24px rgba(37, 211, 102, 0.35), 0 0 0 0 rgba(37, 211, 102, 0.5);
+  }
+  70% {
+    box-shadow: 0 8px 24px rgba(37, 211, 102, 0.35), 0 0 0 12px rgba(37, 211, 102, 0);
+  }
+  100% {
+    box-shadow: 0 8px 24px rgba(37, 211, 102, 0.35), 0 0 0 0 rgba(37, 211, 102, 0);
+  }
+}
+
+@keyframes whatsapp-wave {
+  0%, 80%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  83% {
+    transform: rotate(-14deg) scale(1.08);
+  }
+  86% {
+    transform: rotate(12deg) scale(1.08);
+  }
+  89% {
+    transform: rotate(-10deg) scale(1.08);
+  }
+  92% {
+    transform: rotate(6deg) scale(1.05);
+  }
+  95% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
 /* Premium WhatsApp Floating Button Styling */
 .whatsapp-btn {
   width: 54px;
@@ -1237,6 +1270,8 @@ button {
   text-decoration: none !important;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
   cursor: pointer !important;
+  animation: whatsapp-pulse 2.2s infinite !important, whatsapp-wave 4.5s infinite !important;
+  transform-origin: center !important;
 }
 
 .whatsapp-btn:hover {
@@ -2388,6 +2423,7 @@ body.is-browser .modal-overlay-container.top-aligned-modal {
   cursor: pointer !important;
   display: flex !important;
   align-items: center !important;
+  justify-content: center !important;
   gap: 8px !important;
   padding: 8px 18px !important;
   border-radius: 12px !important;
@@ -2397,6 +2433,8 @@ body.is-browser .modal-overlay-container.top-aligned-modal {
   font-family: 'Outfit', sans-serif !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3) !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 .header-login-btn:hover {
@@ -2864,10 +2902,37 @@ body.is-browser .app-header.guest-header.scrolled {
   font-size: 0.82rem !important;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   box-shadow: 0 4px 12px hsla(var(--primary) / 25%) !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+@media (max-width: 1200px) {
+  .guest-nav-links {
+    gap: 8px !important;
+  }
+  .guest-nav-link {
+    font-size: 0.78rem !important;
+    padding: 6px 8px !important;
+  }
+  .guest-right-nav {
+    margin: 0 12px !important;
+  }
+  .guest-header-actions {
+    gap: 6px !important;
+  }
+  .guest-header-actions .header-login-btn {
+    padding: 0 12px !important;
+    font-size: 0.76rem !important;
+  }
+  .guest-header .nav-search-input {
+    width: 140px !important;
+    font-size: 0.75rem !important;
+  }
 }
 
 .guest-header-actions .header-login-btn:hover {
