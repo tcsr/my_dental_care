@@ -1457,10 +1457,10 @@ export default function App() {
                   alignItems: 'center',
                   margin: '0 16px',
                 }}>
-                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.5)', pointerEvents: 'none', zIndex: 1 }} />
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#0ea5e9', pointerEvents: 'none', zIndex: 1 }} />
                   <input
                     type="text"
-                    placeholder={navSearchFocused ? 'Type to search products...' : 'Search...'}
+                    placeholder="Search products..."
                     value={navSearchQuery}
                     onChange={e => { setNavSearchQuery(e.target.value); setNavSearchHighlight(-1); }}
                     onKeyDown={handleNavSearch}
@@ -1469,11 +1469,16 @@ export default function App() {
                       width: navSearchFocused ? '440px' : '190px',
                       height: '42px',
                       padding: '0 38px 0 36px',
-                      fontSize: '0.82rem',
-                      borderRadius: (navSearchFocused && navSearchQuery.trim().length >= 2) ? '10px 10px 0 0' : '10px',
+                      fontSize: '0.86rem',
+                      fontFamily: 'Outfit',
+                      fontWeight: 600,
+                      background: '#ffffff',
+                      color: '#0f172a',
+                      border: navSearchFocused ? '1.5px solid #0ea5e9' : '1.5px solid rgba(14, 165, 233, 0.25)',
+                      borderRadius: (navSearchFocused && navSearchQuery.trim().length >= 2) ? '12px 12px 0 0' : '12px',
                       outline: 'none',
-                      transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.15s ease, box-shadow 0.2s ease',
-                      boxShadow: navSearchFocused ? '0 0 0 3px rgba(14, 165, 233, 0.2)' : 'none',
+                      transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+                      boxShadow: navSearchFocused ? '0 10px 25px -10px rgba(14, 165, 233, 0.22), 0 0 0 3px rgba(14, 165, 233, 0.12)' : '0 2px 8px rgba(0, 0, 0, 0.04)',
                       boxSizing: 'border-box'
                     }}
                     className="nav-search-input"
@@ -1487,7 +1492,7 @@ export default function App() {
                         right: '10px',
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        background: 'rgba(255,255,255,0.15)',
+                        background: 'rgba(15, 23, 42, 0.06)',
                         border: 'none',
                         borderRadius: '50%',
                         width: '18px',
@@ -1496,7 +1501,7 @@ export default function App() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        color: 'rgba(255,255,255,0.7)',
+                        color: '#64748b',
                         zIndex: 2,
                         padding: 0
                       }}
@@ -1512,18 +1517,18 @@ export default function App() {
                       top: '100%',
                       right: 0,
                       width: '440px',
-                      background: 'linear-gradient(160deg, #061525 0%, #0b2545 100%)',
-                      border: '1.5px solid rgba(14, 165, 233, 0.35)',
+                      background: '#ffffff',
+                      border: '1.5px solid #0ea5e9',
                       borderTop: 'none',
-                      borderRadius: '0 0 12px 12px',
+                      borderRadius: '0 0 16px 16px',
                       zIndex: 99999,
-                      boxShadow: '0 16px 48px rgba(0,0,0,0.5), 0 4px 20px rgba(14, 165, 233, 0.18)',
+                      boxShadow: '0 16px 48px rgba(15, 23, 42, 0.12)',
                       overflow: 'hidden',
-                      marginTop: '1px'
+                      marginTop: '0px'
                     }}>
                       {/* Header row */}
-                      <div style={{ padding: '7px 14px', fontSize: '0.68rem', color: 'rgba(14,165,233,0.7)', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '1px solid rgba(14,165,233,0.1)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Search size={10} />
+                      <div style={{ padding: '8px 14px', fontSize: '0.68rem', color: 'rgba(14,165,233,0.85)', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '1px solid rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+                        <Search size={10} color="#0ea5e9" />
                         Products
                       </div>
                       {navSearchSuggestions.length > 0 ? (
@@ -1538,25 +1543,27 @@ export default function App() {
                               gap: '10px',
                               padding: '10px 16px',
                               fontSize: '0.82rem',
-                              color: idx === navSearchHighlight ? '#fff' : 'rgba(255,255,255,0.8)',
-                              background: idx === navSearchHighlight ? 'rgba(14,165,233,0.15)' : 'transparent',
+                              fontFamily: 'Outfit',
+                              fontWeight: 600,
+                              color: idx === navSearchHighlight ? '#0ea5e9' : '#334155',
+                              background: idx === navSearchHighlight ? 'rgba(14, 165, 233, 0.08)' : 'transparent',
                               cursor: 'pointer',
                               borderBottom: idx < navSearchSuggestions.length - 1 ? '1px solid rgba(14,165,233,0.06)' : 'none',
-                              transition: 'background 0.12s ease'
+                              transition: 'background 0.12s ease, color 0.12s ease'
                             }}
                           >
-                            <Search size={13} style={{ opacity: 0.4, flexShrink: 0 }} />
+                            <Search size={12} style={{ opacity: 0.5, flexShrink: 0, color: '#0ea5e9' }} />
                             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                             <span style={{ fontSize: '0.68rem', opacity: 0.35 }}>↵</span>
                           </div>
                         ))
                       ) : (
-                        <div style={{ padding: '14px 16px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+                        <div style={{ padding: '14px 16px', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', fontFamily: 'Outfit' }}>
                           No products found for &ldquo;{navSearchQuery}&rdquo;
                         </div>
                       )}
                       {/* Footer hint */}
-                      <div style={{ padding: '7px 16px', fontSize: '0.68rem', color: 'rgba(255,255,255,0.25)', borderTop: '1px solid rgba(14,165,233,0.08)', display: 'flex', gap: 12 }}>
+                      <div style={{ padding: '7px 16px', fontSize: '0.68rem', color: '#94a3b8', borderTop: '1px solid rgba(14,165,233,0.08)', display: 'flex', gap: 12, fontFamily: 'Outfit' }}>
                         <span>↑↓ navigate</span><span>↵ select</span><span>Esc dismiss</span>
                       </div>
                     </div>

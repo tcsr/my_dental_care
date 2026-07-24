@@ -8,6 +8,7 @@ import { t } from '../utils/i18n';
 import EmptyStateCard from './EmptyStateCard';
 
 export default function ProGuidesSubscreen({ lang, isLoggedIn = true }) {
+  const isDark = localStorage.getItem('guestTheme') === 'dark';
   const guides = useLiveQuery(() => db.customGuides.toArray()) || [];
   const [guideSubTab, setGuideSubTab] = useState('video'); // 'video' | 'written'
   const [expandedSection, setExpandedSection] = useState(null);
@@ -410,69 +411,158 @@ export default function ProGuidesSubscreen({ lang, isLoggedIn = true }) {
             </div>
           </div>
 
-          {filteredGuides.map((video) => (
-            <div key={video.id} className="glass-card" style={{ padding: '14px', margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid hsl(var(--border-color))' }}>
-              
-              {/* Thumbnail Mock Container */}
+          {/* Videos Grid Container */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+            gap: '20px',
+            marginTop: '4px'
+          }}>
+            {filteredGuides.map((video) => (
               <div 
-                onClick={() => setSelectedVideo(video)}
-                style={{
-                  position: 'relative', 
-                  height: '140px', 
-                  borderRadius: '10px',
-                  background: video.localPath 
-                    ? 'linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.85)), #0f172a'
-                    : `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.6)), url('https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg') center/cover`,
+                key={video.id} 
+                className="glass-card" 
+                style={{ 
+                  padding: '14px', 
+                  margin: 0, 
                   display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  cursor: 'pointer',
-                  boxShadow: 'inset 0 0 30px rgba(0,0,0,0.1)',
-                  overflow: 'hidden',
-                  border: '1.5px solid hsl(var(--border-color))'
+                  flexDirection: 'column', 
+                  gap: '12px', 
+                  border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(14,165,233,0.15)',
+                  background: isDark ? 'rgba(15,23,42,0.45)' : 'rgba(255,255,255,0.72)',
+                  borderRadius: '24px',
+                  boxShadow: '0 8px 32px rgba(15,23,42,0.04)',
+                  transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+                  position: 'relative'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-5px)';
+                  e.currentTarget.style.borderColor = '#0ea5e955';
+                  e.currentTarget.style.boxShadow = '0 16px 40px rgba(14,165,233,0.08)';
+                  const img = e.currentTarget.querySelector('.video-thumb-overlay');
+                  if (img) img.style.transform = 'scale(1.08)';
+                  const btn = e.currentTarget.querySelector('.video-play-btn');
+                  if (btn) btn.style.transform = 'scale(1.1) rotate(5deg)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(14,165,233,0.15)';
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(15,23,42,0.04)';
+                  const img = e.currentTarget.querySelector('.video-thumb-overlay');
+                  if (img) img.style.transform = 'none';
+                  const btn = e.currentTarget.querySelector('.video-play-btn');
+                  if (btn) btn.style.transform = 'none';
                 }}
               >
-                {/* Play Button Glow Icon */}
-                <div style={{
-                  width: '46px', height: '46px', borderRadius: '50%', background: 'hsl(var(--primary))',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
-                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.35)', transition: 'transform 0.2s'
-                }}>
-                  <Play size={20} style={{ marginLeft: '3px' }} />
-                </div>
-  
-                {/* Tag Pill */}
-                <span style={{
-                  position: 'absolute', top: '8px', left: '8px', fontSize: '0.58rem', fontWeight: '800',
-                  background: 'hsl(var(--primary))', color: '#fff', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', fontFamily: 'Outfit'
-                }}>
-                  {video.tag}
-                </span>
-              </div>
-  
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ fontSize: '0.82rem', fontWeight: '800', color: 'hsl(var(--text-primary))', fontFamily: 'Outfit' }}>
-                    {video.title}
-                  </h4>
-                  <p style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))', marginTop: '4px', lineHeight: 1.35 }}>
-                    {video.desc || 'No description provided.'}
-                  </p>
-                </div>
-  
-                {isLoggedIn && (
-                  <div style={{ display: 'flex', gap: '6px', marginLeft: '8px' }}>
-                    <button onClick={() => handleStartEdit(video)} style={{ background: 'none', border: 'none', color: 'hsl(var(--primary))', cursor: 'pointer' }} title="Edit Video">
-                      <Edit3 size={14} />
-                    </button>
-                    <button onClick={() => handleDeleteVideo(video.id)} style={{ background: 'none', border: 'none', color: 'hsl(var(--color-hyper))', cursor: 'pointer' }} title="Delete Video">
-                      <Trash2 size={14} />
-                    </button>
+                {/* Thumbnail Mock Container */}
+                <div 
+                  onClick={() => setSelectedVideo(video)}
+                  style={{
+                    position: 'relative', 
+                    height: '150px', 
+                    borderRadius: '16px',
+                    background: '#0a0f1d',
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    cursor: 'pointer',
+                    overflow: 'hidden',
+                    border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(14,165,233,0.12)'
+                  }}
+                >
+                  {/* YouTube Thumbnail Background with zoom */}
+                  {!video.localPath && (
+                    <div 
+                      className="video-thumb-overlay"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.55)), url('https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg') center/cover`,
+                        transition: 'transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)'
+                      }}
+                    />
+                  )}
+                  {video.localPath && (
+                    <div 
+                      className="video-thumb-overlay"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(135deg, #071e3d 0%, #030712 100%)',
+                        transition: 'transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      {/* Subtly show moving mesh in local backgrounds */}
+                      <div style={{ position: 'absolute', inset: 0, opacity: 0.1, backgroundImage: 'radial-gradient(#38bdf8 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+                    </div>
+                  )}
+
+                  {/* Play Button Glow Icon */}
+                  <div 
+                    className="video-play-btn"
+                    style={{
+                      width: '48px', height: '48px', borderRadius: '50%', 
+                      background: 'linear-gradient(135deg, #0ea5e9, #4f46e5)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+                      boxShadow: '0 8px 24px rgba(14, 165, 233, 0.35)', 
+                      transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                      zIndex: 2,
+                      border: '1.5px solid rgba(255,255,255,0.2)'
+                    }}
+                  >
+                    <Play size={18} fill="#ffffff" style={{ marginLeft: '3px', color: '#ffffff' }} />
                   </div>
-                )}
+    
+                  {/* Tag Pill */}
+                  <span style={{
+                    position: 'absolute', top: '10px', left: '10px', fontSize: '0.62rem', fontWeight: '800',
+                    background: 'rgba(15,23,42,0.85)', color: '#38bdf8', padding: '4px 10px', borderRadius: '8px', 
+                    textTransform: 'uppercase', fontFamily: 'Outfit', border: '1px solid rgba(56,189,248,0.3)',
+                    backdropFilter: 'blur(4px)', zIndex: 2
+                  }}>
+                    {video.tag === 'System Guide' ? 'Portal Guide' : video.tag}
+                  </span>
+                </div>
+    
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0 4px 4px' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h4 style={{ fontSize: '0.88rem', fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a', fontFamily: 'Outfit', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
+                      {video.title}
+                    </h4>
+                    <p style={{ fontSize: '0.74rem', color: isDark ? '#94a3b8' : '#64748b', marginTop: '6px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '34px', margin: 0 }}>
+                      {video.desc || 'Demonstrational procedure video tutorial for professional clinical practitioners.'}
+                    </p>
+                  </div>
+    
+                  {isLoggedIn && (
+                    <div style={{ display: 'flex', gap: '6px', marginLeft: '12px', flexShrink: 0, marginTop: 2 }}>
+                      <button 
+                        onClick={() => handleStartEdit(video)} 
+                        style={{ width: 24, height: 24, borderRadius: '50%', border: 'none', background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(14,165,233,0.08)', color: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} 
+                        onMouseEnter={e => { e.currentTarget.style.background = '#0ea5e9'; e.currentTarget.style.color = '#fff'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(14,165,233,0.08)'; e.currentTarget.style.color = '#0ea5e9'; }}
+                        title="Edit Video"
+                      >
+                        <Edit3 size={12} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteVideo(video.id)} 
+                        style={{ width: 24, height: 24, borderRadius: '50%', border: 'none', background: 'rgba(239,68,68,0.08)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} 
+                        onMouseEnter={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = '#fff'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.color = '#ef4444'; }}
+                        title="Delete Video"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
   
           {filteredGuides.length === 0 && (
             <EmptyStateCard 
