@@ -37,14 +37,23 @@ function Reveal({ children, delay = 0, variant = 'fade-up', style = {} }) {
     return () => observer.disconnect();
   }, []);
   
-  const className = visible
-    ? (variant === 'card' ? 'landing-card-reveal-active' : 'landing-reveal-active')
-    : (variant === 'card' ? 'landing-card-reveal' : 'landing-reveal');
+  const getClasses = () => {
+    switch (variant) {
+      case 'card':
+        return visible ? 'landing-card-reveal landing-card-reveal-active' : 'landing-card-reveal';
+      case 'left':
+        return visible ? 'landing-left-reveal landing-left-reveal-active' : 'landing-left-reveal';
+      case 'right':
+        return visible ? 'landing-right-reveal landing-right-reveal-active' : 'landing-right-reveal';
+      default:
+        return visible ? 'landing-reveal landing-reveal-active' : 'landing-reveal';
+    }
+  };
 
   return (
     <div
       ref={ref}
-      className={className}
+      className={getClasses()}
       style={{ animationDelay: `${delay}s`, ...style }}
     >
       {children}
@@ -223,10 +232,10 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
       style={{
         position: 'relative',
         width: '100%',
-        height: 'clamp(380px, 46vw, 500px)',
-        borderRadius: 16,
+        height: 'clamp(420px, 48vw, 560px)',
+        borderRadius: 0,
         overflow: 'hidden',
-        boxShadow: '0 32px 72px -12px rgba(15,23,42,0.38), 0 0 0 1px rgba(255,255,255,0.07)',
+        boxShadow: '0 32px 72px -12px rgba(15,23,42,0.38)',
         background: '#080e1a',
       }}
     >
@@ -568,16 +577,16 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
       {/* ── Slide navigation arrows ── */}
       {total > 1 && (
         <>
-          <div onClick={() => setIndex((i) => (i === 0 ? total - 1 : i - 1))} className="banner-arrow-btn" style={{ left: 18 }}>
+          <div onClick={() => setIndex((i) => (i === 0 ? total - 1 : i - 1))} className="banner-arrow-btn" style={{ left: 'clamp(20px, 3vw, 48px)' }}>
             <ChevronLeft size={20} />
           </div>
-          <div onClick={() => setIndex((i) => (i === total - 1 ? 0 : i + 1))} className="banner-arrow-btn" style={{ right: 18 }}>
+          <div onClick={() => setIndex((i) => (i === total - 1 ? 0 : i + 1))} className="banner-arrow-btn" style={{ right: 'clamp(20px, 3vw, 48px)' }}>
             <ChevronRight size={20} />
           </div>
 
           {/* Slide counter */}
           <div style={{
-            position: 'absolute', bottom: 16, right: 24, zIndex: 10,
+            position: 'absolute', bottom: 20, right: 'clamp(24px, 4vw, 56px)', zIndex: 10,
             display: 'flex', alignItems: 'center', gap: 8,
           }}>
             {slides.map((_, i) => (
@@ -601,7 +610,8 @@ function HeroBannerSlider({ onLoginRequired }) { // eslint-disable-line no-unuse
   );
 }
 
-export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
+export default function LandingPage({ onLoginRequired, onRegisterRequired, guestTheme = 'light' }) {
+  const handleRegisterClick = onRegisterRequired || onLoginRequired;
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
 
   const sendContactEmail = () => {
@@ -639,24 +649,36 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
         @keyframes floatOrb3 { 0%{transform:translate3d(0,0,0) scale(1)} 100%{transform:translate3d(16px,16px,0) scale(1.06)} }
         @keyframes heroUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
         @keyframes landingReveal {
-          from { opacity: 0; transform: translate3d(0, 10px, 0); }
-          to   { opacity: 1; transform: translate3d(0, 0, 0); }
+          from { opacity: 0; filter: blur(6px); transform: translate3d(0, 24px, 0); }
+          to   { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0); }
         }
         @keyframes cardReveal {
-          from { opacity: 0; transform: translate3d(0, 15px, 0) scale(0.96); }
-          to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+          from { opacity: 0; filter: blur(8px); transform: translate3d(0, 28px, 0) scale(0.95); }
+          to   { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) scale(1); }
         }
-        .landing-reveal {
-          opacity: 0;
+        @keyframes revealLeft {
+          from { opacity: 0; filter: blur(6px); transform: translate3d(-32px, 0, 0); }
+          to   { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0); }
         }
+        @keyframes revealRight {
+          from { opacity: 0; filter: blur(6px); transform: translate3d(32px, 0, 0); }
+          to   { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0); }
+        }
+        .landing-reveal { opacity: 0; }
         .landing-reveal-active {
-          animation: landingReveal 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation: landingReveal 0.65s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
-        .landing-card-reveal {
-          opacity: 0;
-        }
+        .landing-card-reveal { opacity: 0; }
         .landing-card-reveal-active {
-          animation: cardReveal 0.48s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation: cardReveal 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .landing-left-reveal { opacity: 0; }
+        .landing-left-reveal-active {
+          animation: revealLeft 0.72s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        .landing-right-reveal { opacity: 0; }
+        .landing-right-reveal-active {
+          animation: revealRight 0.72s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
         @keyframes shimmerText { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
         .hero-btn-primary { transition: all 0.3s cubic-bezier(0.16,1,0.3,1) !important; }
@@ -801,14 +823,14 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
       <div style={{ position: 'relative', zIndex: 1 }}>
 
         {/* ═══════════ HERO BANNER CAROUSEL (TOPMOST) ═══════════ */}
-        <section style={{ width: '100%', padding: '24px clamp(20px, 3vw, 48px) 16px', boxSizing: 'border-box' }}>
+        <section style={{ width: '100%', padding: '0 0 24px 0', boxSizing: 'border-box' }}>
           <Reveal>
             <HeroBannerSlider onLoginRequired={onLoginRequired} />
           </Reveal>
         </section>
 
         {/* ═══════════ HERO ═══════════ */}
-        <section className="lp-hero-section" style={{ padding: '8px 24px 48px', textAlign: 'center', margin: '0 auto', maxWidth: 1060 }}>
+        <section className="lp-hero-section" style={{ padding: '8px 24px 48px', textAlign: 'center', margin: '0 auto', maxWidth: 1360 }}>
           <Reveal variant="card">
             <div className="hero-card-container" style={{
               background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.52) 100%) padding-box, linear-gradient(135deg, rgba(14, 165, 233, 0.3) 0%, rgba(99, 102, 241, 0.22) 50%, rgba(16, 185, 129, 0.12) 100%) border-box',
@@ -843,7 +865,7 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
                   </span>
                 </div>
 
-                <h1 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: 'clamp(2.0rem, 5vw, 3.2rem)', lineHeight: 1.12, color: '#0f172a', margin: '0 0 20px', letterSpacing: '-0.02em' }}>
+                <h1 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: 'clamp(1.4rem, 3.2vw, 2.35rem)', lineHeight: 1.12, color: '#0f172a', margin: '0 0 20px', letterSpacing: '-0.02em' }}>
                   Most Innovative,{' '}
                   <span style={{ background: 'linear-gradient(135deg, #0a3da1 0%, #0ea5e9 50%, #10b981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', backgroundSize: '200% auto', animation: 'shimmerText 4s linear infinite' }}>
                     Versatile Implants
@@ -860,7 +882,7 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
                   <Link to="/catalog" className="hero-btn-primary">
                     <Store size={17} /> Browse Catalog
                   </Link>
-                  <button onClick={onLoginRequired} className="hero-btn-secondary">
+                  <button onClick={handleRegisterClick} className="hero-btn-secondary">
                     <LogIn size={17} /> Register Your Clinic
                   </button>
                 </div>
@@ -907,7 +929,7 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
         </section>
 
         {/* ═══════════ STATS ═══════════ */}
-        <section style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px 60px' }}>
+        <section style={{ maxWidth: 1360, margin: '0 auto', padding: '0 24px 60px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
             {STATS.map((s, i) => {
               const Icon = s.icon;
@@ -929,48 +951,50 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
         </section>
 
         {/* ═══════════ ABOUT ═══════════ */}
-        <section id="about" className="lp-section" style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px 80px' }}>
-          <Reveal>
+        <section id="about" className="lp-section" style={{ maxWidth: 1360, margin: '0 auto', padding: '0 24px 80px' }}>
             <div className="lp-about-grid" style={{ background: 'rgba(255,255,255,0.72)', borderRadius: 32, padding: '44px 48px', border: '1.5px solid rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', boxShadow: '0 20px 50px -10px rgba(14,165,233,0.08)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'center' }}>
-              <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase' }}>About Us</span>
-                <h2 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.9rem', color: '#0f172a', margin: '10px 0 16px', letterSpacing: '-0.02em' }}>
-                  We Care for{' '}
-                  <span style={{ background: 'linear-gradient(135deg, #0ea5e9, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Our Patients</span>
-                </h2>
-                <p style={{ fontSize: '0.92rem', color: '#475569', lineHeight: 1.8, margin: 0 }}>
-                  Immediate Loading, no bone grafting, minimal procedures. Simple, Efficient and Effective.
-                  Join us in saying "Yes, we can" to your patients.
-                </p>
-                <p style={{ fontSize: '0.88rem', color: '#64748b', lineHeight: 1.7, marginTop: 14 }}>
-                  Simple Implant supplies dental clinics with a complete range of implants, instruments, and surgical kits — sourced for quality, priced for practices of every size.
-                </p>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {[
-                  { icon: Target, color: '#0ea5e9', title: 'Our Mission', desc: 'Make high-quality dental implants simple to source, order, and track — for every clinic, regardless of size.' },
-                  { icon: Eye, color: '#10b981', title: 'Our Vision', desc: 'Become the most trusted dental implant supply partner in the region, known for reliability and real support.' },
-                ].map((item, i) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={i} style={{ background: `linear-gradient(135deg, ${item.color}08, rgba(255,255,255,0.5))`, borderRadius: 20, padding: 24, border: `1px solid rgba(255, 255, 255, 0.5)`, boxShadow: '0 8px 24px -8px rgba(15,23,42,0.06)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 10, background: `${item.color}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Icon size={18} color={item.color} />
+              <Reveal variant="left" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase' }}>About Us</span>
+                  <h2 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.9rem', color: '#0f172a', margin: '10px 0 16px', letterSpacing: '-0.02em' }}>
+                    We Care for{' '}
+                    <span style={{ background: 'linear-gradient(135deg, #0ea5e9, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Our Patients</span>
+                  </h2>
+                  <p style={{ fontSize: '0.92rem', color: '#475569', lineHeight: 1.8, margin: 0 }}>
+                    Immediate Loading, no bone grafting, minimal procedures. Simple, Efficient and Effective.
+                    Join us in saying "Yes, we can" to your patients.
+                  </p>
+                  <p style={{ fontSize: '0.88rem', color: '#64748b', lineHeight: 1.7, marginTop: 14 }}>
+                    Simple Implant supplies dental clinics with a complete range of implants, instruments, and surgical kits — sourced for quality, priced for practices of every size.
+                  </p>
+                </div>
+              </Reveal>
+              <Reveal variant="right" delay={0.15} style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {[
+                    { icon: Target, color: '#0ea5e9', title: 'Our Mission', desc: 'Make high-quality dental implants simple to source, order, and track — for every clinic, regardless of size.' },
+                    { icon: Eye, color: '#10b981', title: 'Our Vision', desc: 'Become the most trusted dental implant supply partner in the region, known for reliability and real support.' },
+                  ].map((item, i) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={i} style={{ background: `linear-gradient(135deg, ${item.color}08, rgba(255,255,255,0.5))`, borderRadius: 20, padding: 24, border: `1px solid rgba(255, 255, 255, 0.5)`, boxShadow: '0 8px 24px -8px rgba(15,23,42,0.06)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: 10, background: `${item.color}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Icon size={18} color={item.color} />
+                          </div>
+                          <h3 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', margin: 0 }}>{item.title}</h3>
                         </div>
-                        <h3 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', margin: 0 }}>{item.title}</h3>
+                        <p style={{ fontSize: '0.8rem', color: '#64748b', lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
                       </div>
-                      <p style={{ fontSize: '0.8rem', color: '#64748b', lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </Reveal>
             </div>
-          </Reveal>
         </section>
 
         {/* ═══════════ EVENTS & COURSES ═══════════ */}
-        <section id="events-courses" style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px 80px' }}>
+        <section id="events-courses" style={{ maxWidth: 1360, margin: '0 auto', padding: '0 24px 80px' }}>
           <Reveal>
             <div style={{ textAlign: 'center', marginBottom: 40 }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Professional Growth</span>
@@ -1012,7 +1036,7 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
 
         {/* ═══════════ SUPPORT & SERVICES ═══════════ */}
         <section className="lp-services-section" style={{ padding: '64px 24px 80px', background: isDark ? 'rgba(10, 15, 30, 0.6)' : 'rgba(255,255,255,0.48)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(14,165,233,0.15)', borderBottom: '1px solid rgba(14,165,233,0.15)' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ maxWidth: 1360, margin: '0 auto' }}>
             <Reveal>
               <div style={{ textAlign: 'center', marginBottom: 44 }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Services & Resources</span>
@@ -1046,7 +1070,7 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
         </section>
 
         {/* ═══════════ CONTACT ═══════════ */}
-        <section id="contact" style={{ maxWidth: 1060, margin: '0 auto', padding: '64px 24px 80px' }}>
+        <section id="contact" style={{ maxWidth: 1360, margin: '0 auto', padding: '64px 24px 80px' }}>
           <Reveal>
             <div style={{ textAlign: 'center', marginBottom: 40 }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Get in Touch</span>
@@ -1054,16 +1078,17 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
                 Let's <span style={{ background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Work Together</span>
               </h2>
             </div>
-            <div className="lp-contact-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1.1fr) 2fr', gap: 28, alignItems: 'stretch' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-                {[
-                  { icon: Phone, label: 'Phone', value: '+91 94441 26926', color: '#0ea5e9', link: 'tel:+919444126926' },
-                  { icon: Mail, label: 'Email', value: 'simpleimplants@gmail.com', color: '#6366f1', link: 'mailto:contact@simpleimplant.in' },
-                  { icon: MapPin, label: 'Location', value: 'Perumbakkam, Chennai', color: '#10b981', link: 'https://maps.google.com/?q=Hitech+City+Hyderabad' }
-                ].map((item, i) => {
-                  const Icon = item.icon;
-                  return (
-                    <Reveal key={i} delay={i * 0.08} variant="card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          </Reveal>
+          <div className="lp-contact-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1.1fr) 2fr', gap: 28, alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+              {[
+                { icon: Phone, label: 'Phone', value: '+91 94441 26926', color: '#0ea5e9', link: 'tel:+919444126926' },
+                { icon: Mail, label: 'Email', value: 'simpleimplants@gmail.com', color: '#6366f1', link: 'mailto:contact@simpleimplant.in' },
+                { icon: MapPin, label: 'Location', value: 'Perumbakkam, Chennai', color: '#10b981', link: 'https://maps.google.com/?q=Hitech+City+Hyderabad' }
+              ].map((item, i) => {
+                const Icon = item.icon;
+                return (
+                  <Reveal key={i} delay={i * 0.08} variant="left" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <div
                         className="contact-item"
                         onClick={() => window.open(item.link, '_blank')}
@@ -1105,16 +1130,17 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
                   );
                 })}
               </div>
-              <div className="lp-contact-form-card" style={{
-                background: 'rgba(255, 255, 255, 0.88)',
-                borderRadius: 24,
-                padding: '36px 40px',
-                border: '1.5px solid rgba(14, 165, 233, 0.18)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                boxShadow: '0 15px 45px -10px rgba(14, 165, 233, 0.1), 0 2px 10px rgba(15,23,42,0.03)',
-                display: 'flex',
-                flexDirection: 'column',
+              <Reveal variant="right" delay={0.24} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div className="lp-contact-form-card" style={{
+                  background: 'rgba(255, 255, 255, 0.88)',
+                  borderRadius: 24,
+                  padding: '36px 40px',
+                  border: '1.5px solid rgba(14, 165, 233, 0.18)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  boxShadow: '0 15px 45px -10px rgba(14, 165, 233, 0.1), 0 2px 10px rgba(15,23,42,0.03)',
+                  display: 'flex',
+                  flexDirection: 'column',
                 justifyContent: 'space-between',
                 boxSizing: 'border-box',
                 height: '100%'
@@ -1196,8 +1222,8 @@ export default function LandingPage({ onLoginRequired, guestTheme = 'light' }) {
                   </p>
                 </div>
               </div>
-            </div>
-          </Reveal>
+            </Reveal>
+          </div>
         </section>
 
         <Footer />

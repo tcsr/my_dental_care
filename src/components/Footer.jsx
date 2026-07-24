@@ -139,7 +139,7 @@ export default function Footer() {
       }} />
 
       {/* Top content */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '52px 28px 0', position: 'relative', zIndex: 1 }}>
+      <div style={{ maxWidth: 1360, margin: '0 auto', padding: '52px 28px 0', position: 'relative', zIndex: 1 }}>
 
         {/* Trust badges bar */}
         <div style={{
@@ -471,7 +471,7 @@ export default function Footer() {
         position: 'relative', zIndex: 1,
       }}>
         <div style={{
-          maxWidth: 1200, margin: '0 auto',
+          maxWidth: 1360, margin: '0 auto',
           padding: '16px 28px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
         }}>

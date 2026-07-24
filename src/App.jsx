@@ -117,6 +117,11 @@ export default function App() {
   const [cartUserId, setCartUserId] = useState(undefined); // undefined means not loaded yet
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginModalScreen, setLoginModalScreen] = useState('login');
+  const openLoginModal = (screen = 'login') => {
+    setLoginModalScreen(screen);
+    setShowLoginModal(true);
+  };
   const [postLoginAction, setPostLoginAction] = useState(null); // callback to run after login
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [guestScrolled, setGuestScrolled] = useState(false);
@@ -1792,7 +1797,13 @@ export default function App() {
                       />
                     } />
                     <Route path="/guides" element={<ProGuidesSubscreen lang={lang} isLoggedIn={false} />} />
-                    <Route path="/" element={<LandingPage onLoginRequired={() => setShowLoginModal(true)} guestTheme={guestTheme} />} />
+                    <Route path="/" element={
+                      <LandingPage 
+                        onLoginRequired={() => openLoginModal('login')} 
+                        onRegisterRequired={() => openLoginModal('register')} 
+                        guestTheme={guestTheme} 
+                      />
+                    } />
                     <Route path="/product/:id" element={
                       <ProductDetailPage
                         authUser={authUser}
@@ -2111,6 +2122,7 @@ export default function App() {
             <LoginScreen
               lang={lang}
               isModal={true}
+              initialScreen={loginModalScreen}
               onLogin={(user) => {
                 setAuthUser(user);
                 setIsLoggedIn(true);

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { supabase } from '../utils/supabase';
 import { Eye, EyeOff, Mail, Lock, User, Building2, Phone, MapPin, FileText, ArrowRight, ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react';
 
-export default function LoginScreen({ onLogin, isModal = false }) {
-  const [screen, setScreen] = useState('login'); // 'login' | 'register' | 'pending' | 'forgot'
+export default function LoginScreen({ onLogin, isModal = false, initialScreen = 'login' }) {
+  const [screen, setScreen] = useState(initialScreen); // 'login' | 'register' | 'pending' | 'forgot'
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

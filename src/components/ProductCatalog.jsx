@@ -585,13 +585,13 @@ export default function ProductCatalog({
         }
         .product-card {
           animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
-          transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease !important;
+          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
           will-change: transform;
         }
         .product-card:hover {
-          transform: translateY(-3px) !important;
-          box-shadow: 0 12px 32px rgba(15, 23, 42, 0.10) !important;
-          border-color: #0ea5e9 !important;
+          transform: translateY(-6px) scale(1.01) !important;
+          box-shadow: 0 20px 48px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(14, 165, 233, 0.15) !important;
+          border-color: rgba(14, 165, 233, 0.45) !important;
         }
         .product-card:hover .product-card-img {
           transform: scale(1.05);
@@ -612,11 +612,12 @@ export default function ProductCatalog({
           z-index: 1;
         }
         .cat-chip {
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }
         .cat-chip:hover {
-          transform: translateY(-1px) !important;
+          transform: translateY(-2px) scale(1.02) !important;
           border-color: #0ea5e9 !important;
+          box-shadow: 0 6px 16px rgba(14, 165, 233, 0.12) !important;
         }
         .search-clear-btn {
           width: 24px !important;
