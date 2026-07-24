@@ -9,12 +9,12 @@ import AiAssistant from './components/AiAssistant';
 import LoginScreen from './components/LoginScreen';
 import PremiumSelect from './components/ui/PremiumSelect';
 import PremiumLoader from './components/ui/PremiumLoader';
-import DashboardScreen from './components/DashboardScreen';
-import ProductCatalog from './components/ProductCatalog';
-import DoctorOrders from './components/DoctorOrders';
 import LandingPage from './components/LandingPage';
-import ProductDetailPage from './components/ProductDetailPage';
-import PolicyPage from './components/PolicyPage';
+const DashboardScreen = lazy(() => import('./components/DashboardScreen'));
+const ProductCatalog = lazy(() => import('./components/ProductCatalog'));
+const DoctorOrders = lazy(() => import('./components/DoctorOrders'));
+const ProductDetailPage = lazy(() => import('./components/ProductDetailPage'));
+const PolicyPage = lazy(() => import('./components/PolicyPage'));
 import { t } from './utils/i18n';
 import { useStore } from './utils/store';
 
@@ -92,7 +92,13 @@ export default function App() {
       setIsSidebarOpen(false);
     }
   };
-  const [isDbReady, setIsDbReady] = useState(false);
+  const [isDbReady, setIsDbReady] = useState(() => {
+    try {
+      return localStorage.getItem('dbSeeded') === 'true' && localStorage.getItem('dbSeeded10ProductsSupabase') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
   const [guestTheme, setGuestTheme] = useState(() => localStorage.getItem('guestTheme') || 'light');
   const [isSpeedDialOpen, setIsSpeedDialOpen] = useState(false);
   const toggleGuestTheme = () => {
@@ -112,7 +118,16 @@ export default function App() {
   const [lang, setLang] = useState(() => localStorage.getItem('dentalLang') || 'en');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authUser, setAuthUser] = useState(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [authChecked, setAuthChecked] = useState(() => {
+    try {
+      // Synchronous fast path: if there is no session key in localStorage, user is a guest.
+      // We can skip the splash loader delay immediately.
+      const hasSession = Object.keys(localStorage).some(key => key.includes('auth-token'));
+      return !hasSession;
+    } catch (e) {
+      return false;
+    }
+  });
   const [cart, setCart] = useState({});
   const [cartUserId, setCartUserId] = useState(undefined); // undefined means not loaded yet
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -789,22 +804,22 @@ export default function App() {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 99998,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      background: '#ffffff',
+      background: 'radial-gradient(circle at center, #0b1d3d 0%, #030712 100%)',
       overflow: 'hidden'
     }}>
       <style>{`
         @keyframes _glowMove {
           0% { transform: translate(-10%, -10%) scale(1); }
-          100% { transform: translate(10%, 10%) scale(1.1); }
+          100% { transform: translate(10%, 10%) scale(1.15); }
         }
         @keyframes _glowMove2 {
           0% { transform: translate(15%, -15%) scale(0.9); }
-          100% { transform: translate(-15%, 15%) scale(1.05); }
+          100% { transform: translate(-15%, 15%) scale(1.1); }
         }
         @keyframes _rotateOrbital {
-          0% { transform: rotate(0deg); opacity: 0.2; }
-          50% { transform: rotate(180deg); opacity: 0.5; }
-          100% { transform: rotate(360deg); opacity: 0.2; }
+          0% { transform: rotate(0deg); opacity: 0.3; }
+          50% { transform: rotate(180deg); opacity: 0.6; }
+          100% { transform: rotate(360deg); opacity: 0.3; }
         }
         @keyframes _logoFloat {
           0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
@@ -831,7 +846,7 @@ export default function App() {
           width: 600px;
           height: 600px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(14, 165, 233, 0.08) 0%, rgba(99, 102, 241, 0.03) 50%, transparent 70%);
+          background: radial-gradient(circle, rgba(14, 165, 233, 0.12) 0%, rgba(99, 102, 241, 0.04) 50%, transparent 70%);
           filter: blur(80px);
           animation: _glowMove 8s ease-in-out infinite alternate;
           pointer-events: none;
@@ -841,7 +856,7 @@ export default function App() {
           width: 400px;
           height: 400px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, rgba(14, 165, 233, 0.02) 50%, transparent 70%);
+          background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(14, 165, 233, 0.04) 50%, transparent 70%);
           filter: blur(60px);
           animation: _glowMove2 6s ease-in-out infinite alternate-reverse;
           pointer-events: none;
@@ -850,8 +865,8 @@ export default function App() {
           position: absolute;
           inset: 0;
           background-image:
-            linear-gradient(rgba(14, 165, 233, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(14, 165, 233, 0.03) 1px, transparent 1px);
+            linear-gradient(rgba(14, 165, 233, 0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(14, 165, 233, 0.04) 1px, transparent 1px);
           background-size: 56px 56px;
           mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 80%);
           WebkitMaskImage: radial-gradient(circle at 50% 50%, black 30%, transparent 80%);
@@ -861,7 +876,7 @@ export default function App() {
         ._s-orbital {
           position: absolute;
           border-radius: 50%;
-          border: 1px dashed rgba(14, 165, 233, 0.25);
+          border: 1px dashed rgba(14, 165, 233, 0.35);
           animation: _rotateOrbital 12s linear infinite;
           pointer-events: none;
         }
@@ -873,38 +888,65 @@ export default function App() {
           width: 148px;
           height: 148px;
           border-radius: 50%;
-          .guest-header .nav-search-input {
-            height: 42px !important;
-            background: rgba(255, 255, 255, 0.06) !important;
-            border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
-            color: #f8fafc !important;
-            font-family: 'Outfit', sans-serif !important;
-            /* Note: transition intentionally NOT overridden here so JS inline style controls width animation */
-          }
-          background: rgba(255, 255, 255, 0.95);
-          border: 1.5px solid rgba(14, 165, 233, 0.22);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
+          background: rgba(10, 25, 47, 0.85);
+          border: 1.5px solid rgba(14, 165, 233, 0.35);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
           display: flex;
           align-items: center;
           justify-content: center;
           box-shadow:
-            0 16px 40px rgba(148, 163, 184, 0.16),
-            0 4px 12px rgba(14, 165, 233, 0.08),
-            inset 0 1px 1px rgba(255, 255, 255, 1);
+            0 16px 40px rgba(0, 0, 0, 0.35),
+            0 4px 20px rgba(14, 165, 233, 0.2),
+            inset 0 1px 1px rgba(255, 255, 255, 0.1);
           animation: _logoFloat 4s ease-in-out infinite;
-          transform-style: preserve-3d;
         }
         ._s-logo::after {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.4) 45%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.4) 55%, transparent 65%);
+          background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.1) 45%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 55%, transparent 65%);
           background-size: 200% 100%;
           background-position: 200% 0;
           animation: _logoShine 3s ease-in-out infinite;
           border-radius: 50%;
           pointer-events: none;
+        }
+        ._s-brand {
+          position: relative;
+          z-index: 1;
+          font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+          font-size: 1.8rem;
+          font-weight: 900;
+          letter-spacing: -0.03em;
+          color: #ffffff;
+          text-align: center;
+          margin-bottom: 6px;
+          opacity: 0;
+          transform: translateY(15px);
+          animation: _fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+        }
+        ._s-brand em {
+          font-style: normal;
+          background: linear-gradient(135deg, #38bdf8 30%, #818cf8 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        ._s-tag {
+          position: relative;
+          z-index: 1;
+          font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+          font-size: 0.72rem;
+          font-weight: 700;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          color: rgba(148, 163, 184, 0.6);
+          text-align: center;
+          margin-bottom: 32px;
+          opacity: 0;
+          transform: translateY(15px);
+          animation: _fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
         }
         ._s-loader-container {
           position: relative;
@@ -924,10 +966,10 @@ export default function App() {
           width: 100%;
           height: 4px;
           border-radius: 99px;
-          background: rgba(148, 163, 184, 0.12);
-          border: 1px solid rgba(148, 163, 184, 0.15);
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           overflow: hidden;
-          box-shadow: 0 0 10px rgba(14, 165, 233, 0.1), inset 0 1px 2px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 0 15px rgba(14, 165, 233, 0.25);
         }
         ._s-bar {
           position: absolute;
@@ -935,7 +977,7 @@ export default function App() {
           border-radius: 99px;
           background: linear-gradient(90deg, #38bdf8, #818cf8, #34d399, #38bdf8);
           background-size: 200% 100%;
-          animation: _barProgress 2.2s linear infinite;
+          animation: _barProgress 2s linear infinite;
         }
       `}</style>
 
@@ -943,7 +985,7 @@ export default function App() {
       <div className="_s-glow-2" />
       <div className="_s-grid" />
 
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 30 }}>
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
         <div className="_s-orbital _s-orbital-1" />
         <div className="_s-orbital _s-orbital-2" />
         <div className="_s-logo">
@@ -954,6 +996,9 @@ export default function App() {
           />
         </div>
       </div>
+
+      <div className="_s-brand">SIMPLE <em>IMPLANTS</em></div>
+      <div className="_s-tag">Precision. Simplicity. Excellence.</div>
 
       <div className="_s-loader-container">
         <div className="_s-bar-track">

@@ -211,19 +211,29 @@ export async function seedSurgicalKit() {
 
 // Seed Initial B2B Data
 export async function seedDemoData() {
-  // Fast-path: Check outside transaction to avoid blocking and overhead on every load
+  // Fast-path: Check localStorage first to completely skip database operations if already seeded
+  try {
+    if (localStorage.getItem('dbSeeded') === 'true' && localStorage.getItem('dbSeeded10ProductsSupabase') === 'true') {
+      return;
+    }
+  } catch (e) {
+    console.warn('Fast path localStorage check failed:', e);
+  }
+
+  // Fallback check outside transaction
   try {
     const is10Seeded = await db.userProfile.get('dbSeeded10ProductsSupabase');
     const isSeeded = await db.userProfile.get('dbSeeded');
     if (is10Seeded && isSeeded) {
+      localStorage.setItem('dbSeeded10ProductsSupabase', 'true');
+      localStorage.setItem('dbSeeded', 'true');
       return;
     }
   } catch (e) {
-    console.warn('Fast path seed check failed:', e);
+    console.warn('Fallback IndexedDB check failed:', e);
   }
 
-  // Transaction serializes concurrent calls (e.g. React StrictMode's double-invoked
-  // effects in dev) so the isSeeded check can't race across two callers.
+  // Transaction serializes concurrent calls
   await db.transaction('rw', db.tables, async () => {
     // 1. One-time database reset for the new 10 products catalog
     const is10Seeded = await db.userProfile.get('dbSeeded10ProductsSupabase');
@@ -268,10 +278,14 @@ export async function seedDemoData() {
 
       await db.userProfile.put({ key: 'dbSeeded10Products', value: 'true' });
       await db.userProfile.put({ key: 'dbSeeded10ProductsSupabase', value: 'true' });
+      localStorage.setItem('dbSeeded10ProductsSupabase', 'true');
     }
 
     const isSeeded = await db.userProfile.get('dbSeeded');
-    if (isSeeded) return;
+    if (isSeeded) {
+      localStorage.setItem('dbSeeded', 'true');
+      return;
+    }
 
     await db.userProfile.bulkPut([
       { key: 'userName', value: 'Chandra (Simple Implants)' },
@@ -280,6 +294,7 @@ export async function seedDemoData() {
       { key: 'defaultGstRate', value: 12 },
       { key: 'dbSeeded', value: 'true' }
     ]);
+    localStorage.setItem('dbSeeded', 'true');
 
     // Seed States & Warehouses first for lookup stability
     await db.b2bStates.bulkAdd([

@@ -926,19 +926,45 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
 
         {/* ═══════════ STATS ═══════════ */}
         <section className="lp-section" style={{ maxWidth: 1360, margin: '0 auto', padding: '0 24px 60px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 18 }}>
             {STATS.map((s, i) => {
               const Icon = s.icon;
               return (
                 <Reveal key={i} delay={i * 0.1} variant="zoom">
-                  <div className="lp-stat-card" style={{ background: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: '24px 20px', textAlign: 'center', border: `1.5px solid rgba(255, 255, 255, 0.4)`, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.08)', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: 14, background: `${s.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', border: `1px solid ${s.color}22` }}>
+                  <div 
+                    className="lp-stat-card" 
+                    style={{ 
+                      background: isDark ? 'rgba(15,23,42,0.45)' : 'rgba(255,255,255,0.72)', 
+                      borderRadius: 24, 
+                      padding: '28px 24px', 
+                      textAlign: 'center', 
+                      border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(255,255,255,0.5)', 
+                      backdropFilter: 'blur(20px)', 
+                      WebkitBackdropFilter: 'blur(20px)', 
+                      boxShadow: '0 8px 32px rgba(15,23,42,0.04)', 
+                      transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = 'translateY(-6px)';
+                      e.currentTarget.style.boxShadow = `0 16px 36px -8px ${s.color}22`;
+                      e.currentTarget.style.borderColor = `${s.color}44`;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.boxShadow = '0 8px 32px rgba(15,23,42,0.04)';
+                      e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.5)';
+                    }}
+                  >
+                    <div style={{ width: 52, height: 52, borderRadius: '50%', background: `radial-gradient(circle, ${s.color}1c, ${s.color}05)`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', border: `1px solid ${s.color}22` }}>
                       <Icon size={22} color={s.color} />
                     </div>
-                    <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.8rem', color: '#0f172a', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                    <div style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.9rem', color: isDark ? '#ffffff' : '#0f172a', lineHeight: 1, letterSpacing: '-0.02em' }}>
                       <CounterNumber value={s.value} />
                     </div>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 8 }}>{s.label}</div>
+                    <div style={{ width: 20, height: 2.5, background: s.color, margin: '10px auto 0', borderRadius: 9, opacity: 0.8 }} />
+                    <div style={{ fontSize: '0.62rem', color: isDark ? '#94a3b8' : '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 10 }}>{s.label}</div>
                   </div>
                 </Reveal>
               );
@@ -948,39 +974,63 @@ export default function LandingPage({ onLoginRequired, onRegisterRequired, guest
 
         {/* ═══════════ ABOUT ═══════════ */}
         <section id="about" className="lp-section" style={{ maxWidth: 1360, margin: '0 auto', padding: '0 24px 80px' }}>
-            <div className="lp-about-grid" style={{ background: 'rgba(255,255,255,0.72)', borderRadius: 32, padding: '44px 48px', border: '1.5px solid rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', boxShadow: '0 20px 50px -10px rgba(14,165,233,0.08)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'center' }}>
+            <div className="lp-about-grid" style={{ background: isDark ? 'rgba(15,23,42,0.35)' : 'rgba(255,255,255,0.65)', borderRadius: 32, padding: '44px 48px', border: isDark ? '1.5px solid rgba(255, 255, 255, 0.05)' : '1.5px solid rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', boxShadow: '0 20px 50px -10px rgba(14,165,233,0.05)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'center' }}>
               <Reveal variant="left" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <div>
                   <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.08em', textTransform: 'uppercase' }}>About Us</span>
-                  <h2 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.9rem', color: '#0f172a', margin: '10px 0 16px', letterSpacing: '-0.02em' }}>
+                  <h2 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: 'clamp(1.8rem, 4vw, 2.2rem)', color: isDark ? '#ffffff' : '#0f172a', margin: '10px 0 16px', letterSpacing: '-0.03em', lineHeight: 1.15 }}>
                     We Care for{' '}
-                    <span style={{ background: 'linear-gradient(135deg, #0ea5e9, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Our Patients</span>
+                    <span style={{ background: 'linear-gradient(135deg, #0ea5e9, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: '0 0 30px rgba(14,165,233,0.1)' }}>Our Patients</span>
                   </h2>
-                  <p style={{ fontSize: '0.92rem', color: '#475569', lineHeight: 1.8, margin: 0 }}>
-                    Immediate Loading, no bone grafting, minimal procedures. Simple, Efficient and Effective.
-                    Join us in saying "Yes, we can" to your patients.
-                  </p>
-                  <p style={{ fontSize: '0.88rem', color: '#64748b', lineHeight: 1.7, marginTop: 14 }}>
+                  <div style={{ display: 'flex', gap: 16, marginTop: 18 }}>
+                    <div style={{ width: 3, background: 'linear-gradient(to bottom, #0ea5e9, #10b981)', borderRadius: 4, flexShrink: 0 }} />
+                    <p style={{ fontSize: '0.96rem', color: isDark ? '#cbd5e1' : '#475569', lineHeight: 1.8, margin: 0, fontWeight: 500 }}>
+                      Immediate Loading, no bone grafting, minimal procedures. Simple, Efficient and Effective.
+                      Join us in saying "Yes, we can" to your patients.
+                    </p>
+                  </div>
+                  <p style={{ fontSize: '0.86rem', color: isDark ? '#94a3b8' : '#64748b', lineHeight: 1.7, marginTop: 16, paddingLeft: 19 }}>
                     Simple Implant supplies dental clinics with a complete range of implants, instruments, and surgical kits — sourced for quality, priced for practices of every size.
                   </p>
                 </div>
               </Reveal>
               <Reveal variant="right" delay={0.15} style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {[
                     { icon: Target, color: '#0ea5e9', title: 'Our Mission', desc: 'Make high-quality dental implants simple to source, order, and track — for every clinic, regardless of size.' },
                     { icon: Eye, color: '#10b981', title: 'Our Vision', desc: 'Become the most trusted dental implant supply partner in the region, known for reliability and real support.' },
                   ].map((item, i) => {
                     const Icon = item.icon;
                     return (
-                      <div key={i} style={{ background: `linear-gradient(135deg, ${item.color}08, rgba(255,255,255,0.5))`, borderRadius: 20, padding: 24, border: `1px solid rgba(255, 255, 255, 0.5)`, boxShadow: '0 8px 24px -8px rgba(15,23,42,0.06)' }}>
+                      <div 
+                        key={i} 
+                        style={{ 
+                          background: isDark ? 'rgba(15,23,42,0.45)' : 'rgba(255,255,255,0.72)', 
+                          borderRadius: 24, 
+                          padding: '24px 28px', 
+                          border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(255,255,255,0.5)', 
+                          boxShadow: '0 8px 32px rgba(15,23,42,0.04)',
+                          transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+                          cursor: 'default'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.transform = 'translateY(-4px)';
+                          e.currentTarget.style.borderColor = `${item.color}35`;
+                          e.currentTarget.style.boxShadow = `0 12px 28px -8px ${item.color}18`;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.transform = 'none';
+                          e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.5)';
+                          e.currentTarget.style.boxShadow = '0 8px 32px rgba(15,23,42,0.04)';
+                        }}
+                      >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                          <div style={{ width: 38, height: 38, borderRadius: 10, background: `${item.color}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ width: 42, height: 42, borderRadius: '50%', background: `radial-gradient(circle, ${item.color}18, ${item.color}05)`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${item.color}22` }}>
                             <Icon size={18} color={item.color} />
                           </div>
-                          <h3 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', margin: 0 }}>{item.title}</h3>
+                          <h3 style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '0.98rem', color: isDark ? '#ffffff' : '#0f172a', margin: 0 }}>{item.title}</h3>
                         </div>
-                        <p style={{ fontSize: '0.8rem', color: '#64748b', lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+                        <p style={{ fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b', lineHeight: 1.65, margin: 0 }}>{item.desc}</p>
                       </div>
                     );
                   })}
